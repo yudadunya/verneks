@@ -10,6 +10,8 @@ import CareerCoach from './pages/CareerCoach'
 import Pricing from './pages/Pricing'
 import Login from './pages/Login'
 import Register from './pages/Register'
+import ForgotPassword from './pages/ForgotPassword'
+import ResetPassword from './pages/ResetPassword'
 import Navbar from './components/Navbar'
 
 export default function App() {
@@ -46,6 +48,8 @@ export default function App() {
         <Route path="/" element={<Home user={user} />} />
         <Route path="/login" element={<Login />} />
         <Route path="/register" element={<Register />} />
+        <Route path="/forgot-password" element={<ForgotPassword />} />
+        <Route path="/reset-password" element={<ResetPassword />} />
         <Route path="/dashboard" element={<Dashboard user={user} />} />
         <Route path="/cv-review" element={<CVReview user={user} />} />
         <Route path="/ats-checker" element={<ATSChecker user={user} />} />
