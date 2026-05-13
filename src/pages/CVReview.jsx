@@ -4,7 +4,7 @@ import { useSubscription } from '../hooks/useSubscription'
 import FeatureGate from '../components/FeatureGate'
 
 export default function CVReview({ user }) {
-  const { plan, canUse, getRemainingUses, trackUsage, loading } = useSubscription(user?.id)
+  const { plan, canUse, getRemainingUses, trackUsage, loading: subLoading } = useSubscription(user?.id)
   const [cvText, setCvText] = useState('')
   const [jobTarget, setJobTarget] = useState('')
   const [result, setResult] = useState(null)
@@ -33,7 +33,7 @@ export default function CVReview({ user }) {
     setLoading(false)
   }
 
-  if (loading) return <div style={{ padding: '40px', textAlign: 'center', color: 'var(--gray)' }}>Memuat...</div>
+  if (subLoading) return <div style={{ padding: '40px', textAlign: 'center', color: 'var(--gray)' }}>Memuat...</div>
 
   if (!canUse('cv_review')) return (
     <FeatureGate canUse={false} feature="cv_review" plan={plan} />
