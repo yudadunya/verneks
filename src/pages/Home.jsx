@@ -92,12 +92,11 @@ export default function Home({ user }) {
         <div style={styles.heroInner}>
           <div style={styles.badge}>🇮🇩 AI Career Platform #1 Indonesia</div>
           <h1 style={styles.heroTitle}>
-            Lolos interview<br />
-            <em style={styles.heroItalic}>lebih cepat</em> dengan AI
+            CV Kamu Ditolak Sistem<br />
+            <em style={styles.heroItalic}>Tanpa Kamu Tahu?</em> Bahkan Sebelum HRD Buka
           </h1>
           <p style={styles.heroDesc}>
-            CV Review, ATS Checker, Mock Interview, sampai Career Coach —
-            semua dalam satu platform berbasis AI untuk job seeker Indonesia.
+            GRATIS-Cek seberapa ATS-friendly CV kamu sekarang — plus review, mock interview, dan career coach AI.
           </p>
           <div style={styles.heroCta}>
             <Link to={user ? '/dashboard' : '/register'} style={styles.btnPrimary}>
