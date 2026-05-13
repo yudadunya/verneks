@@ -54,7 +54,10 @@ export default function ATSChecker({ user }) {
   }
 
   if (subLoading) return <div style={{ padding: '40px', textAlign: 'center', color: 'var(--gray)' }}>Memuat...</div>
-
+if (!user) {
+  window.location.href = '/register'
+  return null
+}
   if (!canUse('ats_checker')) return (
     <FeatureGate canUse={false} feature="ats_checker" plan={plan} />
   )
