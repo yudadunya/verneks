@@ -129,7 +129,7 @@ export default function Home({ user }) {
       {/* Pricing */}
       <section style={{ ...styles.section, background: '#f3f4f0' }}>
         <div style={styles.container}>
-          <h2 style={styles.sectionTitle}>Pilih paket yang cocok</h2>
+          <h2 style={styles.sectionTitle}>Investasi terkecil sebelum gaji pertamamu</h2>
           <div style={styles.pricingGrid}>
             {plans.map((plan) => (
               <div key={plan.name} style={{ ...styles.planCard, background: plan.color, color: plan.textColor }}>
