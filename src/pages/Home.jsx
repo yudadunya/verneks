@@ -35,7 +35,7 @@ const plans = [
   {
     name: 'Free',
     price: 'Gratis',
-    period: 'selamanya',
+    period: '',
     color: '#f3f4f0',
     textColor: 'var(--dark)',
     features: [
