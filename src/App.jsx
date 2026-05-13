@@ -7,6 +7,7 @@ import CVReview from './pages/CVReview'
 import ATSChecker from './pages/ATSChecker'
 import MockInterview from './pages/MockInterview'
 import CareerCoach from './pages/CareerCoach'
+import Pricing from './pages/Pricing'
 import Login from './pages/Login'
 import Register from './pages/Register'
 import Navbar from './components/Navbar'
@@ -50,6 +51,7 @@ export default function App() {
         <Route path="/ats-checker" element={<ATSChecker user={user} />} />
         <Route path="/mock-interview" element={<MockInterview user={user} />} />
         <Route path="/career-coach" element={<CareerCoach user={user} />} />
+        <Route path="/pricing" element={<Pricing user={user} />} />
       </Routes>
     </BrowserRouter>
   )
