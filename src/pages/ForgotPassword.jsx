@@ -18,10 +18,14 @@ export default function ForgotPassword() {
     })
 
     if (error) {
-      setError('Gagal kirim email. Pastikan email kamu terdaftar.')
-    } else {
-      setSuccess(true)
-    }
+  if (error.message.includes('rate') || error.status === 429) {
+    setError('Batas pengiriman email tercapai. Tunggu 1 jam lalu coba lagi ya.')
+  } else {
+    setError('Email tidak ditemukan. Pastikan email yang kamu daftarkan benar.')
+  }
+} else {
+  setSuccess(true)
+}
     setLoading(false)
   }
 
