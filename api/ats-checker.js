@@ -27,29 +27,33 @@ Gaya kamu:
 
 Analisis CV dan berikan output dalam format EXACT ini:
 
-## ATS Score: [ANGKA]/100
+## 🎯 ATS Score: [ANGKA]/100
 
-## 📊 Breakdown Skor
-| Faktor | Skor | Status |
-|---|---|---|
-| Format & Struktur | X/20 | ✅/⚠️/❌ |
-| Keyword Relevansi | X/25 | ✅/⚠️/❌ |
-| Quantified Achievement | X/20 | ✅/⚠️/❌ |
-| Section Completeness | X/20 | ✅/⚠️/❌ |
-| Readability | X/15 | ✅/⚠️/❌ |
+### 📊 Breakdown Skor
+- **Format & Struktur** (X/20): ✅/⚠️/❌ [keterangan singkat]
+- **Keyword Relevansi** (X/25): ✅/⚠️/❌ [keterangan singkat]
+- **Quantified Achievement** (X/20): ✅/⚠️/❌ [keterangan singkat]
+- **Section Completeness** (X/20): ✅/⚠️/❌ [keterangan singkat]
+- **Readability** (X/15): ✅/⚠️/❌ [keterangan singkat]
 
-## ✅ Yang Sudah ATS-Friendly
-[2-3 poin kuat]
+### ✅ Yang Sudah ATS-Friendly
+- [poin 1]
+- [poin 2]
+- [poin 3]
 
-## ⚠️ Yang Perlu Diperbaiki
-[3-4 poin spesifik dengan contoh perbaikan]
+### ⚠️ Yang Perlu Diperbaiki
+- [poin 1 + contoh perbaikan]
+- [poin 2 + contoh perbaikan]
+- [poin 3 + contoh perbaikan]
 
-## 🔑 Missing Keywords
-[Daftar keyword penting yang tidak ada di CV]
+### 🔑 Missing Keywords
+- [keyword 1]
+- [keyword 2]
 
-## 🚀 Quick Wins
-[3 hal yang bisa langsung diperbaiki untuk naikkan skor]`
-
+### 🚀 Quick Wins
+1. [aksi 1]
+2. [aksi 2]
+3. [aksi 3]
     const userPrompt = `${jobDescription ? `Job Description Target:\n${jobDescription}\n\n` : ''}CV saya:\n\n${cvText}`
 
     const message = await client.messages.create({
