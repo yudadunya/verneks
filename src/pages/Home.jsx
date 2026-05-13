@@ -94,11 +94,11 @@ export default function Home({ user }) {
             <em style={styles.heroItalic}>Tanpa Kamu Tahu?</em> Bahkan Sebelum HRD Buka
           </h1>
           <p style={styles.heroDesc}>
-            GRATIS-Cek seberapa ATS-friendly CV kamu sekarang — plus review, mock interview, dan career coach AI.
+            Platform AI yang sudah bantu fresh grad Indonesia dapat panggilan interview — mulai dari CV, ATS, sampai latihan interview.
           </p>
           <div style={styles.heroCta}>
             <Link to={user ? '/dashboard' : '/register'} style={styles.btnPrimary}>
-              {user ? 'Buka Dashboard' : 'Mulai Gratis — Tanpa Kartu Kredit'}
+              {user ? 'Buka Dashboard' : 'Mulai Gratis Sekarang'}
             </Link>
             <Link to="/cv-review" style={styles.btnSecondary}>
               Coba Review CV Sekarang →
