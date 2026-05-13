@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom'
 const features = [
   {
     icon: '📄',
-    title: 'CV Review AI',
+    title: 'CV Review',
     desc: 'Upload CV kamu, dapat feedback detail dari AI dalam hitungan detik.',
     href: '/cv-review',
     
@@ -17,14 +17,14 @@ const features = [
   },
   {
     icon: '🧠',
-    title: 'Career Coach AI',
+    title: 'Career Coach',
     desc: 'Tanya apapun soal karir — gaji, CV, strategi melamar',
     href: '/career-coach',
     
   },
   {
     icon: '🎤',
-    title: 'Mock Interview AI',
+    title: 'Mock Interview',
     desc: 'Simulasi interview kerja dengan pertanyaan nyata dari HRD',
     href: '/mock-interview',
     
@@ -41,7 +41,7 @@ const plans = [
     features: [
       '✅CV Review',
       '✅ATS Score Checker',
-      '✅Career Coach AI',
+      '✅Career Coach',
         ],
     cta: 'Mulai Gratis',
     href: '/register',
@@ -57,7 +57,7 @@ const plans = [
     features: [
       '✅CV Review 5x/bulan',
       '✅ATS Score Checker 5x/bulan',
-      '✅Career Coach AI 5 sesi/bulan',
+      '✅Career Coach 5 sesi/bulan',
           ],
     cta: 'Pilih Starter',
     href: '/pricing',
@@ -73,7 +73,7 @@ const plans = [
     features: [
       '✅CV Review 5x/bulan',
       '✅ATS Score Checker 5x/bulan',
-      '✅Career Coach AI unlimited',
+      '✅Career Coach unlimited',
       '✅Mock Interview unlimited',
     ],
     cta: 'Pilih Pro',
