@@ -14,7 +14,7 @@ const plans = [
     features: [
       '✅ CV Review',
       '✅ ATS Checker',
-      '✅ Career Coach AI',
+      '✅ Career Coach',
           ],
     cta: 'Pakai Gratis',
     popular: false,
@@ -32,7 +32,7 @@ const plans = [
     features: [
       '✅ CV Review 5x/bulan',
       '✅ ATS Checker 5x/bulan',
-      '✅ Career Coach AI 5 sesi/bulan',
+      '✅ Career Coach 5 sesi/bulan',
         ],
     cta: 'Pilih Starter',
     popular: false,
@@ -50,7 +50,7 @@ const plans = [
     features: [
       '✅ CV Review 5x/bulan',
       '✅ ATS Checker 5x/bulan',
-      '✅ Career Coach AI unlimited',
+      '✅ Career Coach unlimited',
       '✅ Mock Interview unlimited',
     ],
     cta: 'Pilih Pro',
