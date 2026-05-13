@@ -33,7 +33,7 @@ export default function Navbar({ user }) {
               Mock Interview
             </Link>
             <Link to="/career-coach" style={{ ...styles.link, ...(isActive('/career-coach') ? styles.linkActive : {}) }}>
-              AI Coach
+              Diah Anna
             </Link>
           </div>
         )}
