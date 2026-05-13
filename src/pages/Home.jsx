@@ -17,7 +17,7 @@ const features = [
   },
   {
     icon: '🧠',
-    title: 'Diah Anna - AI Career Coach',
+    title: 'Career Coach AI',
     desc: 'Ngobrol langsung sama Diah Anna, career coach AI kamu — karir, gaji, sampai resign.',
     href: '/career-coach',
     
@@ -41,7 +41,7 @@ const plans = [
     features: [
       '✅CV Review',
       '✅ATS Score Checker',
-      '✅Diah Anna - AI Career Coach',
+      '✅Career Coach AI',
         ],
     cta: 'Mulai Gratis',
     href: '/register',
@@ -57,7 +57,7 @@ const plans = [
     features: [
       '✅CV Review 5x/bulan',
       '✅ATS Score Checker 5x/bulan',
-      '✅Diah Anna - AI Career Coach 5 sesi/bulan',
+      '✅Career Coach AI 5 sesi/bulan',
           ],
     cta: 'Pilih Starter',
     href: '/pricing',
@@ -73,8 +73,8 @@ const plans = [
     features: [
       '✅CV Review 5x/bulan',
       '✅ATS Score Checker 5x/bulan',
-      '✅Diah Anna - AI Career Coach unlimited',
-      '✅ Mock Interview unlimited',
+      '✅Career Coach AI unlimited',
+      '✅Mock Interview unlimited',
     ],
     cta: 'Pilih Pro',
     href: '/pricing',
