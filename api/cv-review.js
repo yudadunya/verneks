@@ -35,7 +35,7 @@ Saat review CV, berikan:
     const userPrompt = `${jobTarget ? `Target posisi: ${jobTarget}\n\n` : ''}Ini CV saya:\n\n${cvText}`
 
     const message = await client.messages.create({
-      model: 'claude-sonnet-4-20250514',
+      model: 'claude-sonnet-4-6',
       max_tokens: 1500,
       system: systemPrompt,
       messages: [
