@@ -39,9 +39,9 @@ const plans = [
     color: '#f3f4f0',
     textColor: 'var(--dark)',
     features: [
-      'CV Review 1x',
-      'ATS Score Checker 1x',
-      'Diah Anna - AI Career Coach 1x',
+      'CV Review',
+      'ATS Score Checker',
+      'Diah Anna - AI Career Coach',
       '❌ Mock Interview',
     ],
     cta: 'Mulai Gratis',
