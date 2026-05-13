@@ -15,7 +15,7 @@ const plans = [
     features: [
       '✅ CV Review 1x',
       '✅ ATS Checker 1x',
-      '✅ Diah Anna 1x sesi',
+      '✅ Diah Anna-AI Career Coach 1x sesi',
       '❌ Mock Interview',
     ],
     cta: 'Pakai Gratis',
@@ -34,7 +34,7 @@ const plans = [
     features: [
       '✅ CV Review 5x/bulan',
       '✅ ATS Checker 5x/bulan',
-      '✅ Diah Anna 5 sesi/bulan',
+      '✅ Diah Anna-AI Career Coach 5 sesi/bulan',
       '❌ Mock Interview',
     ],
     cta: 'Pilih Starter',
@@ -53,7 +53,7 @@ const plans = [
     features: [
       '✅ CV Review 5x/bulan',
       '✅ ATS Checker 5x/bulan',
-      '✅ Diah Anna unlimited',
+      '✅ Diah Anna-AI Career Coach unlimited',
       '✅ Mock Interview unlimited',
     ],
     cta: 'Pilih Pro',
