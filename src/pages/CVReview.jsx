@@ -35,7 +35,10 @@ export default function CVReview({ user }) {
   }
 
   if (subLoading) return <div style={{ padding: '40px', textAlign: 'center', color: 'var(--gray)' }}>Memuat...</div>
-
+  if (!user) {
+  window.location.href = '/register'
+  return null
+}
   if (!canUse('cv_review')) return (
     <FeatureGate canUse={false} feature="cv_review" plan={plan} />
   )
