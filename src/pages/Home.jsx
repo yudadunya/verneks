@@ -13,21 +13,21 @@ const features = [
     title: 'ATS Score Checker',
     desc: 'Cek seberapa ATS-friendly CV kamu sebelum dikirim ke perusahaan impian.',
     href: '/ats-checker',
-    tag: 'Starter+',
+    tag: 'Gratis 1x',
+  },
+  {
+    icon: '🧠',
+    title: 'Diah Anna - AI Career Coach',
+    desc: 'Ngobrol langsung sama Diah Anna, career coach AI kamu — karir, gaji, sampai resign.',
+    href: '/career-coach',
+    tag: 'Gratis 1x',
   },
   {
     icon: '🎤',
     title: 'Mock Interview AI',
-    desc: 'Latihan interview dengan AI yang kasih feedback jujur, bukan basa-basi.',
+    desc: 'Latihan interview dengan Diah Anna yang kasih feedback jujur, bukan basa-basi.',
     href: '/mock-interview',
-    tag: 'Pro+',
-  },
-  {
-    icon: '🧠',
-    title: 'AI Career Coach',
-    desc: 'Chat dengan career coach AI kapan aja — dari karir, gaji, sampai resign.',
-    href: '/career-coach',
-    tag: 'Pro+',
+    tag: 'Pro',
   },
 ]
 
@@ -38,41 +38,49 @@ const plans = [
     period: 'selamanya',
     color: '#f3f4f0',
     textColor: 'var(--dark)',
-    features: ['CV Review 1x/bulan', 'ATS Score Checker 1x', 'Tips karir basic'],
+    features: [
+      'CV Review 1x',
+      'ATS Score Checker 1x',
+      'Diah Anna - AI Career Coach 1x',
+      '❌ Mock Interview',
+    ],
     cta: 'Mulai Gratis',
-    href: '/register',
-  },
-  {
-    name: 'Starter',
-    price: 'Rp 49rb',
-    period: '/bulan',
-    color: 'var(--dark)',
-    textColor: '#fff',
-    features: ['CV Review 5x/bulan', 'ATS Score Checker unlimited', 'JD Matcher 3x/bulan', 'ATS CV Generator 1x', 'History review tersimpan'],
-    cta: 'Pilih Starter',
     href: '/register',
     popular: false,
   },
   {
+    name: 'Starter',
+    price: 'Rp 49rb',
+    priceOri: 'Rp 99rb',
+    period: '/bulan',
+    color: 'var(--dark)',
+    textColor: '#fff',
+    features: [
+      'CV Review 5x/bulan',
+      'ATS Score Checker 5x/bulan',
+      'Diah Anna - AI Career Coach 5 sesi/bulan',
+      '❌ Mock Interview',
+    ],
+    cta: 'Pilih Starter',
+    href: '/pricing',
+    popular: false,
+  },
+  {
     name: 'Pro',
-    price: 'Rp 99rb',
+    price: 'Rp 199rb',
+    priceOri: 'Rp 599rb',
     period: '/bulan',
     color: 'var(--green)',
     textColor: '#fff',
-    features: ['Semua fitur Starter', 'CV Review unlimited', 'ATS CV Generator unlimited', 'Mock Interview AI', 'AI Career Coach chat', 'Download PDF & DOCX'],
+    features: [
+      'CV Review 5x/bulan',
+      'ATS Score Checker 5x/bulan',
+      'Diah Anna - AI Career Coach unlimited',
+      '✅ Mock Interview unlimited',
+    ],
     cta: 'Pilih Pro',
-    href: '/register',
+    href: '/pricing',
     popular: true,
-  },
-  {
-    name: 'Premium',
-    price: 'Rp 199rb',
-    period: '/bulan',
-    color: '#1c1917',
-    textColor: '#fef3c7',
-    features: ['Semua fitur Pro', 'Salary Negotiation Simulator', 'LinkedIn Profile Optimizer', 'Cover Letter Generator', '1x Konsultasi via Google Meet'],
-    cta: 'Pilih Premium',
-    href: '/register',
   },
 ]
 
@@ -130,17 +138,18 @@ export default function Home({ user }) {
           <div style={styles.pricingGrid}>
             {plans.map((plan) => (
               <div key={plan.name} style={{ ...styles.planCard, background: plan.color, color: plan.textColor }}>
-                {plan.popular && <div style={styles.popularBadge}>Paling Populer</div>}
+                {plan.popular && <div style={styles.popularBadge}>⭐ Paling Populer</div>}
                 <div style={styles.planName}>{plan.name}</div>
                 <div style={styles.planPrice}>
                   <span style={styles.planPriceNum}>{plan.price}</span>
-                  <span style={{ opacity: 0.7, fontSize: '0.875rem' }}>{plan.period}</span>
+                  {plan.priceOri && (
+                    <span style={{ textDecoration: 'line-through', opacity: 0.5, fontSize: '0.9rem', marginLeft: '6px' }}>{plan.priceOri}</span>
+                  )}
+                  <span style={{ opacity: 0.7, fontSize: '0.875rem', marginLeft: '4px' }}>{plan.period}</span>
                 </div>
                 <ul style={styles.planFeatures}>
                   {plan.features.map((f) => (
-                    <li key={f} style={styles.planFeature}>
-                      <span style={{ color: plan.name === 'Free' ? 'var(--green)' : plan.name === 'Pro' ? '#86efac' : plan.name === 'Premium' ? '#fde68a' : '#6ee7b7' }}>✓</span> {f}
-                    </li>
+                    <li key={f} style={styles.planFeature}>{f}</li>
                   ))}
                 </ul>
                 <Link to={plan.href} style={{ ...styles.planCta, background: plan.name === 'Free' ? 'var(--green)' : 'rgba(255,255,255,0.15)', color: plan.name === 'Free' ? '#fff' : plan.textColor, border: plan.name === 'Free' ? 'none' : '1px solid rgba(255,255,255,0.25)' }}>
