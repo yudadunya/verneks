@@ -5,6 +5,7 @@ import FeatureGate from '../components/FeatureGate'
 
 export default function CVReview({ user }) {
   const { plan, canUse, getRemainingUses, trackUsage, loading: subLoading } = useSubscription(user?.id)
+  console.log('user:', user, 'userId:', user?.id)
   const [cvText, setCvText] = useState('')
   const [jobTarget, setJobTarget] = useState('')
   const [result, setResult] = useState(null)
