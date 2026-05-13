@@ -4,7 +4,7 @@ const menuItems = [
   { icon: '📄', title: 'CV Review', desc: 'Review CV kamu dengan feedback spesifik bukan generik', href: '/cv-review', badge: null },
   { icon: '🎯', title: 'ATS Checker', desc: 'Cek ATS score CV kamu', href: '/ats-checker', badge: 'Baru' },
   { icon: '🎤', title: 'Mock Interview', desc: 'Latihan interview kerja dengan pertanyaan nyata dari HRD', href: '/mock-interview', badge: null },
-  { icon: '🧠', title: 'Career Coach AI', desc: 'Tanya apapun soal karir kamu', href: '/career-coach', badge: null },
+  { icon: '🧠', title: 'Career Coach', desc: 'Tanya apapun soal karir kamu', href: '/career-coach', badge: null },
 ]
 
 export default function Dashboard({ user }) {
