@@ -1,5 +1,7 @@
 import { useState, useRef, useEffect } from 'react'
 import ReactMarkdown from 'react-markdown'
+import { useSubscription } from '../hooks/useSubscription'
+import FeatureGate from '../components/FeatureGate'
 
 const POSITIONS = [
   'Data Analyst', 'Software Engineer', 'Product Manager', 'Marketing',
@@ -11,6 +13,7 @@ const LEVELS = ['Fresh Grad', 'Junior (1-2 tahun)', 'Mid (3-5 tahun)', 'Senior (
 const TOTAL_QUESTIONS = 6
 
 export default function MockInterview({ user }) {
+  const { plan, canUse, trackUsage, loading: subLoading } = useSubscription(user?.id)
   const [phase, setPhase] = useState('setup') // setup | interview | feedback
   const [position, setPosition] = useState('')
   const [level, setLevel] = useState('')
@@ -30,6 +33,7 @@ export default function MockInterview({ user }) {
     if (!position || !level) return
     setLoading(true)
     setPhase('interview')
+    await trackUsage('mock_interview')
 
     try {
       const res = await fetch('/api/mock-interview', {
@@ -109,6 +113,12 @@ export default function MockInterview({ user }) {
   }
 
   // SETUP PHASE
+  if (subLoading) return <div style={{ padding: '40px', textAlign: 'center', color: 'var(--gray)' }}>Memuat...</div>
+
+  if (!canUse('mock_interview')) return (
+    <FeatureGate canUse={false} feature="mock_interview" plan={plan} />
+  )
+
   if (phase === 'setup') return (
     <main style={styles.page}>
       <div style={styles.setupContainer}>

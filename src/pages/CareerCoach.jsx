@@ -1,5 +1,7 @@
 import { useState, useRef, useEffect } from 'react'
 import ReactMarkdown from 'react-markdown'
+import { useSubscription } from '../hooks/useSubscription'
+import FeatureGate from '../components/FeatureGate'
 
 const SUGGESTED_TOPICS = [
   'Review CV aku dong',
@@ -11,6 +13,7 @@ const SUGGESTED_TOPICS = [
 ]
 
 export default function CareerCoach({ user }) {
+  const { plan, canUse, trackUsage, loading: subLoading } = useSubscription(user?.id)
   const [messages, setMessages] = useState([])
   const [input, setInput] = useState('')
   const [loading, setLoading] = useState(false)
@@ -28,6 +31,9 @@ export default function CareerCoach({ user }) {
     setMessages(newMessages)
     setInput('')
     setLoading(true)
+
+    // Track usage on first message of session
+    if (messages.length === 0) await trackUsage('diah_anna')
 
     try {
       const res = await fetch('/api/career-coach', {
@@ -51,6 +57,12 @@ export default function CareerCoach({ user }) {
   }
 
   const isFirstMessage = messages.length === 0
+
+  if (subLoading) return <div style={{ padding: '40px', textAlign: 'center', color: 'var(--gray)' }}>Memuat...</div>
+
+  if (!canUse('diah_anna') && messages.length === 0) return (
+    <FeatureGate canUse={false} feature="diah_anna" plan={plan} />
+  )
 
   return (
     <div style={styles.page}>

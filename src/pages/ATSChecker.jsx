@@ -1,7 +1,10 @@
 import { useState } from 'react'
 import ReactMarkdown from 'react-markdown'
+import { useSubscription } from '../hooks/useSubscription'
+import FeatureGate from '../components/FeatureGate'
 
 export default function ATSChecker({ user }) {
+  const { plan, canUse, getRemainingUses, trackUsage, loading: subLoading } = useSubscription(user?.id)
   const [cvText, setCvText] = useState('')
   const [jobDescription, setJobDescription] = useState('')
   const [result, setResult] = useState(null)
@@ -43,11 +46,18 @@ export default function ATSChecker({ user }) {
       if (data.error) throw new Error(data.error)
       setResult(data.result)
       setScore(extractScore(data.result))
+      await trackUsage('ats_checker')
     } catch (e) {
       setError('Waduh, ada error. Coba lagi ya.')
     }
     setLoading(false)
   }
+
+  if (subLoading) return <div style={{ padding: '40px', textAlign: 'center', color: 'var(--gray)' }}>Memuat...</div>
+
+  if (!canUse('ats_checker')) return (
+    <FeatureGate canUse={false} feature="ats_checker" plan={plan} />
+  )
 
   return (
     <main style={styles.page}>

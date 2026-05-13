@@ -1,7 +1,10 @@
 import { useState } from 'react'
 import ReactMarkdown from 'react-markdown'
+import { useSubscription } from '../hooks/useSubscription'
+import FeatureGate from '../components/FeatureGate'
 
 export default function CVReview({ user }) {
+  const { plan, canUse, getRemainingUses, trackUsage, loading } = useSubscription(user?.id)
   const [cvText, setCvText] = useState('')
   const [jobTarget, setJobTarget] = useState('')
   const [result, setResult] = useState(null)
@@ -23,11 +26,18 @@ export default function CVReview({ user }) {
       const data = await res.json()
       if (data.error) throw new Error(data.error)
       setResult(data.review)
+      await trackUsage('cv_review')
     } catch (e) {
       setError('Waduh, ada error. Coba lagi ya.')
     }
     setLoading(false)
   }
+
+  if (loading) return <div style={{ padding: '40px', textAlign: 'center', color: 'var(--gray)' }}>Memuat...</div>
+
+  if (!canUse('cv_review')) return (
+    <FeatureGate canUse={false} feature="cv_review" plan={plan} />
+  )
 
   return (
     <main style={styles.page}>
@@ -35,6 +45,9 @@ export default function CVReview({ user }) {
         <div style={styles.header}>
           <h1 style={styles.title}>📄 CV Review AI</h1>
           <p style={styles.sub}>Paste isi CV kamu, AI akan kasih feedback detail dalam 30 detik.</p>
+          <div style={styles.usageBadge}>
+            Sisa: <strong>{getRemainingUses('cv_review')}x</strong> CV Review bulan ini
+          </div>
         </div>
 
         <div style={styles.layout}>
@@ -110,7 +123,17 @@ const styles = {
   container: { maxWidth: '1100px', margin: '0 auto' },
   header: { marginBottom: '32px' },
   title: { fontFamily: 'var(--font-display)', fontSize: '2rem', fontWeight: 700, marginBottom: '8px' },
-  sub: { color: 'var(--gray)', fontSize: '0.95rem' },
+  sub: { color: 'var(--gray)', fontSize: '0.95rem', marginBottom: '8px' },
+  usageBadge: {
+    display: 'inline-block',
+    background: '#f0fdf4',
+    border: '1px solid #bbf7d0',
+    color: 'var(--green-dark)',
+    fontSize: '0.8rem',
+    padding: '4px 12px',
+    borderRadius: '100px',
+    marginTop: '8px',
+  },
   layout: {
     display: 'grid',
     gridTemplateColumns: '1fr 1fr',
