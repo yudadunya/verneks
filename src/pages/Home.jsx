@@ -106,7 +106,7 @@ export default function Home({ user }) {
               Coba Review CV Sekarang →
             </Link>
           </div>
-          <p style={styles.heroNote}>✓ Gratis selamanya &nbsp; ✓ Tanpa daftar dulu &nbsp; ✓ Hasil dalam 30 detik</p>
+          <p style={styles.heroNote}>✓ Coba Gratis &nbsp; ✓ Terbukti bantu dapat interview &nbsp; ✓ Feedback spesifik, bukan generik</p>
         </div>
 
         {/* Decorative blob */}
