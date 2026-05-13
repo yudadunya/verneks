@@ -60,8 +60,11 @@ export default function Login() {
         </button>
 
         <p style={styles.footer}>
-          Belum punya akun? <Link to="/register" style={styles.link}>Daftar gratis</Link>
-        </p>
+  <Link to="/forgot-password" style={styles.link}>Lupa password?</Link>
+</p>
+<p style={styles.footer}>
+  Belum punya akun? <Link to="/register" style={styles.link}>Daftar gratis</Link>
+</p>
       </div>
     </div>
   )
