@@ -14,6 +14,7 @@ const TOTAL_QUESTIONS = 6
 
 export default function MockInterview({ user }) {
   const { plan, canUse, trackUsage, loading: subLoading } = useSubscription(user?.id)
+  console.log('plan:', plan, 'canUse mock:', canUse('mock_interview'))
   const [phase, setPhase] = useState('setup') // setup | interview | feedback
   const [position, setPosition] = useState('')
   const [level, setLevel] = useState('')
