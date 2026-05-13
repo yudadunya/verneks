@@ -109,7 +109,7 @@ export default function Pricing({ user }) {
     <main style={styles.page}>
       <div style={styles.container}>
         <div style={styles.header}>
-          <h1 style={styles.title}>Pilih Paket Kamu</h1>
+          <h1 style={styles.title}>Investasi terkecil sebelum gaji pertamamu</h1>
           <p style={styles.sub}>Mulai gratis, upgrade kapan aja. Tidak ada kontrak jangka panjang.</p>
         </div>
 
