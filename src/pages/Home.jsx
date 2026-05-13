@@ -6,28 +6,28 @@ const features = [
     title: 'CV Review AI',
     desc: 'Upload CV kamu, dapat feedback detail dari AI dalam hitungan detik.',
     href: '/cv-review',
-    tag: 'Gratis 1x',
+    
   },
   {
     icon: '🎯',
     title: 'ATS Score Checker',
     desc: 'Cek seberapa ATS-friendly CV kamu sebelum dikirim ke perusahaan impian.',
     href: '/ats-checker',
-    tag: 'Gratis 1x',
+    
   },
   {
     icon: '🧠',
     title: 'Diah Anna - AI Career Coach',
     desc: 'Ngobrol langsung sama Diah Anna, career coach AI kamu — karir, gaji, sampai resign.',
     href: '/career-coach',
-    tag: 'Gratis 1x',
+    
   },
   {
     icon: '🎤',
     title: 'Mock Interview AI',
     desc: 'Latihan interview dengan Diah Anna yang kasih feedback jujur, bukan basa-basi.',
     href: '/mock-interview',
-    tag: 'Pro',
+    
   },
 ]
 
