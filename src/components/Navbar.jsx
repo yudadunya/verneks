@@ -33,7 +33,7 @@ export default function Navbar({ user }) {
               Mock Interview
             </Link>
             <Link to="/career-coach" style={{ ...styles.link, ...(isActive('/career-coach') ? styles.linkActive : {}) }}>
-              Diah Anna- AI Career Coach
+              Career Coach AI
             </Link>
             <Link to="/pricing" style={{ ...styles.link, ...(isActive('/pricing') ? styles.linkActive : {}) }}>
               Harga
