@@ -18,14 +18,14 @@ const features = [
   {
     icon: '🧠',
     title: 'Career Coach AI',
-    desc: 'Ngobrol langsung sama Diah Anna, career coach AI kamu — karir, gaji, sampai resign.',
+    desc: 'Tanya apapun soal karir — gaji, CV, strategi melamar',
     href: '/career-coach',
     
   },
   {
     icon: '🎤',
     title: 'Mock Interview AI',
-    desc: 'Latihan interview dengan Diah Anna yang kasih feedback jujur, bukan basa-basi.',
+    desc: 'Simulasi interview kerja dengan pertanyaan nyata dari HRD',
     href: '/mock-interview',
     
   },
@@ -112,7 +112,7 @@ export default function Home({ user }) {
       {/* Features */}
       <section style={styles.section}>
         <div style={styles.container}>
-          <h2 style={styles.sectionTitle}>Semua yang kamu butuhkan<br />untuk dapat kerja lebih cepat</h2>
+          <h2 style={styles.sectionTitle}>Dari nol sampai dapat panggilan<br />— semua ada di sini</h2>
           <div style={styles.grid}>
             {features.map((f) => (
               <Link to={f.href} key={f.title} style={styles.card}>
