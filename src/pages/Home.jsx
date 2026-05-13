@@ -49,8 +49,8 @@ const plans = [
   },
   {
     name: 'Starter',
-    price: 'Rp 49rb',
-    priceOri: 'Rp 99rb',
+    price: '49rb',
+    priceOri: '99rb',
     period: '/bulan',
     color: 'var(--dark)',
     textColor: '#fff',
@@ -65,8 +65,8 @@ const plans = [
   },
   {
     name: 'Pro',
-    price: 'Rp 199rb',
-    priceOri: 'Rp 599rb',
+    price: '199rb',
+    priceOri: '599rb',
     period: '/bulan',
     color: 'var(--green)',
     textColor: '#fff',
