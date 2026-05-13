@@ -59,7 +59,10 @@ export default function CareerCoach({ user }) {
   const isFirstMessage = messages.length === 0
 
   if (subLoading) return <div style={{ padding: '40px', textAlign: 'center', color: 'var(--gray)' }}>Memuat...</div>
-
+if (!user) {
+  window.location.href = '/register'
+  return null
+}
   if (!canUse('diah_anna') && messages.length === 0) return (
     <FeatureGate canUse={false} feature="diah_anna" plan={plan} />
   )
