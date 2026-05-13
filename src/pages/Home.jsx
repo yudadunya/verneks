@@ -100,9 +100,7 @@ export default function Home({ user }) {
             <Link to={user ? '/dashboard' : '/register'} style={styles.btnPrimary}>
               {user ? 'Buka Dashboard' : 'Mulai Gratis Sekarang'}
             </Link>
-            <Link to="/cv-review" style={styles.btnSecondary}>
-              Coba Review CV Sekarang →
-            </Link>
+            
           </div>
           <p style={styles.heroNote}>✓ Coba Gratis &nbsp; ✓ Terbukti bantu dapat interview &nbsp; ✓ Feedback spesifik, bukan generik</p>
         </div>
