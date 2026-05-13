@@ -27,8 +27,12 @@ export default function App() {
 
     // Listen for auth changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-      setUser(session?.user ?? null)
-    })
+  if (_event === 'PASSWORD_RECOVERY') {
+    window.location.href = '/reset-password'
+    return
+  }
+  setUser(session?.user ?? null)
+})
 
     return () => subscription.unsubscribe()
   }, [])
