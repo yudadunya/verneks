@@ -88,15 +88,17 @@ export function useSubscription(userId) {
   }
 
   const trackUsage = async (feature) => {
-    if (!userId) return
-    const monthYear = new Date().toISOString().slice(0, 7)
-    await supabase.from('usage_tracking').insert({
-      user_id: userId,
-      feature,
-      month_year: plan === 'free' ? '0000-00' : monthYear,
-    })
-    await fetchData()
-  }
+  if (!userId) return
+  console.log('tracking usage:', feature, 'userId:', userId)
+  const monthYear = new Date().toISOString().slice(0, 7)
+  const { data, error } = await supabase.from('usage_tracking').insert({
+    user_id: userId,
+    feature,
+    month_year: plan === 'free' ? '0000-00' : monthYear,
+  })
+  console.log('insert result:', data, 'error:', error)
+  await fetchData()
+}
 
   return { plan, usage, loading, canUse, getRemainingUses, trackUsage }
 }
