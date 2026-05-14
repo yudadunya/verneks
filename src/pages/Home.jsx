@@ -136,19 +136,15 @@ export default function Home({ user }) {
         <div style={styles.heroInner}>
           <div style={styles.badge}>AI Career Platform khusus untuk Fresh Grad Indonesia</div>
           <h1 style={styles.heroTitle}>
-  <span style={{ display: 'block' }}>
-    CV kamu <em style={styles.heroItalic}>ditolak sistem</em>
-  </span>
-  <span style={{ display: 'block' }}>
-    sebelum sampe ke HRD?
-  </span>
-</h1>
-          <p style={styles.heroDesc}
+            CV kamu<br />
+            <em style={styles.heroItalic}>ditolak sistem </em>sebelum ke HRD?
+          </h1>
+          <p style={styles.heroDesc}>
             Platform AI yang sudah bantu fresh grad Indonesia dapat panggilan interview — mulai dari CV, ATS, sampai latihan interview.
           </p>
           <div style={styles.heroCta}>
             <Link to={user ? '/dashboard' : '/register'} style={styles.btnPrimary}>
-              {user ? 'Buka Dashboard' : 'Coba Gratis Sekarang'}
+              {user ? 'Buka Dashboard' : 'COBA GRATIS SEKARANG'}
             </Link>
           </div>
           <p style={styles.heroNote}>✓ Hasil dalam beberapa detik &nbsp; ✓ Terbukti bantu dapat interview &nbsp; ✓ Feedback spesifik, bukan generik</p>
@@ -214,7 +210,7 @@ export default function Home({ user }) {
       {/* Testimonials */}
       <section style={styles.section}>
         <div style={styles.container}>
-          <h2 style={styles.sectionTitle}>Fresh Grad Indonesia sudah buktiin sendiri</h2>
+          <h2 style={styles.sectionTitle}>Fresh grad Indonesia sudah buktiin sendiri</h2>
           <div style={styles.testimoniGrid}>
             {testimonials.map((t) => (
               <div key={t.name} style={styles.testimoniCard}>
@@ -280,11 +276,11 @@ const styles = {
     overflow: 'hidden',
   },
   heroInner: {
-  position: 'relative',
-  zIndex: 1,
-  maxWidth: '900px', // dari 720px → 900px
-  margin: '0 auto',
-},
+    position: 'relative',
+    zIndex: 1,
+    maxWidth: '720px',
+    margin: '0 auto',
+  },
   badge: {
     display: 'inline-block',
     background: '#f0fdf4',
@@ -298,15 +294,13 @@ const styles = {
     letterSpacing: '0.02em',
   },
   heroTitle: {
-  fontFamily: 'var(--font-display)',
-  fontSize: 'clamp(1.8rem, 5vw, 3.5rem)', // turunkan dari 2.5rem
-  fontWeight: 700,
-  lineHeight: 1.1,
-  color: 'var(--dark)',
-  marginBottom: '20px',
-  maxWidth: '900px',      // tambah ini
-  margin: '0 auto 20px', // tambah ini
-},
+    fontFamily: 'var(--font-display)',
+    fontSize: 'clamp(2.5rem, 6vw, 4rem)',
+    fontWeight: 700,
+    lineHeight: 1.1,
+    color: 'var(--dark)',
+    marginBottom: '20px',
+  },
   heroItalic: {
     fontStyle: 'italic',
     color: 'var(--green)',
