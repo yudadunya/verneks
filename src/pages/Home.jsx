@@ -251,7 +251,7 @@ export default function Home({ user }) {
           <Link to={user ? '/dashboard' : '/register'} style={styles.ctaBtn}>
             {user ? 'Buka Dashboard' : 'Coba Gratis Sekarang'}
           </Link>
-          <p style={styles.ctaNote}>✓ Coba gratis &nbsp; ✓ Hasil 30 detik &nbsp; ✓ Feedback spesifik, bukan generik</p>
+          <p style={styles.ctaNote}>✓ Hasil dalam beberapa detik &nbsp; ✓ Terbukti bantu dapat interview &nbsp; ✓ Feedback spesifik, bukan generik</p>
         </div>
       </section>
 
