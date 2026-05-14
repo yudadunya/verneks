@@ -88,7 +88,7 @@ export default function Home({ user }) {
       {/* Hero */}
       <section style={styles.hero}>
         <div style={styles.heroInner}>
-          <div style={styles.badge}>AI Career Platform untuk Job Seeker Indonesia</div>
+          <div style={styles.badge}>AI Career Platform khusus untuk Fres Grad Indonesia</div>
           <h1 style={styles.heroTitle}>
             CV kamu<br />
             <em style={styles.heroItalic}>ditolak sistem </em>sebelum ke HRD?
