@@ -15,8 +15,8 @@ const LIMITS = {
     mock_interview: 0,
   },
   pro: {
-    cv_review: 5,
-    ats_checker: 5,
+    cv_review: 999,
+    ats_checker: 999,
     diah_anna: 999,
     mock_interview: 999,
   },
