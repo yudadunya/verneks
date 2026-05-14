@@ -1,70 +1,40 @@
-import { useState } from 'react'
-import { Link, useNavigate } from 'react-router-dom'
-import { signIn } from '../lib/supabase'
+import { useEffect } from 'react'
+import { useNavigate, Link } from 'react-router-dom'
+import { signInWithGoogle, supabase } from '../lib/supabase'
 
 export default function Login() {
   const navigate = useNavigate()
-  const [email, setEmail] = useState('')
-  const [password, setPassword] = useState('')
-  const [loading, setLoading] = useState(false)
-  const [error, setError] = useState(null)
 
-  const handleLogin = async () => {
-    if (!email || !password) return setError('Isi email dan password dulu ya.')
-    setLoading(true)
-    setError(null)
-    const { error } = await signIn(email, password)
-    if (error) {
-      setError('Email atau password salah.')
-    } else {
-      navigate('/dashboard')
-    }
-    setLoading(false)
-  }
+  useEffect(() => {
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (session) navigate('/dashboard')
+    })
+  }, [])
 
   return (
     <div style={styles.page}>
       <div style={styles.card}>
-        <Link to="/" style={styles.logo}>Lamar<span style={{ color: 'var(--green)' }}>Cerdas</span></Link>
+        <Link to="/" style={styles.logo}>
+          Lamar<span style={{ color: 'var(--green)' }}>Cerdas</span>
+        </Link>
+
         <h1 style={styles.title}>Selamat datang kembali</h1>
-        <p style={styles.sub}>Masuk ke akun kamu</p>
+        <p style={styles.sub}>Masuk untuk lanjut coaching karir kamu</p>
 
-        {error && <div style={styles.error}>{error}</div>}
-
-        <div style={styles.field}>
-          <label style={styles.label}>Email</label>
-          <input
-            style={styles.input}
-            type="email"
-            placeholder="kamu@email.com"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            onKeyDown={(e) => e.key === 'Enter' && handleLogin()}
-          />
-        </div>
-
-        <div style={styles.field}>
-          <label style={styles.label}>Password</label>
-          <input
-            style={styles.input}
-            type="password"
-            placeholder="••••••••"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            onKeyDown={(e) => e.key === 'Enter' && handleLogin()}
-          />
-        </div>
-
-        <button onClick={handleLogin} disabled={loading} style={styles.btn}>
-          {loading ? 'Masuk...' : 'Masuk'}
+        <button onClick={signInWithGoogle} style={styles.btnGoogle}>
+          <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" width="20" alt="Google" />
+          Masuk dengan Google
         </button>
 
-        <p style={styles.footer}>
-  <Link to="/forgot-password" style={styles.link}>Lupa password?</Link>
-</p>
-<p style={styles.footer}>
-  Belum punya akun? <Link to="/register" style={styles.link}>Daftar gratis</Link>
-</p>
+        <p style={styles.note}>
+          Belum punya akun? Tidak perlu daftar —<br />
+          langsung masuk dengan Google di atas.
+        </p>
+
+        <p style={styles.terms}>
+          Dengan masuk, kamu setuju dengan{' '}
+          <Link to="/" style={{ color: 'var(--green)' }}>Syarat & Ketentuan</Link> kami.
+        </p>
       </div>
     </div>
   )
@@ -84,74 +54,54 @@ const styles = {
     borderRadius: '20px',
     padding: '40px',
     width: '100%',
-    maxWidth: '420px',
+    maxWidth: '400px',
+    textAlign: 'center',
   },
   logo: {
     fontFamily: 'var(--font-display)',
     fontSize: '1.3rem',
     fontWeight: 700,
     display: 'block',
-    marginBottom: '28px',
+    marginBottom: '32px',
   },
   title: {
     fontFamily: 'var(--font-display)',
     fontSize: '1.6rem',
     fontWeight: 700,
-    marginBottom: '6px',
+    marginBottom: '8px',
   },
   sub: {
     color: 'var(--gray)',
     fontSize: '0.9rem',
-    marginBottom: '28px',
+    marginBottom: '32px',
   },
-  error: {
-    background: '#fef2f2',
-    border: '1px solid #fecaca',
-    color: '#dc2626',
-    borderRadius: '10px',
-    padding: '12px 16px',
-    fontSize: '0.875rem',
-    marginBottom: '20px',
-  },
-  field: {
-    marginBottom: '16px',
-  },
-  label: {
-    display: 'block',
-    fontSize: '0.875rem',
-    fontWeight: 600,
-    marginBottom: '6px',
-    color: 'var(--dark)',
-  },
-  input: {
+  btnGoogle: {
     width: '100%',
-    padding: '12px 16px',
-    border: '1px solid var(--border)',
-    borderRadius: '10px',
-    fontSize: '0.95rem',
-    outline: 'none',
-    background: 'var(--cream)',
+    background: '#fff',
     color: 'var(--dark)',
-  },
-  btn: {
-    width: '100%',
-    background: 'var(--green)',
-    color: '#fff',
     fontWeight: 600,
     fontSize: '0.95rem',
     padding: '14px',
-    borderRadius: '10px',
-    border: 'none',
-    marginTop: '8px',
+    borderRadius: '12px',
+    border: '1px solid var(--border)',
+    cursor: 'pointer',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: '10px',
+    fontFamily: 'var(--font-body)',
+    boxShadow: '0 1px 3px rgba(0,0,0,0.08)',
     marginBottom: '20px',
   },
-  footer: {
-    textAlign: 'center',
-    fontSize: '0.875rem',
+  note: {
     color: 'var(--gray)',
+    fontSize: '0.8rem',
+    lineHeight: 1.6,
+    marginBottom: '16px',
   },
-  link: {
-    color: 'var(--green)',
-    fontWeight: 600,
+  terms: {
+    color: 'var(--gray)',
+    fontSize: '0.75rem',
+    lineHeight: 1.6,
   },
 }
