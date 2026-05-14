@@ -140,11 +140,11 @@ export default function Home({ user }) {
             <em style={styles.heroItalic}>ditolak sistem </em>sebelum ke HRD?
           </h1>
           <p style={styles.heroDesc}>
-            Platform AI yang sudah bantu fresh grad Indonesia dapat panggilan interview — mulai dari CV, ATS, sampai latihan interview.
+            Platform AI yang sudah bantu Fresh Grad Indonesia dapat panggilan interview — mulai dari CV, ATS, sampai latihan interview.
           </p>
           <div style={styles.heroCta}>
             <Link to={user ? '/dashboard' : '/register'} style={styles.btnPrimary}>
-              {user ? 'Buka Dashboard' : 'COBA GRATIS SEKARANG'}
+              {user ? 'Buka Dashboard' : 'Coba Gratis Sekarang'}
             </Link>
           </div>
           <p style={styles.heroNote}>✓ Hasil dalam beberapa detik &nbsp; ✓ Terbukti bantu dapat interview &nbsp; ✓ Feedback spesifik, bukan generik</p>
@@ -210,7 +210,7 @@ export default function Home({ user }) {
       {/* Testimonials */}
       <section style={styles.section}>
         <div style={styles.container}>
-          <h2 style={styles.sectionTitle}>Fresh grad Indonesia sudah buktiin sendiri</h2>
+          <h2 style={styles.sectionTitle}>Fresh Grad Indonesia sudah buktiin sendiri</h2>
           <div style={styles.testimoniGrid}>
             {testimonials.map((t) => (
               <div key={t.name} style={styles.testimoniCard}>
@@ -247,7 +247,7 @@ export default function Home({ user }) {
       <section style={styles.ctaSection}>
         <div style={styles.ctaInner}>
           <h2 style={styles.ctaTitle}>Sudah siap dapat panggilan interview pertamamu?</h2>
-          <p style={styles.ctaDesc}>Ribuan fresh grad Indonesia sudah mulai — sekarang giliran kamu.</p>
+          <p style={styles.ctaDesc}>Ribuan Fresh Grad Indonesia sudah mulai — sekarang giliran kamu.</p>
           <Link to={user ? '/dashboard' : '/register'} style={styles.ctaBtn}>
             {user ? 'Buka Dashboard' : 'Coba Gratis Sekarang'}
           </Link>
