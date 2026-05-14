@@ -144,7 +144,7 @@ export default function Home({ user }) {
           </p>
           <div style={styles.heroCta}>
             <Link to={user ? '/dashboard' : '/register'} style={styles.btnPrimary}>
-              {user ? 'Buka Dashboard' : 'COBA GRATIS SEKARANG'}
+              {user ? 'Buka Dashboard' : 'Coba Gratis Sekarang'}
             </Link>
           </div>
           <p style={styles.heroNote}>✓ Hasil dalam beberapa detik &nbsp; ✓ Terbukti bantu dapat interview &nbsp; ✓ Feedback spesifik, bukan generik</p>
