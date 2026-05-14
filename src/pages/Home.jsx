@@ -260,7 +260,7 @@ export default function Home({ user }) {
         <div style={styles.container}>
           <span style={styles.footerLogo}>Lamar<span style={{ color: 'var(--green)' }}>Cerdas</span></span>
           <p style={{ color: 'var(--gray)', fontSize: '0.875rem' }}>
-            © 2026 LamarCerdas. Dibuat dengan ❤️ untuk job seeker Indonesia.
+            © 2026 LamarCerdas. Dibuat dengan 💙 untuk job seeker Indonesia.
           </p>
         </div>
       </footer>
