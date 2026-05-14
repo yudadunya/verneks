@@ -55,7 +55,7 @@ export function useSubscription(userId) {
       .from('usage_tracking')
       .select('feature')
       .eq('user_id', userId)
-      .eq('month_year', currentPlan === 'free' ? '0000-00' : monthYear)
+      .eq('month_year', monthYear)
 
     // Also get all-time usage for free plan
     const { data: allTimeUsage } = await supabase
@@ -94,7 +94,7 @@ export function useSubscription(userId) {
   const { data, error } = await supabase.from('usage_tracking').insert({
     user_id: userId,
     feature,
-    month_year: plan === 'free' ? '0000-00' : monthYear,
+    month_year: monthYear,
   })
   
   await fetchData()
