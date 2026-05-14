@@ -80,7 +80,7 @@ const plans = [
 
 const testimonials = [
   {
-    avatar: '👩🏻',
+    avatar: '👨🏻',
     quote: 'Selama ini kirim CV ke mana-mana tapi ga ada yang nyangkut. Ternyata CV aku ga lolos ATS sama sekali. Setelah benerin berdasarkan saran LamarCerdas, langsung ada panggilan minggu berikutnya.',
     name: 'Rizky A.',
     detail: 'Teknik Informatika, Universitas Brawijaya',
