@@ -137,9 +137,10 @@ export default function Home({ user }) {
           <div style={styles.badge}>AI Career Platform khusus untuk Fresh Grad Indonesia</div>
           <h1 style={styles.heroTitle}>
             CV kamu<br />
-            <em style={styles.heroItalic}>ditolak sistem </em>sebelum sampe ke HRD?
+            <em style={styles.heroItalic}>ditolak sistem />
+              em>sebelum sampe ke HRD?
           </h1>
-          <p style={styles.heroDesc}>
+          <p style={styles.heroDesc}
             Platform AI yang sudah bantu fresh grad Indonesia dapat panggilan interview — mulai dari CV, ATS, sampai latihan interview.
           </p>
           <div style={styles.heroCta}>
