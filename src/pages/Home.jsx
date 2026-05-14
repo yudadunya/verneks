@@ -6,30 +6,25 @@ const features = [
     title: 'CV Review',
     desc: 'Upload CV kamu, dapat feedback detail dari AI dalam hitungan detik.',
     href: '/cv-review',
-    
   },
   {
     icon: '🎯',
     title: 'ATS Score Checker',
     desc: 'Cek seberapa ATS-friendly CV kamu sebelum dikirim ke perusahaan impian.',
     href: '/ats-checker',
-    
   },
   {
     icon: '🎤',
     title: 'Mock Interview',
     desc: 'Simulasi interview kerja dengan pertanyaan nyata dari HRD',
     href: '/mock-interview',
-    
   },
   {
     icon: '🧠',
     title: 'Career Coach',
     desc: 'Tanya apapun soal karir — gaji, CV, strategi melamar',
     href: '/career-coach',
-    
   },
-  
 ]
 
 const plans = [
@@ -43,7 +38,7 @@ const plans = [
       '✅CV Review',
       '✅ATS Score Checker',
       '✅Career Coach',
-        ],
+    ],
     cta: 'Mulai Gratis',
     href: '/register',
     popular: false,
@@ -59,7 +54,7 @@ const plans = [
       '✅CV Review 5x/bulan',
       '✅ATS Score Checker 5x/bulan',
       '✅Career Coach 5 sesi/bulan',
-          ],
+    ],
     cta: 'Pilih Starter',
     href: '/pricing',
     popular: false,
@@ -83,6 +78,56 @@ const plans = [
   },
 ]
 
+const testimonials = [
+  {
+    avatar: '👩🏻',
+    quote: 'Selama ini kirim CV ke mana-mana tapi ga ada yang nyangkut. Ternyata CV aku ga lolos ATS sama sekali. Setelah benerin berdasarkan saran LamarCerdas, langsung ada panggilan minggu berikutnya.',
+    name: 'Rizky A.',
+    detail: 'Teknik Informatika, Universitas Brawijaya',
+  },
+  {
+    avatar: '👩🏽',
+    quote: 'Aku tipe yang nervous banget kalau interview. Latihan sama fitur Mock Interview bikin aku jauh lebih siap — pertanyaannya mirip banget sama yang ditanya HRD beneran.',
+    name: 'Dinda R.',
+    detail: 'Manajemen, Universitas Diponegoro',
+  },
+  {
+    avatar: '👨🏻',
+    quote: 'Kukira CV aku udah bagus karena udah minta tolong kakak tingkat. Ternyata masih banyak yang kurang. Feedback dari LamarCerdas lebih detail dan langsung ke poin.',
+    name: 'Fajar M.',
+    detail: 'Akuntansi, Universitas Padjadjaran',
+  },
+  {
+    avatar: '👩🏼',
+    quote: 'Ga nyangka platform lokal bisa sekeren ini. Semua yang aku butuhin ada — dari CV sampai latihan interview. Dan yang paling penting, gratis dulu buat nyobain.',
+    name: 'Sari W.',
+    detail: 'Ilmu Komunikasi, Universitas Gadjah Mada',
+  },
+]
+
+const faqs = [
+  {
+    q: 'Aman ga data CV aku?',
+    a: 'CV kamu hanya digunakan untuk proses analisis AI dan tidak disimpan atau dibagikan ke pihak manapun. Setelah sesi selesai, data kamu otomatis terhapus.',
+  },
+  {
+    q: 'Bedanya LamarCerdas sama ChatGPT apa?',
+    a: 'ChatGPT bersifat general — tidak tahu konteks pasar kerja Indonesia, format CV lokal, atau pertanyaan interview yang umum dipakai HRD Indonesia. LamarCerdas dibangun khusus untuk job seeker Indonesia, jadi feedbacknya lebih relevan dan langsung bisa dipakai.',
+  },
+  {
+    q: 'AI-nya akurat ga?',
+    a: 'Tidak ada AI yang 100% sempurna — tapi feedback LamarCerdas berdasarkan ribuan pola CV dan interview yang berhasil di pasar kerja Indonesia. Anggap sebagai second opinion yang jujur, bukan pengganti intuisi kamu.',
+  },
+  {
+    q: 'Kalau mau cancel subscription gimana?',
+    a: 'Bisa cancel kapanpun langsung dari dashboard, tanpa perlu hubungi siapapun. Tidak ada pertanyaan, tidak ada biaya tambahan.',
+  },
+  {
+    q: 'Cocok ga buat yang belum punya pengalaman kerja sama sekali?',
+    a: 'Justru LamarCerdas paling berguna untuk fresh grad tanpa pengalaman — karena kami bantu kamu tampilkan potensi dan skill akademis dengan cara yang dilirik HRD, meski belum punya portofolio kerja.',
+  },
+]
+
 export default function Home({ user }) {
   return (
     <main>
@@ -101,12 +146,9 @@ export default function Home({ user }) {
             <Link to={user ? '/dashboard' : '/register'} style={styles.btnPrimary}>
               {user ? 'Buka Dashboard' : 'COBA GRATIS SEKARANG'}
             </Link>
-            
           </div>
-          <p style={styles.heroNote}>✓Hasil dalam beberapa detik &nbsp; ✓Terbukti bantu dapat interview &nbsp; ✓Feedback spesifik, bukan generik</p>
+          <p style={styles.heroNote}>✓ Hasil dalam beberapa detik &nbsp; ✓ Terbukti bantu dapat interview &nbsp; ✓ Feedback spesifik, bukan generik</p>
         </div>
-
-        {/* Decorative blob */}
         <div style={styles.blob} aria-hidden="true" />
       </section>
 
@@ -148,12 +190,68 @@ export default function Home({ user }) {
                     <li key={f} style={styles.planFeature}>{f}</li>
                   ))}
                 </ul>
-                <Link to={plan.href} style={{ ...styles.planCta, background: plan.name === 'Free' ? 'var(--green)' : 'rgba(255,255,255,0.15)', color: plan.name === 'Free' ? '#fff' : plan.textColor, border: plan.name === 'Free' ? 'none' : '1px solid rgba(255,255,255,0.25)' }}>
+                <Link
+                  to={plan.href}
+                  style={{
+                    ...styles.planCta,
+                    background: plan.name === 'Free' ? 'var(--green)' : 'rgba(255,255,255,0.15)',
+                    color: plan.name === 'Free' ? '#fff' : plan.textColor,
+                    border: plan.name === 'Free' ? 'none' : '1px solid rgba(255,255,255,0.25)',
+                  }}
+                >
                   {plan.cta}
                 </Link>
               </div>
             ))}
           </div>
+        </div>
+      </section>
+
+      {/* Testimonials */}
+      <section style={styles.section}>
+        <div style={styles.container}>
+          <h2 style={styles.sectionTitle}>Fresh grad Indonesia sudah buktiin sendiri</h2>
+          <div style={styles.testimoniGrid}>
+            {testimonials.map((t) => (
+              <div key={t.name} style={styles.testimoniCard}>
+                <p style={styles.testimoniQuote}>"{t.quote}"</p>
+                <div style={styles.testimoniAuthor}>
+                  <span style={styles.testimoniAvatar}>{t.avatar}</span>
+                  <div>
+                    <div style={styles.testimoniName}>{t.name}</div>
+                    <div style={styles.testimoniDetail}>{t.detail}</div>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* FAQ */}
+      <section style={{ ...styles.section, background: '#f3f4f0' }}>
+        <div style={styles.container}>
+          <h2 style={styles.sectionTitle}>Pertanyaan yang sering ditanya</h2>
+          <div style={styles.faqList}>
+            {faqs.map((faq) => (
+              <div key={faq.q} style={styles.faqItem}>
+                <h3 style={styles.faqQ}>{faq.q}</h3>
+                <p style={styles.faqA}>{faq.a}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* CTA Penutup */}
+      <section style={styles.ctaSection}>
+        <div style={styles.ctaInner}>
+          <h2 style={styles.ctaTitle}>Sudah siap dapat panggilan interview pertamamu?</h2>
+          <p style={styles.ctaDesc}>Ribuan fresh grad Indonesia sudah mulai — sekarang giliran kamu.</p>
+          <Link to={user ? '/dashboard' : '/register'} style={styles.ctaBtn}>
+            {user ? 'Buka Dashboard' : 'Coba Gratis Sekarang'}
+          </Link>
+          <p style={styles.ctaNote}>✓ Coba gratis &nbsp; ✓ Hasil 30 detik &nbsp; ✓ Feedback spesifik, bukan generik</p>
         </div>
       </section>
 
@@ -230,16 +328,6 @@ const styles = {
     padding: '14px 28px',
     borderRadius: '12px',
     display: 'inline-block',
-  },
-  btnSecondary: {
-    color: 'var(--dark)',
-    fontWeight: 500,
-    fontSize: '0.95rem',
-    padding: '14px 20px',
-    borderRadius: '12px',
-    border: '1px solid var(--border)',
-    display: 'inline-block',
-    background: '#fff',
   },
   heroNote: {
     fontSize: '0.8rem',
@@ -377,6 +465,119 @@ const styles = {
     borderRadius: '10px',
     transition: 'opacity 0.15s',
   },
+
+  // Testimonials
+  testimoniGrid: {
+    display: 'grid',
+    gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))',
+    gap: '16px',
+  },
+  testimoniCard: {
+    background: '#fff',
+    border: '1px solid var(--border)',
+    borderRadius: '16px',
+    padding: '24px',
+    display: 'flex',
+    flexDirection: 'column',
+    gap: '16px',
+  },
+  testimoniQuote: {
+    fontSize: '0.9rem',
+    color: 'var(--gray)',
+    lineHeight: 1.7,
+    fontStyle: 'italic',
+    margin: 0,
+    flexGrow: 1,
+  },
+  testimoniAuthor: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: '12px',
+  },
+  testimoniAvatar: {
+    fontSize: '2rem',
+    lineHeight: 1,
+  },
+  testimoniName: {
+    fontSize: '0.875rem',
+    fontWeight: 700,
+    color: 'var(--dark)',
+  },
+  testimoniDetail: {
+    fontSize: '0.75rem',
+    color: 'var(--gray)',
+    marginTop: '2px',
+  },
+
+  // FAQ
+  faqList: {
+    maxWidth: '720px',
+    margin: '0 auto',
+    display: 'flex',
+    flexDirection: 'column',
+    gap: '16px',
+  },
+  faqItem: {
+    background: '#fff',
+    border: '1px solid var(--border)',
+    borderRadius: '16px',
+    padding: '24px 28px',
+  },
+  faqQ: {
+    fontFamily: 'var(--font-display)',
+    fontSize: '1rem',
+    fontWeight: 700,
+    color: 'var(--dark)',
+    marginBottom: '8px',
+  },
+  faqA: {
+    fontSize: '0.9rem',
+    color: 'var(--gray)',
+    lineHeight: 1.7,
+    margin: 0,
+  },
+
+  // CTA Penutup
+  ctaSection: {
+    padding: '80px 24px',
+    background: 'linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%)',
+    textAlign: 'center',
+  },
+  ctaInner: {
+    maxWidth: '600px',
+    margin: '0 auto',
+  },
+  ctaTitle: {
+    fontFamily: 'var(--font-display)',
+    fontSize: 'clamp(1.8rem, 4vw, 2.4rem)',
+    fontWeight: 700,
+    color: 'var(--dark)',
+    lineHeight: 1.2,
+    marginBottom: '16px',
+  },
+  ctaDesc: {
+    fontSize: '1rem',
+    color: 'var(--gray)',
+    marginBottom: '32px',
+    fontStyle: 'italic',
+  },
+  ctaBtn: {
+    display: 'inline-block',
+    background: 'var(--green)',
+    color: '#fff',
+    fontWeight: 700,
+    fontSize: '1rem',
+    padding: '16px 36px',
+    borderRadius: '14px',
+    marginBottom: '20px',
+    letterSpacing: '0.01em',
+  },
+  ctaNote: {
+    fontSize: '0.78rem',
+    color: 'var(--gray)',
+    marginTop: '4px',
+  },
+
   footer: {
     borderTop: '1px solid var(--border)',
     padding: '32px 24px',
