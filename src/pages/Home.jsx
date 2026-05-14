@@ -102,7 +102,7 @@ export default function Home({ user }) {
             </Link>
             
           </div>
-          <p style={styles.heroNote}>✓ Coba Gratis &nbsp; ✓ Terbukti bantu dapat interview &nbsp; ✓ Feedback spesifik, bukan generik</p>
+          <p style={styles.heroNote}>✓Hasil dalam beberapa detik &nbsp; ✓Terbukti bantu dapat interview &nbsp; ✓Feedback spesifik, bukan generik</p>
         </div>
 
         {/* Decorative blob */}
