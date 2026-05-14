@@ -35,9 +35,9 @@ const plans = [
     color: '#f3f4f0',
     textColor: 'var(--dark)',
     features: [
-      '✅CV Review',
-      '✅ATS Score Checker',
-      '✅Career Coach',
+      '✅CV Review 1x/bulan',
+      '✅ATS Score Checker 1x/bulan',
+      '✅Career Coach 1x/bulan',
     ],
     cta: 'Mulai Gratis',
     href: '/register',
@@ -67,8 +67,8 @@ const plans = [
     color: 'var(--green)',
     textColor: '#fff',
     features: [
-      '✅CV Review 5x/bulan',
-      '✅ATS Score Checker 5x/bulan',
+      '✅CV Review unlimited',
+      '✅ATS Score Checker unlimited',
       '✅Career Coach unlimited',
       '✅Mock Interview unlimited',
     ],
