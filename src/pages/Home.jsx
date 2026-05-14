@@ -210,7 +210,7 @@ export default function Home({ user }) {
       {/* Testimonials */}
       <section style={styles.section}>
         <div style={styles.container}>
-          <h2 style={styles.sectionTitle}>Fresh grad Indonesia sudah buktiin sendiri</h2>
+          <h2 style={styles.sectionTitle}>Fresh Grad Indonesia sudah buktiin sendiri</h2>
           <div style={styles.testimoniGrid}>
             {testimonials.map((t) => (
               <div key={t.name} style={styles.testimoniCard}>
