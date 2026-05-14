@@ -16,19 +16,20 @@ const features = [
     
   },
   {
-    icon: '🧠',
-    title: 'Career Coach',
-    desc: 'Tanya apapun soal karir — gaji, CV, strategi melamar',
-    href: '/career-coach',
-    
-  },
-  {
     icon: '🎤',
     title: 'Mock Interview',
     desc: 'Simulasi interview kerja dengan pertanyaan nyata dari HRD',
     href: '/mock-interview',
     
   },
+  {
+    icon: '🧠',
+    title: 'Career Coach',
+    desc: 'Tanya apapun soal karir — gaji, CV, strategi melamar',
+    href: '/career-coach',
+    
+  },
+  
 ]
 
 const plans = [
@@ -88,7 +89,7 @@ export default function Home({ user }) {
       {/* Hero */}
       <section style={styles.hero}>
         <div style={styles.heroInner}>
-          <div style={styles.badge}>AI Career Platform khusus untuk Fres Grad Indonesia</div>
+          <div style={styles.badge}>AI Career Platform khusus untuk Fresh Grad Indonesia</div>
           <h1 style={styles.heroTitle}>
             CV kamu<br />
             <em style={styles.heroItalic}>ditolak sistem </em>sebelum ke HRD?
