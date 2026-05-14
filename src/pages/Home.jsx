@@ -276,11 +276,11 @@ const styles = {
     overflow: 'hidden',
   },
   heroInner: {
-    position: 'relative',
-    zIndex: 1,
-    maxWidth: '720px',
-    margin: '0 auto',
-  },
+  position: 'relative',
+  zIndex: 1,
+  maxWidth: '900px', // dari 720px → 900px
+  margin: '0 auto',
+},
   badge: {
     display: 'inline-block',
     background: '#f0fdf4',
@@ -294,13 +294,15 @@ const styles = {
     letterSpacing: '0.02em',
   },
   heroTitle: {
-    fontFamily: 'var(--font-display)',
-    fontSize: 'clamp(2.5rem, 6vw, 4rem)',
-    fontWeight: 700,
-    lineHeight: 1.1,
-    color: 'var(--dark)',
-    marginBottom: '20px',
-  },
+  fontFamily: 'var(--font-display)',
+  fontSize: 'clamp(1.8rem, 5vw, 3.5rem)', // turunkan dari 2.5rem
+  fontWeight: 700,
+  lineHeight: 1.1,
+  color: 'var(--dark)',
+  marginBottom: '20px',
+  maxWidth: '900px',      // tambah ini
+  margin: '0 auto 20px', // tambah ini
+},
   heroItalic: {
     fontStyle: 'italic',
     color: 'var(--green)',
