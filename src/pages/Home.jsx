@@ -94,7 +94,7 @@ export default function Home({ user }) {
             <em style={styles.heroItalic}>ditolak sistem </em>sebelum sampe ke HRD?
           </h1>
           <p style={styles.heroDesc}>
-            Platform AI yang sudah bantu fresh grad Indonesia dapat panggilan interview — mulai dari CV, ATS, latihan interview sampai Career Coach.
+            Platform AI yang sudah bantu fresh grad Indonesia dapat panggilan interview — mulai dari CV, ATS, sampai latihan interview.
           </p>
           <div style={styles.heroCta}>
             <Link to={user ? '/dashboard' : '/register'} style={styles.btnPrimary}>
