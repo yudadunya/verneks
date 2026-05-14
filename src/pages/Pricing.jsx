@@ -12,9 +12,9 @@ const plans = [
     textColor: 'var(--dark)',
     borderColor: 'var(--border)',
     features: [
-      '✅ CV Review',
-      '✅ ATS Checker',
-      '✅ Career Coach',
+      '✅ CV Review 1x/bulan',
+      '✅ ATS Checker 1x/bulan',
+      '✅ Career Coach 1x/bulan',
           ],
     cta: 'Pakai Gratis',
     popular: false,
@@ -48,8 +48,8 @@ const plans = [
     textColor: '#fff',
     borderColor: 'var(--green)',
     features: [
-      '✅ CV Review 5x/bulan',
-      '✅ ATS Checker 5x/bulan',
+      '✅ CV Review unlimited',
+      '✅ ATS Checker unlimited',
       '✅ Career Coach unlimited',
       '✅ Mock Interview unlimited',
     ],
