@@ -19,7 +19,7 @@
       gtag('config', 'G-CMBVW4CKPS');
     </script>
 
-    <!-- Meta Pixel Code (PASANG DI SINI) -->
+    <!-- Meta Pixel Code (Bagian Script Tetap di Head) -->
     <script>
       !function(f,b,e,v,n,t,s)
       {if(f.fbq)return;n=f.fbq=function(){n.callMethod?
@@ -29,17 +29,20 @@
       t.src=v;s=b.getElementsByTagName(e)[0];
       s.parentNode.insertBefore(t,s)}(window, document,'script',
       'https://connect.facebook.net/en_US/fbevents.js' );
-      fbq('init', '974692861714803'); // Ganti dengan ID Pixel Anda
+      fbq('init', '974692861714803'); 
       fbq('track', 'PageView');
     </script>
+    <!-- End Meta Pixel Script -->
+
+  </head>
+  <body>
+    <!-- Meta Pixel Noscript (PINDAHKAN KE SINI - Awal Body) -->
     <noscript>
       <img height="1" width="1" style="display:none" 
            src="https://www.facebook.com/tr?id=974692861714803&ev=PageView&noscript=1"/>
     </noscript>
-    <!-- End Meta Pixel Code -->
+    <!-- End Meta Pixel Noscript -->
 
-  </head>
-  <body>
     <div id="root"></div>
     <script type="module" src="/src/main.jsx"></script>
   </body>
