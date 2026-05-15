@@ -38,7 +38,7 @@ export const signInWithGoogle = async () => {
   const { data, error } = await supabase.auth.signInWithOAuth({
     provider: 'google',
     options: {
-      redirectTo: 'https://lamarcerdas-bwac.vercel.app/dashboard'
+      redirectTo: 'https://lamarcerdas.my.id/dashboard'
     }
   })
   return { data, error }
