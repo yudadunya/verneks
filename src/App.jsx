@@ -1,5 +1,6 @@
 import { BrowserRouter, Routes, Route } from 'react-router-dom'
 import { useState, useEffect } from 'react'
+import { SpeedInsights } from '@vercel/speed-insights/react'
 import { supabase } from './lib/supabase'
 import Home from './pages/Home'
 import Dashboard from './pages/Dashboard'
@@ -61,6 +62,7 @@ export default function App() {
         <Route path="/career-coach" element={<CareerCoach user={user} />} />
         <Route path="/pricing" element={<Pricing user={user} />} />
       </Routes>
+      <SpeedInsights />
     </BrowserRouter>
   )
 }
