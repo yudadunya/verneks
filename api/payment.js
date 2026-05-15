@@ -31,10 +31,10 @@ export default async function handler(req, res) {
       name: selectedPlan.name,
     }],
     callbacks: {
-      finish: `${process.env.VITE_APP_URL || 'https://lamarcerdas-bwac.vercel.app'}/dashboard?payment=success`,
-      error: `${process.env.VITE_APP_URL || 'https://lamarcerdas-bwac.vercel.app'}/pricing?payment=error`,
-      pending: `${process.env.VITE_APP_URL || 'https://lamarcerdas-bwac.vercel.app'}/dashboard?payment=pending`,
-    }
+  finish: 'https://lamarcerdas.my.id/dashboard?payment=success',
+  error: 'https://lamarcerdas.my.id/pricing?payment=error',
+  pending: 'https://lamarcerdas.my.id/dashboard?payment=pending',
+}
   }
 
   try {
