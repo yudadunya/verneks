@@ -93,7 +93,7 @@ export default function Chat({ user }) {
       )
       sessionStorage.setItem(sessionKey, '1')
     } else {
-      pushBot(`Halo lagi${firstName ? ` ${firstName}` : ''}! 👋 Mau ngapain hari ini?`, MAIN_MENU)
+      pushBot('Mau ngapain hari ini?', MAIN_MENU)
     }
   }, [subLoading])
 
@@ -151,8 +151,8 @@ export default function Chat({ user }) {
   }
 
   const route = async (id, label) => {
-    if (id === '__menu' || id === 'menu') { setMode('menu'); pushBot('Oke! Mau ngapain lagi?', MAIN_MENU); return }
-    if (id === '__clear_coach') { setCoachHistory([]); if (STORAGE_KEY) try { localStorage.removeItem(STORAGE_KEY) } catch {}; pushBot('Riwayat dihapus. Mulai dari awal ya! 🌱'); return }
+    if (id === '__menu' || id === 'menu') { setMode('menu'); pushBot('Mau ngapain lagi?', MAIN_MENU); return }
+    if (id === '__clear_coach') { setCoachHistory([]); if (STORAGE_KEY) try { localStorage.removeItem(STORAGE_KEY) } catch {}; pushBot('Riwayat dihapus. 🌱 Ketik pertanyaan karir kamu.'); return }
     if (id === 'cv-review')  { if (checkPaywall('cv_review'))     startCvReview();  return }
     if (id === 'ats')        { if (checkPaywall('ats_checker'))    startAts();       return }
     if (id === 'interview')  { if (checkPaywall('mock_interview')) startInterview(); return }
@@ -186,10 +186,7 @@ export default function Chat({ user }) {
   const startCvMaker   = () => { setMode('cv-maker-info'); setCvMakerInfo({ text: '', format: '' }); pushBot('Oke, kita bikin CV kamu! ✨\n\nCeritakan tentang dirimu:\n• Nama lengkap\n• Posisi yang dituju\n• Pengalaman kerja\n• Pendidikan\n• Keahlian / skills') }
   const startCoach = () => {
     setMode('coach')
-    if (coachHistory.length > 0) {
-      pushBot('Lanjut dari obrolan sebelumnya 💬', [{ id: '__clear_coach', label: '🗑️ Hapus riwayat' }])
-    }
-    // Kalau fresh start, tidak perlu pesan — greeting sudah ada di atas
+    // Tidak ada pesan tambahan — user langsung ketik
   }
 
   const doCvReview = async (jobTarget) => {
