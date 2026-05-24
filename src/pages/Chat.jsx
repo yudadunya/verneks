@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect, useCallback } from 'react'
 import { supabase } from '../lib/supabase'
 import { useNavigate } from 'react-router-dom'
+import Onboarding from '../components/Onboarding'
 
 // ─── Simple Markdown Renderer ───────────────────────────────────────────────
 function renderMd(text) {
@@ -71,6 +72,17 @@ export default function Chat({ user }) {
   const [interview, setInterview]     = useState({ position: '', level: '', messages: [], qNum: 0 })
   const [coachHistory, setCoachHistory] = useState([])
   const [cvMakerInfo, setCvMakerInfo] = useState({ text: '', format: '' })
+  const ONBOARDING_KEY = user?.id ? `onboarded_${user.id}` : null
+  const [showOnboarding, setShowOnboarding] = useState(() => {
+    if (!ONBOARDING_KEY) return false
+    return !localStorage.getItem(ONBOARDING_KEY)
+  })
+
+  const handleOnboardingDone = () => {
+    if (ONBOARDING_KEY) localStorage.setItem(ONBOARDING_KEY, '1')
+    setShowOnboarding(false)
+  }
+
   const bottomRef = useRef()
   const fileRef   = useRef()
 
@@ -491,7 +503,8 @@ export default function Chat({ user }) {
 
   // ── Render ────────────────────────────────────────────────────────────────
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', height: '100vh', background: 'var(--wa-chat-bg)', maxWidth: 480, margin: '0 auto' }}>
+    <div style={{ display: 'flex', flexDirection: 'column', height: '100vh', background: 'var(--wa-chat-bg)', maxWidth: 480, margin: '0 auto', position: 'relative' }}>
+      {showOnboarding && <Onboarding onDone={handleOnboardingDone} />}
 
       {/* ── Header ── */}
       <div style={{
