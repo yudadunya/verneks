@@ -107,7 +107,7 @@ export default function Home({ user }) {
           {loading ? 'Mengarahkan...' : 'Coba Gratis dengan Google'}
         </button>
         <p style={{ color: 'rgba(255,255,255,0.3)', fontSize: '0.72rem', marginTop: 10, textAlign: 'center', maxWidth: 360 }}>
-          Tidak perlu kartu kredit · Langsung aktif · Gratis selamanya
+          Tidak perlu kartu kredit · Langsung aktif ·
         </p>
       </div>
 
@@ -202,7 +202,7 @@ export default function Home({ user }) {
         <p style={{ color: 'rgba(255,255,255,0.7)', fontSize: '0.83rem', lineHeight: 1.6, fontStyle: 'italic', marginBottom: 8 }}>
           "ATS score CV aku 48. Setelah pakai LamarCerdas naik jadi 87. Seminggu kemudian dapet panggilan dari 3 perusahaan."
         </p>
-        <span style={{ color: 'rgba(255,255,255,0.35)', fontSize: '0.72rem' }}>— Rizky A., diterima di Tokopedia</span>
+        <span style={{ color: 'rgba(255,255,255,0.35)', fontSize: '0.72rem' }}>— Rizky A., diterima di salahsatu marketplace besar</span>
       </div>
 
       {/* Final CTA */}
