@@ -32,7 +32,6 @@ async function apiFetch(url, body) {
 // ─── Constants ───────────────────────────────────────────────────────────────
 const MAIN_MENU = [
   { id: 'cv-review',  label: '📄 Review CV',      desc: 'Feedback AI untuk CV kamu'       },
-  { id: 'ats',        label: '🎯 Cek ATS Score',  desc: 'Seberapa lolos ATS?'              },
   { id: 'interview',  label: '🎤 Mock Interview', desc: 'Latihan interview kerja'          },
   { id: 'cv-maker',   label: '✨ Bikin CV',        desc: 'CV profesional dalam menit'      },
   { id: 'coach',      label: '🧠 Tanya Karir',    desc: 'Chat bebas sama Diah Anna'       },
@@ -353,7 +352,6 @@ export default function Chat({ user }) {
       const data = await apiFetch('/api/cv-review', { cvText, jobTarget })
       logUsage('cv-review')
       pushBot(data.review, [
-        { id: 'ats', label: '🎯 Cek ATS Score juga' },
         { id: '__menu', label: '🏠 Kembali ke menu' },
       ])
     } catch (e) {
