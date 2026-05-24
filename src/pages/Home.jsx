@@ -34,8 +34,24 @@ export default function Home({ user }) {
       {/* Navbar */}
       <div style={{ position: 'relative', zIndex: 10, padding: '18px 20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-          <div style={{ width: 28, height: 28, borderRadius: 8, background: 'linear-gradient(135deg, #25D366, #128C7E)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.9rem' }}>✦</div>
-          <span style={{ color: '#fff', fontWeight: 700, fontSize: '1rem', letterSpacing: '-0.3px' }}>LamarCerdas</span>
+          <svg width="28" height="28" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg" style={{ flexShrink: 0 }}>
+            <defs>
+              <linearGradient id="lgNav" x1="0%" y1="0%" x2="100%" y2="100%">
+                <stop offset="0%" stopColor="#25D366"/><stop offset="100%" stopColor="#128C7E"/>
+              </linearGradient>
+            </defs>
+            <rect width="100" height="100" rx="22" fill="url(#lgNav)"/>
+            <rect x="27" y="18" width="36" height="50" rx="4" fill="none" stroke="rgba(255,255,255,0.95)" strokeWidth="3"/>
+            <line x1="34" y1="32" x2="56" y2="32" stroke="rgba(255,255,255,0.95)" strokeWidth="2.5" strokeLinecap="round"/>
+            <line x1="34" y1="41" x2="56" y2="41" stroke="rgba(255,255,255,0.75)" strokeWidth="2" strokeLinecap="round"/>
+            <line x1="34" y1="50" x2="50" y2="50" stroke="rgba(255,255,255,0.75)" strokeWidth="2" strokeLinecap="round"/>
+            <circle cx="68" cy="72" r="12" fill="#25D366"/>
+            <path d="M62 72 L66 76 L75 65" fill="none" stroke="#fff" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"/>
+            <path d="M72,22 L73.4,25.6 L77,27 L73.4,28.4 L72,32 L70.6,28.4 L67,27 L70.6,25.6 Z" fill="rgba(255,255,255,0.85)"/>
+          </svg>
+          <span style={{ color: '#fff', fontWeight: 800, fontSize: '1.05rem', letterSpacing: '-0.5px' }}>
+            Lamar<span style={{ background: 'linear-gradient(90deg, #25D366, #34B7F1)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>Cerdas</span>
+          </span>
         </div>
         <button onClick={handleGoogle} style={{ color: 'rgba(255,255,255,0.75)', fontSize: '0.85rem', fontWeight: 600, background: 'rgba(255,255,255,0.07)', border: '1px solid rgba(255,255,255,0.12)', borderRadius: 20, padding: '6px 16px', cursor: 'pointer' }}>
           Masuk
@@ -107,7 +123,7 @@ export default function Home({ user }) {
           {loading ? 'Mengarahkan...' : 'Coba Gratis dengan Google'}
         </button>
         <p style={{ color: 'rgba(255,255,255,0.3)', fontSize: '0.72rem', marginTop: 10, textAlign: 'center', maxWidth: 360 }}>
-          Tidak perlu kartu kredit · Langsung aktif ·
+          Tidak perlu kartu kredit · Langsung aktif
         </p>
       </div>
 
@@ -202,7 +218,7 @@ export default function Home({ user }) {
         <p style={{ color: 'rgba(255,255,255,0.7)', fontSize: '0.83rem', lineHeight: 1.6, fontStyle: 'italic', marginBottom: 8 }}>
           "ATS score CV aku 48. Setelah pakai LamarCerdas naik jadi 87. Seminggu kemudian dapet panggilan dari 3 perusahaan."
         </p>
-        <span style={{ color: 'rgba(255,255,255,0.35)', fontSize: '0.72rem' }}>— Rizky A., diterima di salahsatu marketplace besar</span>
+        <span style={{ color: 'rgba(255,255,255,0.35)', fontSize: '0.72rem' }}>— Rizky A., diterima di marketplace besar</span>
       </div>
 
       {/* Final CTA */}
