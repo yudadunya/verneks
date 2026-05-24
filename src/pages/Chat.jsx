@@ -186,11 +186,10 @@ export default function Chat({ user }) {
   const startCvMaker   = () => { setMode('cv-maker-info'); setCvMakerInfo({ text: '', format: '' }); pushBot('Oke, kita bikin CV kamu! ✨\n\nCeritakan tentang dirimu:\n• Nama lengkap\n• Posisi yang dituju\n• Pengalaman kerja\n• Pendidikan\n• Keahlian / skills') }
   const startCoach = () => {
     setMode('coach')
-    if (coachHistory.length === 0) {
-      pushBot('Halo! Aku Diah Anna 💙\n\nMau ngobrolin apa soal karir kamu?')
-    } else {
-      pushBot('Lanjut ya! 💙', [{ id: '__clear_coach', label: '🗑️ Hapus riwayat chat' }])
+    if (coachHistory.length > 0) {
+      pushBot('Lanjut dari obrolan sebelumnya 💬', [{ id: '__clear_coach', label: '🗑️ Hapus riwayat' }])
     }
+    // Kalau fresh start, tidak perlu pesan — greeting sudah ada di atas
   }
 
   const doCvReview = async (jobTarget) => {
