@@ -51,6 +51,14 @@ const CV_FORMATS = [
   { id: 'linkedin',  label: '💼 LinkedIn Profile' },
 ]
 
+// ─── Usage Limits per Plan ───────────────────────────────────────────────────
+const LIMITS = {
+  free:    { 'cv-review': 1,  ats: 1,  coach: 1,  interview: 0,  'cv-maker': 1  },
+  starter: { 'cv-review': 5,  ats: 5,  coach: 5,  interview: 0,  'cv-maker': 5  },
+  pro:     { 'cv-review': 20, ats: 20, coach: 20, interview: 20, 'cv-maker': 20 },
+}
+const PLAN_LABEL = { free: 'Free', starter: 'Starter', pro: 'Pro ⭐' }
+
 // ─── Main Chat Component ─────────────────────────────────────────────────────
 export default function Chat({ user }) {
   const navigate = useNavigate()
@@ -58,6 +66,7 @@ export default function Chat({ user }) {
   const [input, setInput]             = useState('')
   const [loading, setLoading]         = useState(false)
   const [mode, setMode]               = useState('menu')
+  const [userPlan, setUserPlan]       = useState('free')
   // Collected data across turns
   const [cvText, setCvText]           = useState('')
   const [interview, setInterview]     = useState({ position: '', level: '', messages: [], qNum: 0 })
@@ -94,6 +103,50 @@ export default function Chat({ user }) {
 
   // ── Scroll to bottom ─────────────────────────────────────────────────────
   useEffect(() => { bottomRef.current?.scrollIntoView({ behavior: 'smooth' }) }, [messages, loading])
+
+  // ── Load user plan ────────────────────────────────────────────────────────
+  useEffect(() => {
+    if (!user) return
+    supabase
+      .from('subscriptions').select('plan')
+      .eq('user_id', user.id).eq('status', 'active')
+      .gte('expires_at', new Date().toISOString())
+      .single()
+      .then(({ data }) => { if (data?.plan) setUserPlan(data.plan) })
+  }, [user])
+
+  // ── Usage check (returns true = boleh, false = blocked) ──────────────────
+  const checkUsage = async (feature) => {
+    const limit = LIMITS[userPlan]?.[feature] ?? 0
+    if (limit === 0) return false   // fitur tidak tersedia di plan ini
+    const monthStart = new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString()
+    const { count } = await supabase
+      .from('usage_logs')
+      .select('*', { count: 'exact', head: true })
+      .eq('user_id', user.id)
+      .eq('feature', feature)
+      .gte('created_at', monthStart)
+    return (count ?? 0) < limit
+  }
+
+  // ── Log usage ─────────────────────────────────────────────────────────────
+  const logUsage = (feature) => {
+    supabase.from('usage_logs').insert({ user_id: user.id, feature }).then(() => {})
+  }
+
+  // ── Show paywall message ──────────────────────────────────────────────────
+  const showPaywall = (feature) => {
+    const limit = LIMITS[userPlan]?.[feature] ?? 0
+    const featureLabel = { 'cv-review': 'CV Review', ats: 'ATS Checker', coach: 'Career Coach', interview: 'Mock Interview', 'cv-maker': 'CV Maker' }[feature]
+    const msg = limit === 0
+      ? `Fitur **${featureLabel}** tidak tersedia di paket **${PLAN_LABEL[userPlan]}** kamu.\n\nUpgrade untuk menggunakan fitur ini! 🚀`
+      : `Kamu sudah pakai **${featureLabel}** ${limit}x bulan ini (batas paket **${PLAN_LABEL[userPlan]}}**).\n\nUpgrade untuk lanjut! 🚀`
+    pushBot(msg, [
+      { id: '__pricing', label: '⭐ Lihat Paket Upgrade' },
+      { id: '__menu', label: '🏠 Menu utama' },
+    ])
+    setMode('menu')
+  }
 
   // ── Message helpers ───────────────────────────────────────────────────────
   const pushBot = useCallback((text, quickReplies = null) => {
@@ -160,6 +213,7 @@ export default function Chat({ user }) {
       pushBot('Oke! Mau ngapain lagi?', MAIN_MENU)
       return
     }
+    if (id === '__pricing') { navigate('/pricing'); return }
     if (id === 'cv-review')  { startCvReview(); return }
     if (id === 'ats')        { startAts(); return }
     if (id === 'interview')  { startInterview(); return }
@@ -254,32 +308,38 @@ export default function Chat({ user }) {
     }
   }
 
-  // ── Feature starters ──────────────────────────────────────────────────────
-  const startCvReview = () => {
+  // ── Feature starters (dengan usage check) ────────────────────────────────
+  const startCvReview = async () => {
+    if (!await checkUsage('cv-review')) { showPaywall('cv-review'); return }
     setMode('cv-review-upload')
     setCvText('')
     pushBot('Kirimkan file CV kamu (📎 PDF/Word), atau langsung paste teks CV-nya di sini.')
   }
 
-  const startAts = () => {
+  const startAts = async () => {
+    if (!await checkUsage('ats')) { showPaywall('ats'); return }
     setMode('ats-upload')
     setCvText('')
     pushBot('Kirimkan file CV kamu (📎 PDF/Word), atau paste teks CV-nya di sini.')
   }
 
-  const startInterview = () => {
+  const startInterview = async () => {
+    if (!await checkUsage('interview')) { showPaywall('interview'); return }
     setMode('interview-position')
     setInterview({ position: '', level: '', messages: [], qNum: 0 })
     pushBot('Siap latihan interview! 🎤\n\nMau melamar posisi apa?\n(contoh: Data Analyst, Software Engineer, Marketing Manager)')
   }
 
-  const startCvMaker = () => {
+  const startCvMaker = async () => {
+    if (!await checkUsage('cv-maker')) { showPaywall('cv-maker'); return }
     setMode('cv-maker-info')
     setCvMakerInfo({ text: '', format: '' })
     pushBot('Oke, kita bikin CV kamu! ✨\n\nCeritakan tentang dirimu:\n• Nama lengkap\n• Posisi yang dituju\n• Pengalaman kerja\n• Pendidikan\n• Keahlian / skills\n\nBisa panjang, nanti aku rapikan jadi CV profesional.')
   }
 
-  const startCoach = () => {
+  const startCoach = async () => {
+    if (!await checkUsage('coach')) { showPaywall('coach'); return }
+    logUsage('coach')  // log saat sesi dimulai
     setMode('coach')
     setCoachHistory([])
     pushBot('Halo! Aku Diah Anna 💙\n\nMau ngobrolin apa soal karir kamu?')
@@ -291,6 +351,7 @@ export default function Chat({ user }) {
     setLoading(true)
     try {
       const data = await apiFetch('/api/cv-review', { cvText, jobTarget })
+      logUsage('cv-review')
       pushBot(data.review, [
         { id: 'ats', label: '🎯 Cek ATS Score juga' },
         { id: '__menu', label: '🏠 Kembali ke menu' },
@@ -308,6 +369,7 @@ export default function Chat({ user }) {
     setLoading(true)
     try {
       const data = await apiFetch('/api/ats-checker', { cvText, jobDescription })
+      logUsage('ats')
       pushBot(data.result, [
         { id: 'cv-review', label: '📄 Review CV juga' },
         { id: '__menu', label: '🏠 Kembali ke menu' },
@@ -322,6 +384,7 @@ export default function Chat({ user }) {
   // ── Mock Interview API ────────────────────────────────────────────────────
   const startInterviewSession = async (position, level) => {
     setMode('interview-active')
+    logUsage('interview')
     setLoading(true)
     try {
       const data = await apiFetch('/api/mock-interview', { action: 'start', position, level, messages: [] })
@@ -384,6 +447,7 @@ export default function Chat({ user }) {
             skills: '',
           },
         })
+      logUsage('cv-maker')
       pushBot(data.result, [
         { id: 'ats', label: '🎯 Cek ATS Score' },
         { id: '__menu', label: '🏠 Kembali ke menu' },
@@ -452,11 +516,14 @@ export default function Chat({ user }) {
           <div style={{ color: '#fff', fontWeight: 700, fontSize: '1rem', lineHeight: 1.2 }}>Diah Anna</div>
           <div style={{ color: 'rgba(255,255,255,0.65)', fontSize: '0.73rem' }}>AI Career Coach • online</div>
         </div>
+        <button
+          onClick={() => navigate('/pricing')}
+          style={{ color: '#fff', fontSize: '0.72rem', padding: '3px 8px', background: userPlan === 'free' ? 'rgba(255,200,0,0.25)' : 'rgba(255,255,255,0.15)', border: '1px solid rgba(255,255,255,0.3)', borderRadius: 12, fontWeight: 600, cursor: 'pointer', whiteSpace: 'nowrap' }}
+        >
+          {PLAN_LABEL[userPlan]}
+        </button>
         {user?.user_metadata?.avatar_url && (
-          <img
-            src={user.user_metadata.avatar_url}
-            style={{ width: 32, height: 32, borderRadius: '50%', objectFit: 'cover', opacity: 0.9 }}
-          />
+          <img src={user.user_metadata.avatar_url} style={{ width: 30, height: 30, borderRadius: '50%', objectFit: 'cover', opacity: 0.9 }} />
         )}
         <button
           onClick={handleSignOut}
