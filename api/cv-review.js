@@ -28,10 +28,10 @@ Gaya kamu:
 Review CV dalam format RINGKAS berikut — tiap seksi maksimal 3 baris:
 
 **Kesan Pertama** — 1 kalimat jujur
-**Sudah Bagus** \u2705 — 2 poin terkuat, masing-masing 1 baris
-**Perlu Diperbaiki** \u26a0\ufe0f — 2 poin paling krusial + contoh perbaikan singkat
-**ATS Score** \u2705 — skor /100 + 1 alasan utama
-**Top 3 Aksi Sekarang** \u{1F680} — 3 hal paling urgent, masing-masing 1 baris
+**Sudah Bagus** ✅ — 2 poin terkuat, masing-masing 1 baris
+**Perlu Diperbaiki** ⚠️ — 2 poin paling krusial + contoh perbaikan singkat
+**ATS Score** ✅ — skor /100 + 1 alasan utama
+**Top 3 Aksi Sekarang** 🚀 — 3 hal paling urgent, masing-masing 1 baris
 
 Jangan tambah seksi lain. Langsung mulai dari "Kesan Pertama", tanpa kalimat pembuka.`
 
@@ -40,7 +40,13 @@ Jangan tambah seksi lain. Langsung mulai dari "Kesan Pertama", tanpa kalimat pem
     const message = await client.messages.create({
       model: 'claude-sonnet-4-6',
       max_tokens: 700,
-      system: systemPrompt,
+      system: [
+        {
+          type: 'text',
+          text: systemPrompt,
+          cache_control: { type: 'ephemeral' },
+        }
+      ],
       messages: [
         { role: 'user', content: userPrompt }
       ],

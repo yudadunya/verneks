@@ -17,9 +17,15 @@ export default async function handler(req, res) {
       const message = await client.messages.create({
         model: 'claude-sonnet-4-6',
         max_tokens: 500,
-        system: `Kamu adalah Diah Anna, career coach yang sedang melakukan mock interview.
+        system: [
+          {
+            type: 'text',
+            text: `Kamu adalah Diah Anna, career coach yang sedang melakukan mock interview.
 Gaya kamu hangat tapi profesional, seperti HRD senior yang supportif.
 Bahasa Indonesia natural, sesekali campur Inggris.`,
+            cache_control: { type: 'ephemeral' },
+          }
+        ],
         messages: [{
           role: 'user',
           content: `Mulai mock interview untuk posisi ${position} level ${level}. 
@@ -36,10 +42,6 @@ Jangan terlalu panjang.`
       const { questionNumber, totalQuestions = 6 } = req.body
       const isLastQuestion = questionNumber >= totalQuestions
 
-      const systemPrompt = `Kamu adalah Diah Anna, career coach yang sedang melakukan mock interview untuk posisi ${position} level ${level}.
-Gaya kamu hangat, jujur, dan konstruktif.
-Bahasa Indonesia natural.`
-
       const nextAction = isLastQuestion
         ? `Ini jawaban terakhir. Berikan feedback singkat untuk jawaban ini, lalu katakan sesi selesai dan minta user tunggu feedback lengkap.`
         : `Berikan feedback SINGKAT (2-3 kalimat) untuk jawaban ini — apa yang bagus dan apa yang bisa diperbaiki. Lalu langsung ajukan "Pertanyaan ${questionNumber + 1}: [pertanyaan baru yang relevan untuk posisi ini]"`
@@ -47,7 +49,15 @@ Bahasa Indonesia natural.`
       const message = await client.messages.create({
         model: 'claude-sonnet-4-6',
         max_tokens: 600,
-        system: systemPrompt,
+        system: [
+          {
+            type: 'text',
+            text: `Kamu adalah Diah Anna, career coach yang sedang melakukan mock interview untuk posisi ${position} level ${level}.
+Gaya kamu hangat, jujur, dan konstruktif.
+Bahasa Indonesia natural.`,
+            cache_control: { type: 'ephemeral' },
+          }
+        ],
         messages: [
           ...messages,
           {
@@ -69,9 +79,15 @@ Bahasa Indonesia natural.`
       const message = await client.messages.create({
         model: 'claude-sonnet-4-6',
         max_tokens: 2000,
-        system: `Kamu adalah Diah Anna, career coach expert untuk posisi ${position} level ${level}.
+        system: [
+          {
+            type: 'text',
+            text: `Kamu adalah Diah Anna, career coach expert untuk posisi ${position} level ${level}.
 Berikan feedback interview yang jujur, spesifik, dan actionable.
 Bahasa Indonesia natural. Format pakai markdown yang rapi.`,
+            cache_control: { type: 'ephemeral' },
+          }
+        ],
         messages: [
           ...messages,
           {

@@ -53,13 +53,20 @@ Analisis CV dan berikan output dalam format EXACT ini:
 ### 🚀 Quick Wins
 1. [aksi 1]
 2. [aksi 2]
-3. [aksi 3]
+3. [aksi 3]`
+
     const userPrompt = `${jobDescription ? `Job Description Target:\n${jobDescription}\n\n` : ''}CV saya:\n\n${cvText}`
 
     const message = await client.messages.create({
       model: 'claude-sonnet-4-6',
       max_tokens: 2000,
-      system: systemPrompt,
+      system: [
+        {
+          type: 'text',
+          text: systemPrompt,
+          cache_control: { type: 'ephemeral' },
+        }
+      ],
       messages: [
         { role: 'user', content: userPrompt }
       ],
