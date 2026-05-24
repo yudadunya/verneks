@@ -191,14 +191,14 @@ export default function Chat({ user }) {
 
   const doCvReview = async (jobTarget) => {
     setMode('cv-review-done'); setLoading(true); await trackUsage('cv_review')
-    try { const data = await apiFetch('/api/cv-review', { cvText, jobTarget }); pushBot(data.review, [{ id: 'ats', label: '🎯 Cek ATS Score juga' }, { id: '__menu', label: '🏠 Kembali ke menu' }]) }
+    try { const data = await apiFetch('/api/cv-review', { cvText, jobTarget }); pushBot(data.review) }
     catch (e) { pushBot(`Aduh, ada error: ${e.message}\n\nCoba lagi ya! 🙏`); setMode('menu') }
     setLoading(false)
   }
 
   const doAts = async (jobDescription) => {
     setMode('ats-done'); setLoading(true); await trackUsage('ats_checker')
-    try { const data = await apiFetch('/api/ats-checker', { cvText, jobDescription }); pushBot(data.result, [{ id: 'cv-review', label: '📄 Review CV juga' }, { id: '__menu', label: '🏠 Kembali ke menu' }]) }
+    try { const data = await apiFetch('/api/ats-checker', { cvText, jobDescription }); pushBot(data.result) }
     catch (e) { pushBot(`Error: ${e.message}`); setMode('menu') }
     setLoading(false)
   }
@@ -220,7 +220,7 @@ export default function Chat({ user }) {
       if (data.isComplete) {
         pushBot(data.reply)
         const fbData = await apiFetch('/api/mock-interview', { action: 'feedback', position: interview.position, level: interview.level, messages: updatedMsgs })
-        setMode('interview-done'); pushBot(fbData.feedback || 'Sesi interview selesai! 🎉', [{ id: 'interview', label: '🔄 Interview lagi' }, { id: '__menu', label: '🏠 Kembali ke menu' }])
+        setMode('interview-done'); pushBot(fbData.feedback || 'Sesi interview selesai! 🎉')
       } else { pushBot(data.reply) }
     } catch (e) { pushBot(`Error: ${e.message}`) }
     setLoading(false)
@@ -229,7 +229,7 @@ export default function Chat({ user }) {
   const doCvMaker = async (infoText, format) => {
     setMode('cv-maker-done'); setLoading(true); await trackUsage('cv_maker')
     const nameGuess = infoText.split('\n')[0].replace(/nama\s*:?\s*/i, '').trim()
-    try { const data = await apiFetch('/api/cv-maker', { mode: 'scratch', format, formData: { name: nameGuess || 'Nama Pengguna', experience: infoText, education: '', skills: '' } }); pushBot(data.result, [{ id: 'ats', label: '🎯 Cek ATS Score' }, { id: '__menu', label: '🏠 Kembali ke menu' }]) }
+    try { const data = await apiFetch('/api/cv-maker', { mode: 'scratch', format, formData: { name: nameGuess || 'Nama Pengguna', experience: infoText, education: '', skills: '' } }); pushBot(data.result) }
     catch (e) { pushBot(`Error: ${e.message}`); setMode('menu') }
     setLoading(false)
   }
@@ -245,7 +245,7 @@ export default function Chat({ user }) {
       const name = user.user_metadata?.name || user.user_metadata?.full_name || ''
       const data = await apiFetch('/api/career-coach', { messages: history, userProfile: name ? `Nama: ${name}` : '' })
       setCoachHistory(prev => [...prev, { role: 'assistant', content: data.reply }])
-      pushBot(data.reply, coachHistory.length === 0 ? [{ id: '__menu', label: '🏠 Menu utama' }] : null)
+      pushBot(data.reply)
     } catch { pushBot('Diah Anna lagi sibuk sebentar, coba lagi ya! 🙏') }
   }
 

@@ -43,7 +43,7 @@ Cara berkomunikasi:
 - Kalau ada yang perlu diperbaiki, bilang dengan empathy
 - **Jawaban RINGKAS dan PADAT** — maksimal 3-5 kalimat atau 3 poin per respons
 - Gunakan poin-poin pendek kalau ada beberapa saran
-- Akhiri dengan 1 pertanyaan follow-up ATAU 1 kalimat motivasi (pilih salah satu, jangan keduanya)
+- Kalau perlu info lebih, tanya 1 pertanyaan follow-up yang spesifik — kalau tidak perlu, langsung jawab saja
 - JANGAN ulang pertanyaan user di awal jawaban
 
 ${userProfile ? `Info user: ${userProfile}` : ''}
