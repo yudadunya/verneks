@@ -93,7 +93,7 @@ export default function Chat({ user }) {
       )
       sessionStorage.setItem(sessionKey, '1')
     } else {
-      pushBot('Mau ngapain hari ini?', MAIN_MENU)
+      pushBot('', MAIN_MENU)
     }
   }, [subLoading])
 
@@ -151,7 +151,7 @@ export default function Chat({ user }) {
   }
 
   const route = async (id, label) => {
-    if (id === '__menu' || id === 'menu') { setMode('menu'); pushBot('Mau ngapain lagi?', MAIN_MENU); return }
+    if (id === '__menu' || id === 'menu') { setMode('menu'); pushBot('', MAIN_MENU); return }
     if (id === '__clear_coach') { setCoachHistory([]); if (STORAGE_KEY) try { localStorage.removeItem(STORAGE_KEY) } catch {}; pushBot('Riwayat dihapus. 🌱 Ketik pertanyaan karir kamu.'); return }
     if (id === 'cv-review')  { if (checkPaywall('cv_review'))     startCvReview();  return }
     if (id === 'ats')        { if (checkPaywall('ats_checker'))    startAts();       return }
@@ -192,21 +192,21 @@ export default function Chat({ user }) {
   const doCvReview = async (jobTarget) => {
     setMode('cv-review-done'); setLoading(true); await trackUsage('cv_review')
     try { const data = await apiFetch('/api/cv-review', { cvText, jobTarget }); pushBot(data.review) }
-    catch (e) { pushBot(`Aduh, ada error: ${e.message}\n\nCoba lagi ya! 🙏`); setMode('menu') }
+    catch (e) { pushBot(`Aduh, ada error: ${e.message}`) }
     setLoading(false)
   }
 
   const doAts = async (jobDescription) => {
     setMode('ats-done'); setLoading(true); await trackUsage('ats_checker')
     try { const data = await apiFetch('/api/ats-checker', { cvText, jobDescription }); pushBot(data.result) }
-    catch (e) { pushBot(`Error: ${e.message}`); setMode('menu') }
+    catch (e) { pushBot(`Error: ${e.message}`) }
     setLoading(false)
   }
 
   const startInterviewSession = async (position, level) => {
     setMode('interview-active'); setLoading(true); await trackUsage('mock_interview')
     try { const data = await apiFetch('/api/mock-interview', { action: 'start', position, level, messages: [] }); setInterview(prev => ({ ...prev, messages: [{ role: 'assistant', content: data.reply }], qNum: data.questionNumber })); pushBot(data.reply) }
-    catch (e) { pushBot(`Error: ${e.message}`); setMode('menu') }
+    catch (e) { pushBot(`Error: ${e.message}`) }
     setLoading(false)
   }
 
@@ -230,7 +230,7 @@ export default function Chat({ user }) {
     setMode('cv-maker-done'); setLoading(true); await trackUsage('cv_maker')
     const nameGuess = infoText.split('\n')[0].replace(/nama\s*:?\s*/i, '').trim()
     try { const data = await apiFetch('/api/cv-maker', { mode: 'scratch', format, formData: { name: nameGuess || 'Nama Pengguna', experience: infoText, education: '', skills: '' } }); pushBot(data.result) }
-    catch (e) { pushBot(`Error: ${e.message}`); setMode('menu') }
+    catch (e) { pushBot(`Error: ${e.message}`) }
     setLoading(false)
   }
 
@@ -286,12 +286,14 @@ export default function Chat({ user }) {
       <div style={{ flex: 1, overflowY: 'auto', padding: '10px 10px 4px', display: 'flex', flexDirection: 'column', gap: '2px', WebkitOverflowScrolling: 'touch' }}>
         {messages.map(msg => (
           <div key={msg.id} style={{ marginBottom: msg.quickReplies ? 2 : 1 }}>
-            <div style={{ display: 'flex', justifyContent: msg.role === 'user' ? 'flex-end' : 'flex-start' }}>
-              <div
-                style={{ maxWidth: '82%', background: msg.role === 'user' ? '#DCF8C6' : '#fff', borderRadius: msg.role === 'user' ? '14px 3px 14px 14px' : '3px 14px 14px 14px', padding: '9px 13px', fontSize: '0.875rem', lineHeight: 1.55, boxShadow: '0 1px 2px rgba(0,0,0,0.1)', color: '#111B21', wordBreak: 'break-word', overflowWrap: 'anywhere', minWidth: 0 }}
-                dangerouslySetInnerHTML={{ __html: renderMd(msg.text) }}
-              />
-            </div>
+            {msg.text && (
+              <div style={{ display: 'flex', justifyContent: msg.role === 'user' ? 'flex-end' : 'flex-start' }}>
+                <div
+                  style={{ maxWidth: '82%', background: msg.role === 'user' ? '#DCF8C6' : '#fff', borderRadius: msg.role === 'user' ? '14px 3px 14px 14px' : '3px 14px 14px 14px', padding: '9px 13px', fontSize: '0.875rem', lineHeight: 1.55, boxShadow: '0 1px 2px rgba(0,0,0,0.1)', color: '#111B21', wordBreak: 'break-word', overflowWrap: 'anywhere', minWidth: 0 }}
+                  dangerouslySetInnerHTML={{ __html: renderMd(msg.text) }}
+                />
+              </div>
+            )}
             {msg.quickReplies && (
               <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, padding: '5px 4px 6px' }}>
                 {msg.quickReplies.map(qr => (
