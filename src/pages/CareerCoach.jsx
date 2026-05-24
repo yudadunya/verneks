@@ -1,5 +1,7 @@
 import { useState, useRef, useEffect } from 'react'
 import ReactMarkdown from 'react-markdown'
+import { useSubscription } from '../hooks/useSubscription'
+import FeatureGate from '../components/FeatureGate'
 
 const SUGGESTED_TOPICS = [
   'Review CV aku dong',
@@ -11,10 +13,12 @@ const SUGGESTED_TOPICS = [
 ]
 
 export default function CareerCoach({ user }) {
+  const { plan, canUse, getRemainingUses, trackUsage, loading: subLoading } = useSubscription(user?.id)
   const [messages, setMessages] = useState([])
   const [input, setInput] = useState('')
   const [loading, setLoading] = useState(false)
   const bottomRef = useRef(null)
+  const inputRef = useRef(null)
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' })
@@ -29,6 +33,8 @@ export default function CareerCoach({ user }) {
     setInput('')
     setLoading(true)
 
+    if (messages.length === 0) await trackUsage('diah_anna')
+
     try {
       const res = await fetch('/api/career-coach', {
         method: 'POST',
@@ -42,76 +48,102 @@ export default function CareerCoach({ user }) {
       if (data.error) throw new Error(data.error)
       setMessages([...newMessages, { role: 'assistant', content: data.reply }])
     } catch (e) {
-      setMessages([...newMessages, {
-        role: 'assistant',
-        content: 'Waduh, koneksi lagi gangguan nih. Coba kirim lagi ya! 🙏'
-      }])
+      setMessages([...newMessages, { role: 'assistant', content: 'Waduh, koneksi lagi gangguan nih. Coba kirim lagi ya! 🙏' }])
     }
     setLoading(false)
   }
 
-  const isFirstMessage = messages.length === 0
+  const handleKeyDown = (e) => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault()
+      sendMessage()
+    }
+  }
+
+  if (subLoading) return (
+    <div className="wa-screen">
+      <div className="wa-header">
+        <div className="wa-header-avatar">🧠</div>
+        <div><div className="wa-header-title">Diah Anna</div><div className="wa-header-subtitle">Memuat...</div></div>
+      </div>
+    </div>
+  )
+
+  if (!user) { window.location.href = '/register'; return null }
+
+  if (!canUse('diah_anna') && messages.length === 0) return (
+    <FeatureGate canUse={false} feature="diah_anna" plan={plan} user={user} />
+  )
+
+  const remaining = getRemainingUses('diah_anna')
+  const isFirst = messages.length === 0
 
   return (
-    <div style={styles.page}>
-      {/* Header */}
-      <div style={styles.header}>
-        <div style={styles.avatar}>DA</div>
-        <div>
-          <div style={styles.name}>Diah Anna</div>
-          <div style={styles.role}>Career Coach · AI</div>
+    <div className="wa-screen" style={{ height: '100vh', display: 'flex', flexDirection: 'column' }}>
+      {/* WA Chat Header */}
+      <div className="wa-header">
+        <div className="wa-header-avatar" style={{ background: '#9C27B0', fontSize: '0.9rem', fontWeight: 700, color: '#fff' }}>DA</div>
+        <div style={{ flex: 1 }}>
+          <div className="wa-header-title">Diah Anna 🧠</div>
+          <div className="wa-header-subtitle">
+            {loading ? 'mengetik...' : 'Career Coach · AI · Online'}
+          </div>
         </div>
-        <div style={styles.onlineDot} />
+        {plan !== 'platinum' && (
+          <div style={{ fontSize: '0.7rem', color: 'rgba(255,255,255,0.8)', textAlign: 'right' }}>
+            {remaining} sesi<br />tersisa
+          </div>
+        )}
       </div>
 
       {/* Chat area */}
-      <div style={styles.chatArea}>
-        {isFirstMessage && (
-          <div style={styles.welcome}>
-            <div style={styles.welcomeAvatar}>DA</div>
-            <div style={styles.welcomeBubble}>
-              <p>Hei! Saya <strong>Diah Anna</strong>, career coach kamu 👋</p>
-              <p style={{ marginTop: '8px' }}>Mau cerita soal karir, CV, interview, atau apapun — saya siap dengerin dan bantu. Mulai dari mana dulu?</p>
-            </div>
+      <div className="wa-chat-area" style={{ flex: 1, overflowY: 'auto', paddingBottom: '8px' }}>
 
-            <div style={styles.suggestions}>
-              {SUGGESTED_TOPICS.map((topic) => (
-                <button
-                  key={topic}
-                  onClick={() => sendMessage(topic)}
-                  style={styles.suggestionBtn}
-                >
-                  {topic}
-                </button>
-              ))}
+        {/* Welcome message */}
+        {isFirst && (
+          <>
+            <div className="wa-section-divider"><span>Mulai percakapan</span></div>
+            <div className="wa-bubble-wrap incoming">
+              <div>
+                <div className="wa-bubble incoming">
+                  <p>Hei! Saya <strong>Diah Anna</strong>, career coach kamu 👋</p>
+                  <p style={{ marginTop: '6px' }}>Mau cerita soal karir, CV, interview, atau apapun — saya siap dengerin dan bantu. Mulai dari mana dulu?</p>
+                  <div className="wa-bubble-time">sekarang ✓</div>
+                </div>
+                <div className="wa-quick-replies" style={{ paddingLeft: 0 }}>
+                  {SUGGESTED_TOPICS.map((topic) => (
+                    <button key={topic} className="wa-quick-reply" onClick={() => sendMessage(topic)}>
+                      {topic}
+                    </button>
+                  ))}
+                </div>
+              </div>
             </div>
-          </div>
+          </>
         )}
 
-        {messages.map((msg, i) => (
-          <div key={i} style={msg.role === 'user' ? styles.userRow : styles.assistantRow}>
-            {msg.role === 'assistant' && (
-              <div style={styles.msgAvatar}>DA</div>
-            )}
-            <div style={msg.role === 'user' ? styles.userBubble : styles.assistantBubble}>
-              {msg.role === 'assistant' ? (
-                <div style={styles.markdown}>
-                  <ReactMarkdown>{msg.content}</ReactMarkdown>
-                </div>
-              ) : (
-                msg.content
-              )}
+        {/* Messages */}
+        {messages.map((msg, i) => {
+          const time = new Date().toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' })
+          return (
+            <div key={i} className={`wa-bubble-wrap ${msg.role === 'user' ? 'outgoing' : 'incoming'}`}>
+              <div className={`wa-bubble ${msg.role === 'user' ? 'outgoing' : 'incoming'}`}>
+                {msg.role === 'assistant'
+                  ? <div className="wa-markdown"><ReactMarkdown>{msg.content}</ReactMarkdown></div>
+                  : msg.content}
+                <div className="wa-bubble-time">{time}{msg.role === 'user' ? ' ✓✓' : ''}</div>
+              </div>
             </div>
-          </div>
-        ))}
+          )
+        })}
 
+        {/* Typing */}
         {loading && (
-          <div style={styles.assistantRow}>
-            <div style={styles.msgAvatar}>DA</div>
-            <div style={styles.typingBubble}>
-              <span style={styles.dot} />
-              <span style={{ ...styles.dot, animationDelay: '0.2s' }} />
-              <span style={{ ...styles.dot, animationDelay: '0.4s' }} />
+          <div className="wa-bubble-wrap incoming">
+            <div className="wa-typing">
+              <div className="wa-typing-dot" />
+              <div className="wa-typing-dot" />
+              <div className="wa-typing-dot" />
             </div>
           </div>
         )}
@@ -119,224 +151,31 @@ export default function CareerCoach({ user }) {
         <div ref={bottomRef} />
       </div>
 
-      {/* Input */}
-      <div style={styles.inputArea}>
-        <input
-          style={styles.input}
-          placeholder="Cerita ke Diah Anna..."
-          value={input}
-          onChange={(e) => setInput(e.target.value)}
-          onKeyDown={(e) => e.key === 'Enter' && !e.shiftKey && sendMessage()}
-          disabled={loading}
-        />
+      {/* Input bar */}
+      <div className="wa-input-bar">
+        <div className="wa-input-wrap">
+          <textarea
+            ref={inputRef}
+            className="wa-input"
+            placeholder="Cerita ke Diah Anna..."
+            value={input}
+            rows={1}
+            onChange={(e) => setInput(e.target.value)}
+            onKeyDown={handleKeyDown}
+            disabled={loading}
+          />
+        </div>
         <button
+          className="wa-send-btn"
           onClick={() => sendMessage()}
           disabled={loading || !input.trim()}
-          style={styles.sendBtn}
         >
-          ↑
+          ➤
         </button>
       </div>
 
-      <style>{`
-        @keyframes bounce {
-          0%, 80%, 100% { transform: translateY(0); }
-          40% { transform: translateY(-6px); }
-        }
-      `}</style>
+      {/* Bottom nav spacer */}
+      <div style={{ height: '64px' }} />
     </div>
   )
-}
-
-const styles = {
-  page: {
-    display: 'flex',
-    flexDirection: 'column',
-    height: 'calc(100vh - 64px)',
-    maxWidth: '800px',
-    margin: '0 auto',
-    padding: '0 24px',
-  },
-  header: {
-    display: 'flex',
-    alignItems: 'center',
-    gap: '12px',
-    padding: '16px 0',
-    borderBottom: '1px solid var(--border)',
-    position: 'relative',
-  },
-  avatar: {
-    width: '44px',
-    height: '44px',
-    borderRadius: '50%',
-    background: 'var(--green)',
-    color: '#fff',
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    fontWeight: 700,
-    fontSize: '0.875rem',
-    fontFamily: 'var(--font-display)',
-    flexShrink: 0,
-  },
-  name: {
-    fontWeight: 700,
-    fontSize: '1rem',
-    fontFamily: 'var(--font-display)',
-  },
-  role: {
-    fontSize: '0.75rem',
-    color: 'var(--gray)',
-  },
-  onlineDot: {
-    width: '8px',
-    height: '8px',
-    borderRadius: '50%',
-    background: '#22c55e',
-    marginLeft: 'auto',
-  },
-  chatArea: {
-    flex: 1,
-    overflowY: 'auto',
-    padding: '24px 0',
-    display: 'flex',
-    flexDirection: 'column',
-    gap: '16px',
-  },
-  welcome: {
-    display: 'flex',
-    flexDirection: 'column',
-    gap: '12px',
-  },
-  welcomeAvatar: {
-    width: '40px',
-    height: '40px',
-    borderRadius: '50%',
-    background: 'var(--green)',
-    color: '#fff',
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    fontWeight: 700,
-    fontSize: '0.8rem',
-  },
-  welcomeBubble: {
-    background: '#fff',
-    border: '1px solid var(--border)',
-    borderRadius: '0 16px 16px 16px',
-    padding: '16px',
-    fontSize: '0.95rem',
-    lineHeight: 1.6,
-    maxWidth: '480px',
-  },
-  suggestions: {
-    display: 'flex',
-    flexWrap: 'wrap',
-    gap: '8px',
-    marginTop: '4px',
-  },
-  suggestionBtn: {
-    background: '#f0fdf4',
-    border: '1px solid #bbf7d0',
-    color: 'var(--green-dark)',
-    borderRadius: '100px',
-    padding: '8px 16px',
-    fontSize: '0.8rem',
-    fontWeight: 500,
-    cursor: 'pointer',
-    fontFamily: 'var(--font-body)',
-  },
-  userRow: {
-    display: 'flex',
-    justifyContent: 'flex-end',
-  },
-  assistantRow: {
-    display: 'flex',
-    gap: '10px',
-    alignItems: 'flex-start',
-  },
-  msgAvatar: {
-    width: '32px',
-    height: '32px',
-    borderRadius: '50%',
-    background: 'var(--green)',
-    color: '#fff',
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    fontWeight: 700,
-    fontSize: '0.7rem',
-    flexShrink: 0,
-    marginTop: '2px',
-  },
-  userBubble: {
-    background: 'var(--green)',
-    color: '#fff',
-    borderRadius: '16px 16px 0 16px',
-    padding: '12px 16px',
-    fontSize: '0.95rem',
-    lineHeight: 1.6,
-    maxWidth: '480px',
-  },
-  assistantBubble: {
-    background: '#fff',
-    border: '1px solid var(--border)',
-    borderRadius: '0 16px 16px 16px',
-    padding: '12px 16px',
-    fontSize: '0.95rem',
-    lineHeight: 1.6,
-    maxWidth: '520px',
-  },
-  typingBubble: {
-    background: '#fff',
-    border: '1px solid var(--border)',
-    borderRadius: '0 16px 16px 16px',
-    padding: '16px',
-    display: 'flex',
-    gap: '4px',
-    alignItems: 'center',
-  },
-  dot: {
-    width: '6px',
-    height: '6px',
-    borderRadius: '50%',
-    background: 'var(--gray)',
-    display: 'inline-block',
-    animation: 'bounce 1.2s infinite',
-  },
-  markdown: {
-    fontSize: '0.95rem',
-    lineHeight: 1.7,
-  },
-  inputArea: {
-    display: 'flex',
-    gap: '8px',
-    padding: '16px 0',
-    borderTop: '1px solid var(--border)',
-  },
-  input: {
-    flex: 1,
-    padding: '12px 16px',
-    border: '1px solid var(--border)',
-    borderRadius: '100px',
-    fontSize: '0.95rem',
-    outline: 'none',
-    background: '#fff',
-    fontFamily: 'var(--font-body)',
-  },
-  sendBtn: {
-    width: '44px',
-    height: '44px',
-    borderRadius: '50%',
-    background: 'var(--green)',
-    color: '#fff',
-    border: 'none',
-    fontSize: '1.2rem',
-    fontWeight: 700,
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    cursor: 'pointer',
-    flexShrink: 0,
-  },
 }

@@ -11,6 +11,10 @@
   "dependencies": {
     "@anthropic-ai/sdk": "^0.92.0",
     "@supabase/supabase-js": "^2.45.0",
+    "html2pdf.js": "^0.10.1",
+    "formidable": "^3.5.2",
+    "mammoth": "^1.8.0",
+    "pdf-parse": "^1.1.1",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
     "react-router-dom": "^7.0.0",

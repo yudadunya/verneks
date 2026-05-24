@@ -34,3 +34,12 @@ export const getUser = async () => {
   const { data: { user } } = await supabase.auth.getUser()
   return user
 }
+export const signInWithGoogle = async () => {
+  const { data, error } = await supabase.auth.signInWithOAuth({
+    provider: 'google',
+    options: {
+      redirectTo: 'https://lamarcerdas.my.id/dashboard'
+    }
+  })
+  return { data, error }
+}

@@ -1,244 +1,113 @@
 import { useState } from 'react'
 import ReactMarkdown from 'react-markdown'
+import { useSubscription } from '../hooks/useSubscription'
+import FeatureGate from '../components/FeatureGate'
 
 export default function ATSChecker({ user }) {
+  const { plan, canUse, getRemainingUses, trackUsage, loading: subLoading } = useSubscription(user?.id)
   const [cvText, setCvText] = useState('')
   const [jobDescription, setJobDescription] = useState('')
   const [result, setResult] = useState(null)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState(null)
   const [score, setScore] = useState(null)
+  const [view, setView] = useState('form')
 
-  const extractScore = (text) => {
-    const match = text.match(/ATS Score:\s*(\d+)\/100/)
-    return match ? parseInt(match[1]) : null
-  }
-
-  const getScoreColor = (score) => {
-    if (score >= 80) return '#16a34a'
-    if (score >= 60) return '#d97706'
-    return '#dc2626'
-  }
-
-  const getScoreLabel = (score) => {
-    if (score >= 80) return 'ATS Friendly 🎉'
-    if (score >= 60) return 'Perlu Perbaikan ⚠️'
-    return 'ATS Unfriendly ❌'
-  }
+  const extractScore = (text) => { const m = text.match(/ATS Score:\s*(\d+)\/100/); return m ? parseInt(m[1]) : null }
+  const getScoreColor = (s) => s >= 80 ? '#25D366' : s >= 60 ? '#f59e0b' : '#ea0038'
+  const getScoreLabel = (s) => s >= 80 ? 'ATS Friendly 🎉' : s >= 60 ? 'Perlu Perbaikan ⚠️' : 'ATS Unfriendly ❌'
 
   const handleCheck = async () => {
     if (!cvText.trim()) return setError('Paste isi CV kamu dulu ya.')
-    setLoading(true)
-    setError(null)
-    setResult(null)
-    setScore(null)
-
+    setLoading(true); setError(null); setResult(null); setScore(null)
     try {
-      const res = await fetch('/api/ats-checker', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ cvText, jobDescription }),
-      })
+      const res = await fetch('/api/ats-checker', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ cvText, jobDescription }) })
       const data = await res.json()
       if (data.error) throw new Error(data.error)
-      setResult(data.result)
-      setScore(extractScore(data.result))
-    } catch (e) {
-      setError('Waduh, ada error. Coba lagi ya.')
-    }
+      setResult(data.result); setScore(extractScore(data.result))
+      await trackUsage('ats_checker'); setView('result')
+    } catch { setError('Waduh, ada error. Coba lagi ya.') }
     setLoading(false)
   }
 
+  if (subLoading) return <div className="wa-screen"><div className="wa-header"><div className="wa-header-avatar">🎯</div><div><div className="wa-header-title">ATS Checker</div></div></div></div>
+  if (!user) { window.location.href = '/register'; return null }
+  if (!canUse('ats_checker')) return <FeatureGate canUse={false} feature="ats_checker" plan={plan} user={user} />
+
   return (
-    <main style={styles.page}>
-      <div style={styles.container}>
-        <div style={styles.header}>
-          <h1 style={styles.title}>🎯 ATS Score Checker</h1>
-          <p style={styles.sub}>Cek seberapa ATS-friendly CV kamu sebelum dikirim ke perusahaan impian.</p>
+    <div className="wa-screen">
+      <div className="wa-header">
+        {view === 'result' && <button className="wa-header-back" onClick={() => setView('form')}>‹</button>}
+        <div className="wa-header-avatar" style={{ background: '#2196F3' }}>🎯</div>
+        <div style={{ flex: 1 }}>
+          <div className="wa-header-title">ATS Score Checker</div>
+          <div className="wa-header-subtitle">{view === 'result' ? (score !== null ? `Score: ${score}/100` : 'Hasil analisis') : `Sisa ${getRemainingUses('ats_checker')}x bulan ini`}</div>
         </div>
+        {view === 'result' && score !== null && (
+          <div className="wa-score-ring" style={{ background: getScoreColor(score), width: '44px', height: '44px', fontSize: '0.8rem', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800, color: '#fff' }}>
+            {score}
+          </div>
+        )}
+      </div>
 
-        <div style={styles.layout}>
-          <div style={styles.inputSection}>
-            <div style={styles.field}>
-              <label style={styles.label}>Job Description (opsional tapi recommended)</label>
-              <textarea
-                style={{ ...styles.textarea, minHeight: '120px' }}
-                placeholder="Paste job description dari lowongan yang mau kamu lamar — hasilnya akan jauh lebih akurat"
-                value={jobDescription}
-                onChange={(e) => setJobDescription(e.target.value)}
-                rows={5}
-              />
-              <p style={styles.hint}>{jobDescription.length} karakter</p>
-            </div>
+      {view === 'form' ? (
+        <div style={{ flex: 1, overflowY: 'auto' }}>
+          <div className="wa-section-header">Job Description (opsional tapi recommended)</div>
+          <div className="wa-form-group">
+            <textarea className="wa-form-textarea" rows={4} placeholder="Paste job description dari lowongan yang mau kamu lamar — hasilnya jauh lebih akurat" value={jobDescription} onChange={e => setJobDescription(e.target.value)} />
+            <div style={{ fontSize: '0.72rem', color: 'var(--wa-gray)', textAlign: 'right' }}>{jobDescription.length} karakter</div>
+          </div>
 
-            <div style={styles.field}>
-              <label style={styles.label}>Isi CV Kamu</label>
-              <textarea
-                style={styles.textarea}
-                placeholder="Paste seluruh isi CV kamu di sini"
-                value={cvText}
-                onChange={(e) => setCvText(e.target.value)}
-                rows={14}
-              />
-              <p style={styles.hint}>{cvText.length} karakter</p>
-            </div>
+          <div className="wa-section-header">Isi CV Kamu</div>
+          <div className="wa-form-group">
+            <textarea className="wa-form-textarea" rows={10} placeholder="Paste seluruh isi CV kamu di sini" value={cvText} onChange={e => setCvText(e.target.value)} />
+            <div style={{ fontSize: '0.72rem', color: 'var(--wa-gray)', textAlign: 'right' }}>{cvText.length} karakter</div>
+          </div>
 
-            {error && <div style={styles.error}>{error}</div>}
+          {error && <div className="wa-alert red" style={{ margin: '8px 12px' }}>{error}</div>}
 
-            <button onClick={handleCheck} disabled={loading} style={styles.btn}>
+          <div style={{ padding: '12px 16px' }}>
+            <button className="wa-btn-primary" onClick={handleCheck} disabled={loading}>
               {loading ? '⏳ Menganalisis...' : '🎯 Cek ATS Score'}
             </button>
           </div>
-
-          <div style={styles.resultSection}>
-            {loading && (
-              <div style={styles.loadingBox}>
-                <div style={styles.spinner} />
-                <p style={{ color: 'var(--gray)', fontSize: '0.9rem' }}>AI lagi analisis CV kamu...</p>
-              </div>
-            )}
-
-            {score !== null && !loading && (
-              <div style={styles.scoreBox}>
-                <div style={{ ...styles.scoreBig, color: getScoreColor(score) }}>
-                  {score}<span style={styles.scoreOf}>/100</span>
-                </div>
-                <div style={{ ...styles.scoreLabel, color: getScoreColor(score) }}>
-                  {getScoreLabel(score)}
-                </div>
-                <div style={styles.scoreBar}>
-                  <div style={{
-                    ...styles.scoreBarFill,
-                    width: `${score}%`,
-                    background: getScoreColor(score)
-                  }} />
-                </div>
-              </div>
-            )}
-
-            {result && !loading && (
-              <div style={styles.resultBox}>
-                <div style={styles.markdown}>
-                  <ReactMarkdown>{result}</ReactMarkdown>
-                </div>
-              </div>
-            )}
-
-            {!loading && !result && (
-              <div style={styles.placeholder}>
-                <p style={{ fontSize: '3rem', marginBottom: '12px' }}>🎯</p>
-                <p style={{ color: 'var(--gray)', fontSize: '0.9rem', textAlign: 'center' }}>
-                  Hasil ATS Score kamu akan muncul di sini
-                </p>
-              </div>
-            )}
-          </div>
+          <div style={{ height: '64px' }} />
         </div>
-      </div>
-    </main>
-  )
-}
+      ) : (
+        <div style={{ flex: 1, overflowY: 'auto' }}>
+          {/* Score bubble */}
+          {score !== null && (
+            <div className="wa-bubble-wrap incoming" style={{ padding: '12px 8px 0' }}>
+              <div className="wa-bubble incoming" style={{ maxWidth: '100%', width: '100%' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '16px', marginBottom: '8px' }}>
+                  <div style={{ width: '70px', height: '70px', borderRadius: '50%', background: getScoreColor(score), display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontWeight: 800, fontSize: '1.3rem', flexShrink: 0 }}>
+                    {score}
+                  </div>
+                  <div>
+                    <div style={{ fontWeight: 700, fontSize: '1rem', color: getScoreColor(score) }}>{getScoreLabel(score)}</div>
+                    <div style={{ fontSize: '0.8rem', color: 'var(--wa-gray)' }}>ATS Score CV kamu</div>
+                    <div style={{ marginTop: '6px' }}>
+                      <div className="wa-progress-track" style={{ width: '160px' }}>
+                        <div className="wa-progress-fill" style={{ width: `${score}%`, background: getScoreColor(score) }} />
+                      </div>
+                    </div>
+                  </div>
+                </div>
+                <div className="wa-bubble-time">{new Date().toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' })}</div>
+              </div>
+            </div>
+          )}
 
-const styles = {
-  page: { padding: '40px 24px', minHeight: 'calc(100vh - 64px)' },
-  container: { maxWidth: '1100px', margin: '0 auto' },
-  header: { marginBottom: '32px' },
-  title: { fontFamily: 'var(--font-display)', fontSize: '2rem', fontWeight: 700, marginBottom: '8px' },
-  sub: { color: 'var(--gray)', fontSize: '0.95rem' },
-  layout: { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '24px' },
-  inputSection: {},
-  field: { marginBottom: '16px' },
-  label: { display: 'block', fontSize: '0.875rem', fontWeight: 600, marginBottom: '6px' },
-  textarea: {
-    width: '100%',
-    padding: '14px 16px',
-    border: '1px solid var(--border)',
-    borderRadius: '10px',
-    fontSize: '0.9rem',
-    outline: 'none',
-    background: 'var(--cream)',
-    resize: 'vertical',
-    lineHeight: 1.6,
-    fontFamily: 'var(--font-body)',
-    minHeight: '200px',
-  },
-  hint: { fontSize: '0.75rem', color: 'var(--gray)', marginTop: '4px', textAlign: 'right' },
-  error: {
-    background: '#fef2f2',
-    border: '1px solid #fecaca',
-    color: '#dc2626',
-    borderRadius: '10px',
-    padding: '12px 16px',
-    fontSize: '0.875rem',
-    marginBottom: '16px',
-  },
-  btn: {
-    width: '100%',
-    background: 'var(--green)',
-    color: '#fff',
-    fontWeight: 600,
-    fontSize: '0.95rem',
-    padding: '14px',
-    borderRadius: '10px',
-    border: 'none',
-  },
-  resultSection: {
-    background: '#fff',
-    border: '1px solid var(--border)',
-    borderRadius: '16px',
-    overflow: 'hidden',
-    minHeight: '400px',
-    display: 'flex',
-    flexDirection: 'column',
-  },
-  loadingBox: {
-    display: 'flex',
-    flexDirection: 'column',
-    alignItems: 'center',
-    justifyContent: 'center',
-    flex: 1,
-    gap: '12px',
-    padding: '40px',
-  },
-  spinner: {
-    width: '32px',
-    height: '32px',
-    borderRadius: '50%',
-    border: '3px solid var(--green)',
-    borderTopColor: 'transparent',
-    animation: 'spin 0.8s linear infinite',
-  },
-  scoreBox: {
-    padding: '28px',
-    borderBottom: '1px solid var(--border)',
-    textAlign: 'center',
-    background: '#fafaf7',
-  },
-  scoreBig: {
-    fontFamily: 'var(--font-display)',
-    fontSize: '4rem',
-    fontWeight: 700,
-    lineHeight: 1,
-  },
-  scoreOf: { fontSize: '1.5rem', opacity: 0.5 },
-  scoreLabel: { fontWeight: 600, fontSize: '1rem', marginTop: '8px', marginBottom: '16px' },
-  scoreBar: {
-    background: '#e5e7e0',
-    borderRadius: '100px',
-    height: '8px',
-    overflow: 'hidden',
-    maxWidth: '200px',
-    margin: '0 auto',
-  },
-  scoreBarFill: { height: '100%', borderRadius: '100px', transition: 'width 1s ease' },
-  resultBox: { flex: 1, overflow: 'auto' },
-  markdown: { padding: '20px', fontSize: '0.9rem', lineHeight: 1.7, color: 'var(--dark)' },
-  placeholder: {
-    display: 'flex',
-    flexDirection: 'column',
-    alignItems: 'center',
-    justifyContent: 'center',
-    flex: 1,
-    padding: '40px',
-  },
+          {result && (
+            <div style={{ padding: '8px 16px' }}>
+              <div style={{ background: '#fff', borderRadius: '12px', padding: '16px', border: '1px solid var(--wa-border)', fontSize: '0.88rem', lineHeight: 1.7 }}>
+                <ReactMarkdown>{result}</ReactMarkdown>
+              </div>
+            </div>
+          )}
+          <div style={{ height: '80px' }} />
+        </div>
+      )}
+    </div>
+  )
 }

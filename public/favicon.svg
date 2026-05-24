@@ -1,0 +1,29 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
+  <!-- Background white circle -->
+  <circle cx="50" cy="50" r="50" fill="#ffffff"/>
+  
+  <!-- Lightbulb outline -->
+  <path d="M50 15 C33 15 20 27 20 43 C20 54 26 62 35 67 L35 72 C35 74 37 76 39 76 L61 76 C63 76 65 74 65 72 L65 67 C74 62 80 54 80 43 C80 27 67 15 50 15 Z" 
+    fill="none" stroke="#16a34a" stroke-width="4" stroke-linejoin="round"/>
+  
+  <!-- Base stripes -->
+  <rect x="38" y="76" width="24" height="4" rx="2" fill="#16a34a"/>
+  <rect x="40" y="82" width="20" height="4" rx="2" fill="#16a34a"/>
+  <rect x="43" y="88" width="14" height="4" rx="2" fill="#16a34a"/>
+
+  <!-- Filament stem -->
+  <line x1="50" y1="70" x2="50" y2="58" stroke="#16a34a" stroke-width="3.5" stroke-linecap="round"/>
+  <circle cx="50" cy="57" r="3" fill="#16a34a"/>
+
+  <!-- Chart arrow going up -->
+  <polyline 
+    points="36,56 42,50 48,54 58,38" 
+    fill="none" stroke="#16a34a" stroke-width="3.5" 
+    stroke-linecap="round" stroke-linejoin="round"/>
+  
+  <!-- Arrow head -->
+  <polyline 
+    points="53,34 58,38 62,43" 
+    fill="none" stroke="#16a34a" stroke-width="3.5" 
+    stroke-linecap="round" stroke-linejoin="round"/>
+</svg>
