@@ -180,9 +180,7 @@ export default function Chat({ user }) {
   const startCoach = () => {
     setMode('coach')
     if (coachHistory.length === 0) {
-      pushBot('Halo! Aku Diah Anna 💙
-
-Mau ngobrolin apa soal karir kamu?')
+      pushBot('Halo! Aku Diah Anna 💙\n\nMau ngobrolin apa soal karir kamu?')
     } else {
       pushBot('Lanjut ya! 💙', [{ id: '__clear_coach', label: '🗑️ Hapus riwayat chat' }])
     }
