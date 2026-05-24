@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect, useCallback } from 'react'
+import { useState, useEffect, useRef, useCallback } from 'react'
 import { supabase } from '../lib/supabase'
 import { useNavigate } from 'react-router-dom'
 import { useSubscription, LIMITS, FEATURE_LABEL } from '../hooks/useSubscription'
@@ -63,7 +63,6 @@ export default function Chat({ user }) {
   const navigate = useNavigate()
   const { plan, loading: subLoading, canUse, trackUsage } = useSubscription(user?.id)
 
-  // Ambil riwayat coach dari localStorage saat pertama load
   const STORAGE_KEY = user?.id ? `coach_history_${user.id}` : null
   const savedHistory = STORAGE_KEY ? (() => { try { return JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]') } catch { return [] } })() : []
 
@@ -92,19 +91,18 @@ export default function Chat({ user }) {
         MAIN_MENU
       )
       sessionStorage.setItem(sessionKey, '1')
-    } else {
-      // tidak perlu pushBot saat refresh
+    } else if (messages.length === 0) {
+      pushBot(`Selamat datang kembali, ${firstName || 'Sobat'}! 👋\n\nAda yang bisa aku bantu lagi?`, MAIN_MENU)
     }
   }, [subLoading])
 
   useEffect(() => { bottomRef.current?.scrollIntoView({ behavior: 'smooth' }) }, [messages, loading])
 
-  // Simpan riwayat coach ke localStorage setiap kali berubah (max 50 pesan terakhir)
   useEffect(() => {
     if (!STORAGE_KEY) return
     const trimmed = coachHistory.slice(-50)
     try { localStorage.setItem(STORAGE_KEY, JSON.stringify(trimmed)) } catch {}
-  }, [coachHistory]) // eslint-disable-line
+  }, [coachHistory])
 
   const pushBot = useCallback((text, quickReplies = null) => {
     setMessages(prev => [...prev, { id: Date.now() + Math.random(), role: 'bot', text, quickReplies }])
@@ -184,10 +182,7 @@ export default function Chat({ user }) {
   const startAts       = () => { setMode('ats-upload'); setCvText(''); pushBot('Kirimkan file CV kamu (📎 PDF/Word), atau paste teks CV-nya di sini.') }
   const startInterview = () => { setMode('interview-position'); setInterview({ position: '', level: '', messages: [], qNum: 0 }); pushBot('Siap latihan interview! 🎤\n\nMau melamar posisi apa?\n(contoh: Data Analyst, Software Engineer, Marketing Manager)') }
   const startCvMaker   = () => { setMode('cv-maker-info'); setCvMakerInfo({ text: '', format: '' }); pushBot('Oke, kita bikin CV kamu! ✨\n\nCeritakan tentang dirimu:\n• Nama lengkap\n• Posisi yang dituju\n• Pengalaman kerja\n• Pendidikan\n• Keahlian / skills') }
-  const startCoach = () => {
-    setMode('coach')
-    // Tidak ada pesan tambahan — user langsung ketik
-  }
+  const startCoach = () => { setMode('coach') }
 
   const doCvReview = async (jobTarget) => {
     setMode('cv-review-done'); setLoading(true); await trackUsage('cv_review')
@@ -253,9 +248,8 @@ export default function Chat({ user }) {
   const canUpload = ['cv-review-upload', 'ats-upload'].includes(mode)
 
   return (
-    // ─── Layout: fixed full-screen, tidak geser saat keyboard/scroll ───────
     <div style={{
-      position: 'fixed', inset: 0,           // ← fix header hilang saat scroll
+      position: 'fixed', inset: 0,
       display: 'flex', flexDirection: 'column',
       background: 'var(--wa-chat-bg)',
       maxWidth: 480, margin: '0 auto',
@@ -263,14 +257,15 @@ export default function Chat({ user }) {
       right: 'auto', width: '100%',
     }}>
 
-      {/* ── Header — selalu terlihat karena parent fixed ── */}
       <div style={{
-        background: 'var(--wa-header)', padding: '10px 16px',
+        background: 'var(--wa-header)', padding: '10px 16px 6px',
         display: 'flex', alignItems: 'center', gap: '12px',
-        flexShrink: 0,                        // ← tidak boleh menyusut
+        flexShrink: 0,
         zIndex: 10,
       }}>
-        <div style={{ width: 42, height: 42, borderRadius: '50%', background: '#25D366', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.3rem', flexShrink: 0 }}>🧠</div>
+        <div style={{ width: 42, height: 42, borderRadius: '50%', background: '#25D366', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.3rem', flexShrink: 0 }}>
+          <span>🧠</span>
+        </div>
         <div style={{ flex: 1 }}>
           <div style={{ color: '#fff', fontWeight: 700, fontSize: '1rem', lineHeight: 1.2 }}>Diah Anna</div>
           <div style={{ color: 'rgba(255,255,255,0.65)', fontSize: '0.73rem' }}>
@@ -282,7 +277,52 @@ export default function Chat({ user }) {
         </button>
       </div>
 
-      {/* ── Messages — satu-satunya area yang scroll ── */}
+      <div style={{
+        background: 'var(--wa-header)',
+        padding: '0 10px 10px',
+        display: 'flex',
+        gap: '8px',
+        overflowX: 'auto',
+        flexShrink: 0,
+        zIndex: 10,
+        scrollbarWidth: 'none',
+        msOverflowStyle: 'none',
+      }}>
+        <style>{`
+          .no-scrollbar::-webkit-scrollbar { display: none; }
+        `}</style>
+        <div className="no-scrollbar" style={{ display: 'flex', gap: '8px', overflowX: 'auto' }}>
+          {MAIN_MENU.map(item => {
+            const isActive = mode.startsWith(item.id)
+            return (
+              <button
+                key={item.id}
+                onClick={() => handleQuickReply(item.id, item.label)}
+                disabled={loading}
+                style={{
+                  flexShrink: 0,
+                  background: isActive ? '#fff' : 'rgba(255,255,255,0.15)',
+                  color: isActive ? '#075E54' : '#fff',
+                  border: 'none',
+                  borderRadius: '16px',
+                  padding: '6px 14px',
+                  fontSize: '0.75rem',
+                  fontWeight: 600,
+                  cursor: loading ? 'not-allowed' : 'pointer',
+                  transition: 'all 0.2s ease',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '4px',
+                  boxShadow: isActive ? '0 2px 6px rgba(0,0,0,0.2)' : 'none'
+                }}
+              >
+                {item.label}
+              </button>
+            )
+          })}
+        </div>
+      </div>
+
       <div style={{ flex: 1, overflowY: 'auto', padding: '10px 10px 4px', display: 'flex', flexDirection: 'column', gap: '2px', WebkitOverflowScrolling: 'touch' }}>
         {messages.map(msg => (
           <div key={msg.id} style={{ marginBottom: msg.quickReplies ? 2 : 1 }}>
@@ -317,14 +357,12 @@ export default function Chat({ user }) {
         <div ref={bottomRef} style={{ height: 4 }} />
       </div>
 
-      {/* ── Upload hint ── */}
       {canUpload && (
         <div style={{ background: '#e8f5e9', borderTop: '1px solid #c8e6c9', padding: '6px 14px', fontSize: '0.75rem', color: '#2e7d32', textAlign: 'center', flexShrink: 0 }}>
           📎 Klik ikon clip untuk upload PDF/Word, atau paste teks CV langsung
         </div>
       )}
 
-      {/* ── Input bar ── */}
       <div style={{ background: '#f0f2f5', padding: '8px 10px', display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0, borderTop: '1px solid #e0e0e0' }}>
         <input ref={fileRef} type="file" accept=".pdf,.doc,.docx" style={{ display: 'none' }} onChange={e => handleFile(e.target.files[0])} />
         <button onClick={() => canUpload && fileRef.current?.click()}
@@ -334,7 +372,7 @@ export default function Chat({ user }) {
         <input value={input} onChange={e => setInput(e.target.value)}
           onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey && !loading) { e.preventDefault(); handleSend() } }}
           placeholder="Ketik pesan..." disabled={loading}
-          style={{ flex: 1, background: '#fff', border: 'none', borderRadius: 24, padding: '10px 16px', fontSize: '0.9rem', outline: 'none', fontFamily: 'var(--font-body)' }}
+          style={{ flex: 1, background: '#fff', border: 'none', borderRadius: 24, padding: '10px 16px', fontSize: '0.9rem', outline: 'none' }}
         />
         <button onClick={handleSend} disabled={loading || !input.trim()}
           style={{ width: 38, height: 38, borderRadius: '50%', background: !loading && input.trim() ? '#25D366' : '#ccc', border: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1rem', flexShrink: 0, cursor: !loading && input.trim() ? 'pointer' : 'default', color: '#fff' }}>
@@ -349,5 +387,5 @@ export default function Chat({ user }) {
         }
       `}</style>
     </div>
+    }
   )
-}
