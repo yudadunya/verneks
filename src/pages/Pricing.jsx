@@ -15,7 +15,7 @@ const PLANS = [
     popular: false,
     features: [
       { label: 'CV Review', val: '1x' },
-      { label: 'Career Coach (Diah Anna)', val: '1x' },
+      { label: 'Career Coach (Diah Anna)', val: 'Bebas' },
       { label: 'CV Maker AI', val: '1x' },
       { label: 'Mock Interview', val: false },
       { label: 'Priority response', val: false },
