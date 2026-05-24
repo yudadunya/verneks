@@ -82,12 +82,19 @@ export default function Chat({ user }) {
 
   useEffect(() => {
     if (subLoading || !user) return
+    const sessionKey = `greeted_${user.id}`
+    const alreadyGreeted = sessionStorage.getItem(sessionKey)
     const firstName = (user.user_metadata?.name || user.user_metadata?.full_name || '').split(' ')[0]
     const planLabel = { free: 'Free', starter: 'Starter', pro: 'Pro' }[plan] || 'Free'
-    pushBot(
-      `Halo${firstName ? ` ${firstName}` : ''}! 👋 Aku Diah Anna, AI Career Coach kamu.\n\nPaket kamu: *${planLabel}*\n\nMau mulai dari mana hari ini?`,
-      MAIN_MENU
-    )
+    if (!alreadyGreeted) {
+      pushBot(
+        `Halo${firstName ? ` ${firstName}` : ''}! 👋 Aku Diah Anna, AI Career Coach kamu.\n\nPaket kamu: *${planLabel}*\n\nMau mulai dari mana hari ini?`,
+        MAIN_MENU
+      )
+      sessionStorage.setItem(sessionKey, '1')
+    } else {
+      pushBot(`Halo lagi${firstName ? ` ${firstName}` : ''}! 👋 Mau ngapain hari ini?`, MAIN_MENU)
+    }
   }, [subLoading])
 
   useEffect(() => { bottomRef.current?.scrollIntoView({ behavior: 'smooth' }) }, [messages, loading])
@@ -285,7 +292,7 @@ export default function Chat({ user }) {
           <div key={msg.id} style={{ marginBottom: msg.quickReplies ? 2 : 1 }}>
             <div style={{ display: 'flex', justifyContent: msg.role === 'user' ? 'flex-end' : 'flex-start' }}>
               <div
-                style={{ maxWidth: '82%', background: msg.role === 'user' ? '#DCF8C6' : '#fff', borderRadius: msg.role === 'user' ? '14px 3px 14px 14px' : '3px 14px 14px 14px', padding: '9px 13px', fontSize: '0.875rem', lineHeight: 1.55, boxShadow: '0 1px 2px rgba(0,0,0,0.1)', color: '#111B21', wordBreak: 'break-word' }}
+                style={{ maxWidth: '82%', background: msg.role === 'user' ? '#DCF8C6' : '#fff', borderRadius: msg.role === 'user' ? '14px 3px 14px 14px' : '3px 14px 14px 14px', padding: '9px 13px', fontSize: '0.875rem', lineHeight: 1.55, boxShadow: '0 1px 2px rgba(0,0,0,0.1)', color: '#111B21', wordBreak: 'break-word', overflowWrap: 'anywhere', minWidth: 0 }}
                 dangerouslySetInnerHTML={{ __html: renderMd(msg.text) }}
               />
             </div>
