@@ -93,7 +93,7 @@ export default function Chat({ user }) {
       )
       sessionStorage.setItem(sessionKey, '1')
     } else {
-      pushBot('', MAIN_MENU)
+      // tidak perlu pushBot saat refresh
     }
   }, [subLoading])
 
@@ -151,7 +151,7 @@ export default function Chat({ user }) {
   }
 
   const route = async (id, label) => {
-    if (id === '__menu' || id === 'menu') { setMode('menu'); pushBot('', MAIN_MENU); return }
+    if (id === '__menu' || id === 'menu') { setMode('menu'); return }
     if (id === '__clear_coach') { setCoachHistory([]); if (STORAGE_KEY) try { localStorage.removeItem(STORAGE_KEY) } catch {}; pushBot('Riwayat dihapus. 🌱 Ketik pertanyaan karir kamu.'); return }
     if (id === 'cv-review')  { if (checkPaywall('cv_review'))     startCvReview();  return }
     if (id === 'ats')        { if (checkPaywall('ats_checker'))    startAts();       return }
