@@ -373,8 +373,8 @@ export default function Chat({ user }) {
         >
           {PLAN_LABEL[plan] || 'Free'}
         </button>
-        <button onClick={() => setShowShareApp(true)} style={{ color: 'rgba(255,255,255,0.7)', fontSize: '1rem', padding: '4px 6px', background: 'none', border: 'none', cursor: 'pointer' }} title="Ajak teman">
-          ↗️
+        <button onClick={() => setShowShareApp(true)} style={{ color: 'rgba(255,255,255,0.6)', fontSize: '0.78rem', fontWeight: 600, padding: '4px 8px', background: 'rgba(255,255,255,0.1)', borderRadius: 6, border: 'none', cursor: 'pointer' }}>
+          Bagikan
         </button>
         <button onClick={handleSignOut} style={{ color: 'rgba(255,255,255,0.6)', fontSize: '0.78rem', padding: '4px 8px', background: 'rgba(255,255,255,0.1)', borderRadius: 6, border: 'none', cursor: 'pointer' }}>
           Keluar
