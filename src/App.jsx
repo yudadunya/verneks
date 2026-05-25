@@ -72,10 +72,10 @@ export default function App() {
         {/* Semua route fitur redirect ke /chat */}
         <Route path="/dashboard"      element={<Chat user={user} chatMessages={chatMessages} setChatMessages={setChatMessages} />} />
         <Route path="/cv-review"      element={<Chat user={user} chatMessages={chatMessages} setChatMessages={setChatMessages} />} />
-        <Route path="/ats-checker"    element={<Chat user={user} />} />
-        <Route path="/mock-interview" element={<Chat user={user} />} />
-        <Route path="/career-coach"   element={<Chat user={user} />} />
-        <Route path="/cv-maker"       element={<Chat user={user} />} />
+        <Route path="/ats-checker"    element={<Chat user={user} chatMessages={chatMessages} setChatMessages={setChatMessages} />} />
+        <Route path="/mock-interview" element={<Chat user={user} chatMessages={chatMessages} setChatMessages={setChatMessages} />} />
+        <Route path="/career-coach"   element={<Chat user={user} chatMessages={chatMessages} setChatMessages={setChatMessages} />} />
+        <Route path="/cv-maker"       element={<Chat user={user} chatMessages={chatMessages} setChatMessages={setChatMessages} />} />
       </Routes>
     </BrowserRouter>
   )
