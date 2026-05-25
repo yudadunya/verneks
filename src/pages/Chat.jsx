@@ -48,7 +48,7 @@ const CV_FORMATS = [
   { id: 'linkedin',  label: '💼 LinkedIn Profile' },
 ]
 
-export default function Chat({ user }) {
+export default function Chat({ user, chatMessages = [], setChatMessages }) {
   const navigate = useNavigate()
   const { plan, loading: subLoading, checkUsage, logUsage } = useSubscription(user?.id)
 
@@ -57,25 +57,8 @@ export default function Chat({ user }) {
   const storageKey     = userKey ? `lc_chat_${userKey}` : null
   const ONBOARDING_KEY = userKey ? `onboarded_${userKey}` : null
 
-  // Baca localStorage langsung di initializer
-  const [messages, setMessages] = useState(() => {
-    if (!userKey) return []
-    // Coba berbagai kemungkinan key (id atau email)
-    const keys = [
-      user?.id    ? `lc_chat_${user.id}`    : null,
-      user?.email ? `lc_chat_${user.email}` : null,
-    ].filter(Boolean)
-    for (const k of keys) {
-      try {
-        const saved = localStorage.getItem(k)
-        if (saved) {
-          const parsed = JSON.parse(saved)
-          if (Array.isArray(parsed) && parsed.length > 0) return parsed
-        }
-      } catch {}
-    }
-    return []
-  })
+  // messages dikelola di App.jsx agar survive re-mount saat login/logout
+  const [messages, setMessages] = useState(chatMessages)
 
   const [input, setInput]               = useState('')
   const [loading, setLoading]           = useState(false)
@@ -99,36 +82,22 @@ export default function Chat({ user }) {
   // ── Auth guard + greeting ────────────────────────────────────────────────
   useEffect(() => {
     if (!user) { navigate('/'); return }
-    // Kalau sudah ada pesan (dari localStorage atau state), tidak perlu greeting
-    setMessages(prev => {
-      if (prev.length > 0) return prev
-      // Coba load dari localStorage saat user baru tersedia
-      const keys = [
-        user.id    ? `lc_chat_${user.id}`    : null,
-        user.email ? `lc_chat_${user.email}` : null,
-      ].filter(Boolean)
-      for (const k of keys) {
-        try {
-          const saved = localStorage.getItem(k)
-          if (saved) {
-            const parsed = JSON.parse(saved)
-            if (Array.isArray(parsed) && parsed.length > 0) return parsed
-          }
-        } catch {}
-      }
-      // Tidak ada riwayat — tampilkan greeting
-      const firstName = (user.user_metadata?.name || user.user_metadata?.full_name || '').split(' ')[0]
-      const greet = { id: Date.now(), role: 'bot', text: `Halo${firstName ? ` ${firstName}` : ''}! 👋 Aku Diah Anna, AI Career Coach kamu.\n\nPilih fitur di atas atau langsung ketik pertanyaanmu ya!` }
-      return [greet]
-    })
+    // Kalau sudah ada riwayat (dari App.jsx), tidak perlu greeting
+    if (chatMessages.length > 0) return
+    const firstName = (user.user_metadata?.name || user.user_metadata?.full_name || '').split(' ')[0]
+    pushBot(`Halo${firstName ? ` ${firstName}` : ''}! 👋 Aku Diah Anna, AI Career Coach kamu.\n\nPilih fitur di atas atau langsung ketik pertanyaanmu ya!`)
   }, [user?.id])
 
-  // ── Simpan riwayat ke localStorage ────────────────────────────────────
+  // ── Sync messages ke App.jsx dan simpan ke localStorage ───────────────
   useEffect(() => {
-    const key = user?.id ? `lc_chat_${user.id}` : user?.email ? `lc_chat_${user.email}` : null
-    if (!key || messages.length === 0) return
+    if (messages.length === 0) return
+    // Sync ke parent (App.jsx) agar tidak hilang saat re-mount
+    if (setChatMessages) setChatMessages(messages)
+    // Simpan ke localStorage sebagai backup
+    const key = user?.id ? `lc_chat_${user.id}` : null
+    if (!key) return
     try { localStorage.setItem(key, JSON.stringify(messages.slice(-100))) } catch {}
-  }, [messages, user?.id])
+  }, [messages])
 
   useEffect(() => { bottomRef.current?.scrollIntoView({ behavior: 'smooth' }) }, [messages, loading])
 
