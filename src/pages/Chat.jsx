@@ -52,19 +52,12 @@ export default function Chat({ user, chatMessages = [], setChatMessages }) {
   const navigate = useNavigate()
   const { plan, loading: subLoading, checkUsage, logUsage } = useSubscription(user?.id)
 
-  // Storage keys — pakai user.id konsisten di semua tempat
   const storageKey     = user?.id ? `lc_chat_${user.id}` : null
   const ONBOARDING_KEY = user?.id ? `onboarded_${user.id}` : null
 
-  // messages dikelola di App.jsx agar survive re-mount saat login/logout
-  const [messages, setMessages] = useState(() => chatMessages.length > 0 ? chatMessages : [])
-
-  // Sync dari App.jsx kalau prop berubah (misal setelah async load)
-  useEffect(() => {
-    if (chatMessages.length > 0 && messages.length === 0) {
-      setMessages(chatMessages)
-    }
-  }, [chatMessages.length])
+  // Pakai chatMessages dari App.jsx langsung sebagai source of truth
+  const messages    = chatMessages
+  const setMessages = setChatMessages
 
   const [input, setInput]               = useState('')
   const [loading, setLoading]           = useState(false)
@@ -88,19 +81,15 @@ export default function Chat({ user, chatMessages = [], setChatMessages }) {
   // ── Auth guard + greeting ────────────────────────────────────────────────
   useEffect(() => {
     if (!user) { navigate('/'); return }
-    // Kalau sudah ada riwayat di localStorage, tidak perlu greeting
-    if (storageKey && localStorage.getItem(storageKey)) return
+    // Kalau sudah ada riwayat, tidak perlu greeting
+    if (messages.length > 0) return
     const firstName = (user.user_metadata?.name || user.user_metadata?.full_name || '').split(' ')[0]
     pushBot(`Halo${firstName ? ` ${firstName}` : ''}! 👋 Aku Diah Anna, AI Career Coach kamu.\n\nPilih fitur di atas atau langsung ketik pertanyaanmu ya!`)
   }, [user?.id])
 
-  // ── Sync messages ke App.jsx dan simpan ke localStorage ───────────────
+  // ── Simpan ke localStorage setiap messages berubah ───────────────────
   useEffect(() => {
-    if (messages.length === 0) return
-    // Sync ke parent (App.jsx) agar tidak hilang saat re-mount
-    if (setChatMessages) setChatMessages(messages)
-    // Simpan ke localStorage
-    if (!storageKey) return
+    if (!storageKey || messages.length === 0) return
     try { localStorage.setItem(storageKey, JSON.stringify(messages)) } catch {}
   }, [messages])
 
