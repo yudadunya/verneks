@@ -169,8 +169,34 @@ export default function Chat({ user }) {
       case 'interview-active':   { await answerInterview(id); return }
       case 'cv-maker-info':   { setCvMakerInfo(prev => ({ ...prev, text: id })); setMode('cv-maker-format'); pushBot('Mau format CV apa?', CV_FORMATS); return }
       case 'cv-maker-format': { if (CV_FORMATS.find(f => f.id === id)) await doCvMaker(cvMakerInfo.text, id); return }
-      case 'coach':           { await doCoach(id); return }
+      case 'coach': {
+        // Cek keyword fitur berbayar bahkan saat dalam sesi coach
+        const msg = id.toLowerCase()
+        const isInterviewTopic = /interview|wawancara|latihan interview|mock|pertanyaan interview|simulasi interview/.test(msg)
+        const isCvReviewTopic  = /review cv|cek cv|koreksi cv|nilai cv|feedback cv|benerin cv/.test(msg)
+        const isAtsTopic       = /ats|applicant tracking|ats score|lolos ats/.test(msg)
+        const isCvMakerTopic   = /bikin cv|buat cv|template cv|contoh cv|cv maker|tulis cv/.test(msg)
+
+        if (isInterviewTopic && !await checkUsage('interview')) { showPaywall('interview'); return }
+        if (isCvReviewTopic  && !await checkUsage('cv-review')) { showPaywall('cv-review'); return }
+        if (isAtsTopic       && !await checkUsage('ats'))        { showPaywall('ats');       return }
+        if (isCvMakerTopic   && !await checkUsage('cv-maker'))   { showPaywall('cv-maker');  return }
+
+        await doCoach(id); return
+      }
       default: {
+        // Deteksi keyword fitur berbayar sebelum masuk coach
+        const msg = id.toLowerCase()
+        const isInterviewTopic = /interview|wawancara|latihan interview|mock|pertanyaan interview|simulasi interview/.test(msg)
+        const isCvReviewTopic  = /review cv|cek cv|koreksi cv|nilai cv|feedback cv|benerin cv/.test(msg)
+        const isAtsTopic       = /ats|applicant tracking|ats score|lolos ats/.test(msg)
+        const isCvMakerTopic   = /bikin cv|buat cv|template cv|contoh cv|cv maker|tulis cv/.test(msg)
+
+        if (isInterviewTopic && !await checkUsage('interview')) { showPaywall('interview'); return }
+        if (isCvReviewTopic  && !await checkUsage('cv-review')) { showPaywall('cv-review'); return }
+        if (isAtsTopic       && !await checkUsage('ats'))        { showPaywall('ats');       return }
+        if (isCvMakerTopic   && !await checkUsage('cv-maker'))   { showPaywall('cv-maker');  return }
+
         setMode('coach'); setCoachHistory([{ role: 'user', content: id }])
         setLoading(true); await callCoachApi([{ role: 'user', content: id }]); setLoading(false)
       }
@@ -290,18 +316,17 @@ export default function Chat({ user }) {
   const canUpload = ['cv-review-upload', 'ats-upload'].includes(mode)
 
   return (
-    // ── Layout: sticky header + keyboard-aware height ──
+    // ── FIX UTAMA: position fixed + inset 0 → header tidak pernah hilang ──
     <div style={{
+      position: 'fixed', top: 0, left: '50%', transform: 'translateX(-50%)',
+      width: '100%', maxWidth: 480, bottom: 0,
       display: 'flex', flexDirection: 'column',
-      width: '100%', maxWidth: 480, margin: '0 auto',
-      height: '100dvh',          /* dvh = aware keyboard mobile */
-      position: 'relative',
       background: 'var(--wa-chat-bg)',
     }}>
       {showOnboarding && <Onboarding onDone={handleOnboardingDone} />}
 
-      {/* ── Header — sticky, tidak hilang saat keyboard muncul ── */}
-      <div style={{ background: 'var(--wa-header)', padding: '10px 16px', display: 'flex', alignItems: 'center', gap: '12px', flexShrink: 0, zIndex: 10, position: 'sticky', top: 0 }}>
+      {/* ── Header — selalu fixed di atas ── */}
+      <div style={{ background: 'var(--wa-header)', padding: '10px 16px', display: 'flex', alignItems: 'center', gap: '12px', flexShrink: 0, zIndex: 10 }}>
         <div style={{ width: 42, height: 42, borderRadius: '50%', background: '#25D366', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.3rem', flexShrink: 0 }}>🧠</div>
         <div style={{ flex: 1 }}>
           <div style={{ color: '#fff', fontWeight: 700, fontSize: '1rem', lineHeight: 1.2 }}>Diah Anna</div>
