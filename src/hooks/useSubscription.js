@@ -2,121 +2,71 @@ import { useState, useEffect } from 'react'
 import { supabase } from '../lib/supabase'
 
 export const LIMITS = {
-  free: {
-    cv_review:      1,
-    ats_checker:    1,
-    diah_anna:      999, // bebas — USP utama
-    mock_interview: 0,
-    cv_maker:       1,
-  },
-  starter: {
-    cv_review:      5,
-    ats_checker:    5,
-    diah_anna:      999, // bebas
-    mock_interview: 0,
-    cv_maker:       5,
-  },
-  pro: {
-    cv_review:      20,
-    ats_checker:    20,
-    diah_anna:      999, // bebas
-    mock_interview: 20,
-    cv_maker:       20,
-  },
-  platinum: {
-    cv_review:      999,
-    ats_checker:    999,
-    diah_anna:      999,
-    mock_interview: 999,
-    cv_maker:       999,
-  },
+  free:    { 'cv-review': 1,  ats: 1,  coach: 999, interview: 0,  'cv-maker': 1  },
+  starter: { 'cv-review': 5,  ats: 5,  coach: 999, interview: 0,  'cv-maker': 5  },
+  pro:     { 'cv-review': 20, ats: 20, coach: 999, interview: 20, 'cv-maker': 20 },
 }
 
+export const PLAN_LABEL = { free: 'Free', starter: 'Starter', pro: 'Pro ⭐' }
+
 export const FEATURE_LABEL = {
-  cv_review:      'CV Review',
-  ats_checker:    'ATS Checker',
-  diah_anna:      'Career Coach',
-  mock_interview: 'Mock Interview',
-  cv_maker:       'CV Maker',
+  'cv-review': 'CV Review',
+  ats:         'ATS Checker',
+  coach:       'Career Coach',
+  interview:   'Mock Interview',
+  'cv-maker':  'CV Maker',
 }
 
 export function useSubscription(userId) {
-  const [plan, setPlan]     = useState('free')
-  const [usage, setUsage]   = useState({})
+  const [plan, setPlan]       = useState('free')
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
     if (!userId) { setLoading(false); return }
-    fetchData()
+    fetchPlan()
   }, [userId])
 
-  const fetchData = async () => {
+  const fetchPlan = async () => {
     setLoading(true)
-
-    // 1. Cek subscription aktif
-    const { data: sub } = await supabase
-      .from('subscriptions')
-      .select('plan, expires_at')
-      .eq('user_id', userId)
-      .eq('status', 'active')
-      .gte('expires_at', new Date().toISOString())
-      .order('created_at', { ascending: false })
-      .limit(1)
-      .single()
-
-    const currentPlan = sub?.plan || 'free'
-    setPlan(currentPlan)
-
-    // 2. Hitung usage
-    // Free: all-time (jatah sekali seumur hidup per fitur)
-    // Berbayar: bulan ini saja
-    const monthYear = new Date().toISOString().slice(0, 7)
-
-    const query = supabase
-      .from('usage_tracking')
-      .select('feature')
-      .eq('user_id', userId)
-
-    const { data: usageRows } = currentPlan === 'free'
-      ? await query                                    // all-time untuk free
-      : await query.eq('month_year', monthYear)        // bulanan untuk berbayar
-
-    const counts = {}
-    usageRows?.forEach(({ feature }) => {
-      counts[feature] = (counts[feature] || 0) + 1
-    })
-
-    setUsage(counts)
+    try {
+      const { data } = await supabase
+        .from('subscriptions')
+        .select('plan')
+        .eq('user_id', userId)
+        .eq('status', 'active')
+        .gte('expires_at', new Date().toISOString())
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .single()
+      if (data?.plan && LIMITS[data.plan]) setPlan(data.plan)
+    } catch {}
     setLoading(false)
   }
 
-  // canUse: true jika user masih punya sisa kuota
-  const canUse = (feature) => {
+  // Cek usage langsung ke DB — dipanggil saat user klik fitur
+  const checkUsage = async (feature) => {
     const limit = LIMITS[plan]?.[feature] ?? 0
-    const used  = usage[feature] || 0
-    return used < limit
+    if (limit === 0) return false
+    if (limit >= 999) return true   // unlimited (coach)
+    try {
+      const monthStart = new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString()
+      const { count } = await supabase
+        .from('usage_logs')
+        .select('*', { count: 'exact', head: true })
+        .eq('user_id', userId)
+        .eq('feature', feature)
+        .gte('created_at', plan === 'free' ? '2000-01-01' : monthStart)   // free = all-time
+      return (count ?? 0) < limit
+    } catch {
+      return true   // kalau error, biarkan lewat daripada block user
+    }
   }
 
-  const getRemainingUses = (feature) => {
-    const limit = LIMITS[plan]?.[feature] ?? 0
-    const used  = usage[feature] || 0
-    return Math.max(0, limit - used)
-  }
-
-  // trackUsage: insert row usage → lalu refresh state
-  const trackUsage = async (feature) => {
+  // Log usage ke DB
+  const logUsage = (feature) => {
     if (!userId) return
-    const monthYear = new Date().toISOString().slice(0, 7)
-    await supabase.from('usage_tracking').insert({
-      user_id: userId,
-      feature,
-      month_year: monthYear,
-    })
-    // Update local state langsung (optimistic) tanpa re-fetch biar cepat
-    setUsage(prev => ({ ...prev, [feature]: (prev[feature] || 0) + 1 }))
-    // Tetap re-fetch di background untuk sinkronisasi
-    fetchData()
+    supabase.from('usage_logs').insert({ user_id: userId, feature }).then(() => {})
   }
 
-  return { plan, usage, loading, canUse, getRemainingUses, trackUsage, fetchData }
+  return { plan, loading, checkUsage, logUsage, fetchPlan }
 }
