@@ -94,7 +94,7 @@ export default function Chat({ user }) {
     // Kalau sudah ada riwayat dari localStorage, langsung tampil — tidak perlu greeting
     if (messages.length > 0) return
     const firstName = (user.user_metadata?.name || user.user_metadata?.full_name || '').split(' ')[0]
-    pushBot(`Halo${firstName ? ` ${firstName}` : ''}! 👋 Aku Diah Anna, AI Career Coach kamu.\n\nPilih fitur di atas atau langsung ketik pertanyaanmu ya!`, MAIN_MENU)
+    pushBot(`Halo${firstName ? ` ${firstName}` : ''}! 👋 Aku Diah Anna, AI Career Coach kamu.\n\nPilih fitur di atas atau langsung ketik pertanyaanmu ya!`)
   }, [user?.id])
 
   // ── Simpan riwayat ke localStorage ────────────────────────────────────
