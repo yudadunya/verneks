@@ -85,9 +85,6 @@ export default function Home({ user }) {
           </span>
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-          <button onClick={() => navigate('/pricing')} style={{ color: 'rgba(255,255,255,0.45)', fontSize: '0.82rem', fontWeight: 500, background: 'none', border: 'none', cursor: 'pointer', padding: '6px 4px' }}>
-            Harga
-          </button>
           <button onClick={handleGoogle} style={{ color: 'rgba(255,255,255,0.75)', fontSize: '0.85rem', fontWeight: 600, background: 'rgba(255,255,255,0.07)', border: '1px solid rgba(255,255,255,0.12)', borderRadius: 20, padding: '6px 16px', cursor: 'pointer' }}>
             Masuk
           </button>
