@@ -233,8 +233,8 @@ export default function Home({ user }) {
         <p style={{ color: 'rgba(255,255,255,0.2)', fontSize: '0.7rem', letterSpacing: '1.5px', textTransform: 'uppercase', fontWeight: 600, textAlign: 'center', marginBottom: 4 }}>Kata mereka</p>
 
         {[
-          { stars: 5, text: 'ATS score CV aku cuma 48. Diah Anna tunjukin persis bagian mana yang salah. Seminggu kemudian dapet 3 panggilan interview.', name: 'Rizky A.', detail: 'Diterima sebagai Data Analyst · Tokopedia' },
-          { stars: 5, text: 'Awalnya skeptis, tapi mock interview sama Diah Anna beneran bikin aku lebih siap. Pertanyaan-nya mirip banget sama yang ditanya HRD asli.', name: 'Sinta W.', detail: 'Fresh grad, diterima di Unilever Indonesia' },
+          { stars: 5, text: 'ATS score CV aku cuma 48. Diah Anna tunjukin persis bagian mana yang salah. Seminggu kemudian dapet 3 panggilan interview.', name: 'Rizky A.', detail: 'Diterima sebagai Data Analyst · marketplace terkemuka Indonesia' },
+          { stars: 5, text: 'Awalnya skeptis, tapi mock interview sama Diah Anna beneran bikin aku lebih siap. Pertanyaan-nya mirip banget sama yang ditanya HRD asli.', name: 'Sinta W.', detail: 'Fresh grad, diterima di perusahaan FMCG multinasional' },
           { stars: 5, text: 'Bingung mau switch karir dari marketing ke product. Diah Anna bantu aku bikin roadmap yang masuk akal dan realistis.', name: 'Bagas P.', detail: 'Career switch · Kini Product Manager di startup Series B' },
         ].map((t, i) => (
           <div key={i} style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 16, padding: '14px 16px' }}>
