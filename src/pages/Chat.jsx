@@ -81,8 +81,17 @@ export default function Chat({ user, chatMessages = [], setChatMessages }) {
   // ── Auth guard + greeting ────────────────────────────────────────────────
   useEffect(() => {
     if (!user) { navigate('/'); return }
-    // Kalau sudah ada riwayat, tidak perlu greeting
-    if (messages.length > 0) return
+    // Cek localStorage langsung — bukan messages state yang mungkin belum sync
+    const key = user.id ? `lc_chat_${user.id}` : null
+    if (key) {
+      try {
+        const saved = localStorage.getItem(key)
+        if (saved) {
+          const parsed = JSON.parse(saved)
+          if (Array.isArray(parsed) && parsed.length > 0) return // ada riwayat, skip greeting
+        }
+      } catch {}
+    }
     const firstName = (user.user_metadata?.name || user.user_metadata?.full_name || '').split(' ')[0]
     pushBot(`Halo${firstName ? ` ${firstName}` : ''}! 👋 Aku Diah Anna, AI Career Coach kamu.\n\nPilih fitur di atas atau langsung ketik pertanyaanmu ya!`)
   }, [user?.id])
