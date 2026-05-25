@@ -52,7 +52,23 @@ export default function Chat({ user }) {
   const navigate = useNavigate()
   const { plan, loading: subLoading, checkUsage, logUsage } = useSubscription(user?.id)
 
-  const [messages, setMessages]         = useState([])
+  // Storage keys — definisikan sebelum useState supaya lazy initializer bisa pakai
+  const storageKey     = user?.id ? `lc_chat_${user.id}` : null
+  const ONBOARDING_KEY = user?.id ? `onboarded_${user.id}` : null
+
+  // Baca localStorage langsung di initializer — tidak perlu tunggu useEffect
+  const [messages, setMessages] = useState(() => {
+    if (!storageKey) return []
+    try {
+      const saved = localStorage.getItem(storageKey)
+      if (saved) {
+        const parsed = JSON.parse(saved)
+        if (Array.isArray(parsed) && parsed.length > 0) return parsed
+      }
+    } catch {}
+    return []
+  })
+
   const [input, setInput]               = useState('')
   const [loading, setLoading]           = useState(false)
   const [mode, setMode]                 = useState('menu')
@@ -60,8 +76,6 @@ export default function Chat({ user }) {
   const [interview, setInterview]       = useState({ position: '', level: '', messages: [], qNum: 0 })
   const [coachHistory, setCoachHistory] = useState([])
   const [cvMakerInfo, setCvMakerInfo]   = useState({ text: '', format: '' })
-
-  const ONBOARDING_KEY = user?.id ? `onboarded_${user.id}` : null
   const [showOnboarding, setShowOnboarding] = useState(() => {
     if (!ONBOARDING_KEY) return false
     return !localStorage.getItem(ONBOARDING_KEY)
@@ -73,21 +87,15 @@ export default function Chat({ user }) {
 
   const bottomRef = useRef()
   const fileRef   = useRef()
-  const storageKey = user ? `lc_chat_${user.id}` : null
 
-  // ── Auth guard + load riwayat ──────────────────────────────────────────
+  // ── Auth guard + greeting (hanya kalau belum ada riwayat) ───────────────
   useEffect(() => {
     if (!user) { navigate('/'); return }
-    try {
-      const saved = localStorage.getItem(storageKey)
-      if (saved) {
-        const parsed = JSON.parse(saved)
-        if (Array.isArray(parsed) && parsed.length > 0) { setMessages(parsed); return }
-      }
-    } catch {}
+    // Kalau sudah ada riwayat dari localStorage, langsung tampil — tidak perlu greeting
+    if (messages.length > 0) return
     const firstName = (user.user_metadata?.name || user.user_metadata?.full_name || '').split(' ')[0]
-    pushBot(`Halo${firstName ? ` ${firstName}` : ''}! 👋 Aku Diah Anna, AI Career Coach kamu.\n\nPilih fitur di atas atau langsung ketik pertanyaanmu ya!`)
-  }, [])
+    pushBot(`Halo${firstName ? ` ${firstName}` : ''}! 👋 Aku Diah Anna, AI Career Coach kamu.\n\nPilih fitur di atas atau langsung ketik pertanyaanmu ya!`, MAIN_MENU)
+  }, [user?.id])
 
   // ── Simpan riwayat ke localStorage ────────────────────────────────────
   useEffect(() => {
