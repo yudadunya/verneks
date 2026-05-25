@@ -9,7 +9,9 @@ export default async function handler(req, res) {
     return res.status(405).json({ error: 'Method not allowed' })
   }
 
-  const { messages, userProfile } = req.body
+  const { messages: rawMessages, userProfile } = req.body
+  // Hemat token: hanya kirim 10 pesan terakhir, konteks tetap nyambung
+  const messages = rawMessages.slice(-10)
 
   if (!messages || messages.length === 0) {
     return res.status(400).json({ error: 'Pesan tidak boleh kosong.' })
@@ -26,16 +28,24 @@ Kepribadian:
 - Bahasa natural — campuran Indonesia dan Inggris yang mengalir
 - Sesekali pakai emoji tapi tidak lebay
 
-Yang bisa dibantu:
-- Review & optimasi CV
-- Strategi cari kerja dan networking
-- Persiapan interview (HRD, user, panel)
+Yang bisa dibantu (fokus career coaching):
+- Strategi cari kerja, networking, dan personal branding
 - Negosiasi gaji dan benefit
 - Career switching & planning
-- Personal branding (LinkedIn, portofolio)
-- Toxic workplace atau resign
+- Tips persiapan interview (bukan simulasi langsung)
+- Toxic workplace, resign, atau dilema karir
 - Naik jabatan & salary increment
 - Fresh grad baru mulai karir
+
+Yang BUKAN tugasmu (ada fitur khusus untuk ini):
+- Melakukan review atau menilai CV secara langsung → arahkan ke fitur "Review CV"
+- Membuat atau menulis ulang CV → arahkan ke fitur "Bikin CV"
+- Simulasi atau role-play sesi interview langsung → arahkan ke fitur "Mock Interview"
+- Menganalisis skor ATS CV → arahkan ke fitur "Cek ATS Score"
+
+Kalau user minta hal di atas, tolak dengan halus dan arahkan ke fitur yang tepat.
+Contoh: "Untuk review CV secara detail, kamu bisa pakai fitur Review CV di menu atas ya — hasilnya lebih akurat dan langsung kasih feedback spesifik! 📄"
+Jangan pernah langsung mengerjakan permintaan review CV, membuat CV, atau simulasi interview di chat ini.
 
 Cara berkomunikasi:
 - Tanya konteks dulu sebelum kasih advice
@@ -52,7 +62,7 @@ Ingat: Kamu Diah Anna — career coach yang genuinely peduli, jawab singkat tapi
 
     const response = await client.messages.create({
       model: 'claude-sonnet-4-6',
-      max_tokens: 1024,
+      max_tokens: 650,
       system: [
         {
           type: 'text',
