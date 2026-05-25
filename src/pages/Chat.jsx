@@ -3,6 +3,7 @@ import { supabase } from '../lib/supabase'
 import { useNavigate } from 'react-router-dom'
 import Onboarding from '../components/Onboarding'
 import ShareCard from '../components/ShareCard'
+import ShareAppModal from '../components/ShareAppModal'
 import { useSubscription, LIMITS, PLAN_LABEL, FEATURE_LABEL } from '../hooks/useSubscription'
 
 function renderMd(text) {
@@ -151,6 +152,7 @@ export default function Chat({ user }) {
   // ── Router ─────────────────────────────────────────────────────────────
   const route = async (id, label) => {
     if (id === '__menu' || id === 'menu') { setMode('menu'); pushBot('Oke! Mau ngapain lagi?', MAIN_MENU); return }
+    if (id === '__share_app') { setShowShareApp(true); return }
     if (id === '__share_cv')  { const m = [...messages].reverse().find(m => m.role === 'bot' && (m.text?.length || 0) > 100); setShareCard({ text: m?.text || '', type: 'cv-review' }); return }
     if (id === '__share_ats') { const m = [...messages].reverse().find(m => m.role === 'bot' && (m.text?.length || 0) > 100); setShareCard({ text: m?.text || '', type: 'ats' }); return }
     if (id === '__pricing') { navigate('/pricing'); return }
@@ -243,7 +245,7 @@ export default function Chat({ user }) {
     try {
       const data = await apiFetch('/api/cv-review', { cvText, jobTarget })
       logUsage('cv-review')
-      pushBot(data.review, [{ id: 'ats', label: '🎯 Cek ATS Score juga' }, { id: '__share_cv', label: '📤 Bagikan hasil' }, { id: '__menu', label: '🏠 Kembali ke menu' }])
+      pushBot(data.review, [{ id: 'ats', label: '🎯 Cek ATS Score juga' }, { id: '__share_cv', label: '📤 Bagikan hasil' }, { id: '__share_app', label: '👥 Ajak teman coba' }, { id: '__menu', label: '🏠 Kembali ke menu' }])
     } catch (e) { pushBot(`Aduh, ada error: ${e.message}\n\nCoba lagi ya! 🙏`); setMode('menu') }
     setLoading(false)
   }
@@ -253,7 +255,7 @@ export default function Chat({ user }) {
     try {
       const data = await apiFetch('/api/ats-checker', { cvText, jobDescription })
       logUsage('ats')
-      pushBot(data.result, [{ id: 'cv-review', label: '📄 Review CV juga' }, { id: '__share_ats', label: '📤 Bagikan hasil' }, { id: '__menu', label: '🏠 Kembali ke menu' }])
+      pushBot(data.result, [{ id: 'cv-review', label: '📄 Review CV juga' }, { id: '__share_ats', label: '📤 Bagikan hasil' }, { id: '__share_app', label: '👥 Ajak teman coba' }, { id: '__menu', label: '🏠 Kembali ke menu' }])
     } catch (e) { pushBot(`Error: ${e.message}`); setMode('menu') }
     setLoading(false)
   }
@@ -342,6 +344,7 @@ export default function Chat({ user }) {
   }
 
   const [shareCard, setShareCard] = useState(null)
+  const [showShareApp, setShowShareApp] = useState(false)
 
   const canUpload = ['cv-review-upload', 'ats-upload'].includes(mode)
 
@@ -355,6 +358,7 @@ export default function Chat({ user }) {
     }}>
       {showOnboarding && <Onboarding onDone={handleOnboardingDone} />}
       {shareCard && <ShareCard resultText={shareCard.text} type={shareCard.type} onClose={() => setShareCard(null)} />}
+      {showShareApp && <ShareAppModal onClose={() => setShowShareApp(false)} />}
 
       {/* ── Header — selalu fixed di atas ── */}
       <div style={{ background: 'var(--wa-header)', padding: '10px 16px', display: 'flex', alignItems: 'center', gap: '12px', flexShrink: 0, zIndex: 10 }}>
@@ -368,6 +372,9 @@ export default function Chat({ user }) {
           style={{ color: '#fff', fontSize: '0.72rem', padding: '3px 8px', background: plan === 'free' ? 'rgba(255,200,0,0.25)' : 'rgba(255,255,255,0.15)', border: '1px solid rgba(255,255,255,0.3)', borderRadius: 12, fontWeight: 600, cursor: 'pointer', whiteSpace: 'nowrap' }}
         >
           {PLAN_LABEL[plan] || 'Free'}
+        </button>
+        <button onClick={() => setShowShareApp(true)} style={{ color: 'rgba(255,255,255,0.7)', fontSize: '1rem', padding: '4px 6px', background: 'none', border: 'none', cursor: 'pointer' }} title="Ajak teman">
+          ↗️
         </button>
         <button onClick={handleSignOut} style={{ color: 'rgba(255,255,255,0.6)', fontSize: '0.78rem', padding: '4px 8px', background: 'rgba(255,255,255,0.1)', borderRadius: 6, border: 'none', cursor: 'pointer' }}>
           Keluar
