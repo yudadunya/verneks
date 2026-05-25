@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 
 const Logo = () => (
@@ -37,6 +38,7 @@ const CHAT_PREVIEW = [
 ]
 
 export default function Home({ user }) {
+  const navigate = useNavigate()
   const [loading, setLoading] = useState(false)
   const [visible, setVisible] = useState(false)
   const [chatIdx, setChatIdx] = useState(0)
@@ -82,9 +84,14 @@ export default function Home({ user }) {
             Lamar<span style={{ background: 'linear-gradient(90deg, #25D366, #34B7F1)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>Cerdas</span>
           </span>
         </div>
-        <button onClick={handleGoogle} style={{ color: 'rgba(255,255,255,0.75)', fontSize: '0.85rem', fontWeight: 600, background: 'rgba(255,255,255,0.07)', border: '1px solid rgba(255,255,255,0.12)', borderRadius: 20, padding: '6px 16px', cursor: 'pointer' }}>
-          Masuk
-        </button>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+          <button onClick={() => navigate('/pricing')} style={{ color: 'rgba(255,255,255,0.45)', fontSize: '0.82rem', fontWeight: 500, background: 'none', border: 'none', cursor: 'pointer', padding: '6px 4px' }}>
+            Harga
+          </button>
+          <button onClick={handleGoogle} style={{ color: 'rgba(255,255,255,0.75)', fontSize: '0.85rem', fontWeight: 600, background: 'rgba(255,255,255,0.07)', border: '1px solid rgba(255,255,255,0.12)', borderRadius: 20, padding: '6px 16px', cursor: 'pointer' }}>
+            Masuk
+          </button>
+        </div>
       </div>
 
       {/* ── HERO ── */}
@@ -117,7 +124,7 @@ export default function Home({ user }) {
         <div style={{ background: '#111b13', borderRadius: 16, overflow: 'hidden', marginBottom: 24, border: '1px solid rgba(37,211,102,0.15)' }}>
           {/* Chat header */}
           <div style={{ background: '#1a2e1e', padding: '10px 14px', display: 'flex', alignItems: 'center', gap: 10 }}>
-            <div style={{ width: 32, height: 32, borderRadius: '50%', background: 'linear-gradient(135deg, #25D366, #128C7E)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1rem' }}>🧠</div>
+            <img src="/diah-anna.png" alt="Diah Anna" style={{ width: 32, height: 32, borderRadius: '50%', objectFit: 'cover', border: '1px solid rgba(37,211,102,0.4)' }}/>
             <div>
               <div style={{ color: '#fff', fontWeight: 700, fontSize: '0.82rem' }}>Diah Anna</div>
               <div style={{ color: '#25D366', fontSize: '0.68rem', fontWeight: 500 }}>● Online sekarang</div>
@@ -226,8 +233,8 @@ export default function Home({ user }) {
         <p style={{ color: 'rgba(255,255,255,0.2)', fontSize: '0.7rem', letterSpacing: '1.5px', textTransform: 'uppercase', fontWeight: 600, textAlign: 'center', marginBottom: 4 }}>Kata mereka</p>
 
         {[
-          { stars: 5, text: 'ATS score CV aku cuma 48. Diah Anna tunjukin persis bagian mana yang salah. Seminggu kemudian dapet 3 panggilan interview.', name: 'Rizky A.', detail: 'Diterima sebagai Data Analyst · Marketplace Indonesia' },
-          { stars: 5, text: 'Awalnya skeptis, tapi mock interview sama Diah Anna beneran bikin aku lebih siap. Pertanyaan-nya mirip banget sama yang ditanya HRD asli.', name: 'Sinta W.', detail: 'Fresh grad, diterima di PT besar di Indonesia' },
+          { stars: 5, text: 'ATS score CV aku cuma 48. Diah Anna tunjukin persis bagian mana yang salah. Seminggu kemudian dapet 3 panggilan interview.', name: 'Rizky A.', detail: 'Diterima sebagai Data Analyst · Tokopedia' },
+          { stars: 5, text: 'Awalnya skeptis, tapi mock interview sama Diah Anna beneran bikin aku lebih siap. Pertanyaan-nya mirip banget sama yang ditanya HRD asli.', name: 'Sinta W.', detail: 'Fresh grad, diterima di Unilever Indonesia' },
           { stars: 5, text: 'Bingung mau switch karir dari marketing ke product. Diah Anna bantu aku bikin roadmap yang masuk akal dan realistis.', name: 'Bagas P.', detail: 'Career switch · Kini Product Manager di startup Series B' },
         ].map((t, i) => (
           <div key={i} style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 16, padding: '14px 16px' }}>
