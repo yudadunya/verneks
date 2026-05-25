@@ -2,6 +2,7 @@ import { useState, useRef, useEffect, useCallback } from 'react'
 import { supabase } from '../lib/supabase'
 import { useNavigate } from 'react-router-dom'
 import Onboarding from '../components/Onboarding'
+import ShareCard from '../components/ShareCard'
 import { useSubscription, LIMITS, PLAN_LABEL, FEATURE_LABEL } from '../hooks/useSubscription'
 
 function renderMd(text) {
@@ -150,6 +151,8 @@ export default function Chat({ user }) {
   // ── Router ─────────────────────────────────────────────────────────────
   const route = async (id, label) => {
     if (id === '__menu' || id === 'menu') { setMode('menu'); pushBot('Oke! Mau ngapain lagi?', MAIN_MENU); return }
+    if (id === '__share_cv')  { const m = [...messages].reverse().find(m => m.role === 'bot' && (m.text?.length || 0) > 100); setShareCard({ text: m?.text || '', type: 'cv-review' }); return }
+    if (id === '__share_ats') { const m = [...messages].reverse().find(m => m.role === 'bot' && (m.text?.length || 0) > 100); setShareCard({ text: m?.text || '', type: 'ats' }); return }
     if (id === '__pricing') { navigate('/pricing'); return }
     if (id === 'cv-review') { startCvReview(); return }
     if (id === 'ats')       { startAts(); return }
@@ -240,7 +243,7 @@ export default function Chat({ user }) {
     try {
       const data = await apiFetch('/api/cv-review', { cvText, jobTarget })
       logUsage('cv-review')
-      pushBot(data.review, [{ id: 'ats', label: '🎯 Cek ATS Score juga' }, { id: '__menu', label: '🏠 Kembali ke menu' }])
+      pushBot(data.review, [{ id: 'ats', label: '🎯 Cek ATS Score juga' }, { id: '__share_cv', label: '📤 Bagikan hasil' }, { id: '__menu', label: '🏠 Kembali ke menu' }])
     } catch (e) { pushBot(`Aduh, ada error: ${e.message}\n\nCoba lagi ya! 🙏`); setMode('menu') }
     setLoading(false)
   }
@@ -250,7 +253,7 @@ export default function Chat({ user }) {
     try {
       const data = await apiFetch('/api/ats-checker', { cvText, jobDescription })
       logUsage('ats')
-      pushBot(data.result, [{ id: 'cv-review', label: '📄 Review CV juga' }, { id: '__menu', label: '🏠 Kembali ke menu' }])
+      pushBot(data.result, [{ id: 'cv-review', label: '📄 Review CV juga' }, { id: '__share_ats', label: '📤 Bagikan hasil' }, { id: '__menu', label: '🏠 Kembali ke menu' }])
     } catch (e) { pushBot(`Error: ${e.message}`); setMode('menu') }
     setLoading(false)
   }
@@ -338,6 +341,8 @@ export default function Chat({ user }) {
     await supabase.auth.signOut(); navigate('/')
   }
 
+  const [shareCard, setShareCard] = useState(null)
+
   const canUpload = ['cv-review-upload', 'ats-upload'].includes(mode)
 
   return (
@@ -349,6 +354,7 @@ export default function Chat({ user }) {
       background: 'var(--wa-chat-bg)',
     }}>
       {showOnboarding && <Onboarding onDone={handleOnboardingDone} />}
+      {shareCard && <ShareCard resultText={shareCard.text} type={shareCard.type} onClose={() => setShareCard(null)} />}
 
       {/* ── Header — selalu fixed di atas ── */}
       <div style={{ background: 'var(--wa-header)', padding: '10px 16px', display: 'flex', alignItems: 'center', gap: '12px', flexShrink: 0, zIndex: 10 }}>
