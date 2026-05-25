@@ -294,7 +294,32 @@ export default function Chat({ user }) {
     setLoading(false)
   }
 
+  // Keyword yang trigger paywall langsung
+  const PAID_TRIGGERS = {
+    mock_interview: ['mock interview', 'latihan interview', 'simulasi interview', 'interview aku', 'interview saya', 'practice interview'],
+    cv_review:      ['review cv', 'review cv aku', 'cek cv', 'koreksi cv', 'nilai cv', 'analisa cv', 'feedback cv'],
+    cv_maker:       ['bikin cv', 'buat cv', 'buatkan cv', 'generate cv', 'cv maker', 'template cv', 'tulis cv'],
+    ats_checker:    ['cek ats', 'ats score', 'skor ats', 'lolos ats'],
+  }
+
+  const checkPaidTrigger = (msg) => {
+    const lower = msg.toLowerCase()
+    for (const [feature, keywords] of Object.entries(PAID_TRIGGERS)) {
+      if (keywords.some(kw => lower.includes(kw))) return feature
+    }
+    return null
+  }
+
   const doCoach = async (msg) => {
+    // Cek apakah user minta fitur berbayar secara eksplisit
+    const triggeredFeature = checkPaidTrigger(msg)
+    if (triggeredFeature) {
+      const canUse = await checkUsage(triggeredFeature)
+      if (!canUse) {
+        showPaywall(triggeredFeature)
+        return
+      }
+    }
     const newHistory = [...coachHistory, { role: 'user', content: msg }]
     setCoachHistory(newHistory); setLoading(true); await callCoachApi(newHistory); setLoading(false)
   }
