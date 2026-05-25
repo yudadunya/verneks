@@ -27,6 +27,7 @@ async function apiFetch(url, body) {
 
 const MAIN_MENU = [
   { id: 'cv-review', label: '📄 Review CV'     },
+  { id: 'ats',       label: '🎯 ATS Checker'   },
   { id: 'interview', label: '🎤 Mock Interview' },
   { id: 'cv-maker',  label: '✨ Bikin CV'       },
   { id: 'coach',     label: '🧠 Tanya Karir'   },
@@ -289,17 +290,18 @@ export default function Chat({ user }) {
   const canUpload = ['cv-review-upload', 'ats-upload'].includes(mode)
 
   return (
-    // ── FIX UTAMA: position fixed + inset 0 → header tidak pernah hilang ──
+    // ── Layout: sticky header + keyboard-aware height ──
     <div style={{
-      position: 'fixed', top: 0, left: '50%', transform: 'translateX(-50%)',
-      width: '100%', maxWidth: 480, bottom: 0,
       display: 'flex', flexDirection: 'column',
+      width: '100%', maxWidth: 480, margin: '0 auto',
+      height: '100dvh',          /* dvh = aware keyboard mobile */
+      position: 'relative',
       background: 'var(--wa-chat-bg)',
     }}>
       {showOnboarding && <Onboarding onDone={handleOnboardingDone} />}
 
-      {/* ── Header — selalu fixed di atas ── */}
-      <div style={{ background: 'var(--wa-header)', padding: '10px 16px', display: 'flex', alignItems: 'center', gap: '12px', flexShrink: 0, zIndex: 10 }}>
+      {/* ── Header — sticky, tidak hilang saat keyboard muncul ── */}
+      <div style={{ background: 'var(--wa-header)', padding: '10px 16px', display: 'flex', alignItems: 'center', gap: '12px', flexShrink: 0, zIndex: 10, position: 'sticky', top: 0 }}>
         <div style={{ width: 42, height: 42, borderRadius: '50%', background: '#25D366', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.3rem', flexShrink: 0 }}>🧠</div>
         <div style={{ flex: 1 }}>
           <div style={{ color: '#fff', fontWeight: 700, fontSize: '1rem', lineHeight: 1.2 }}>Diah Anna</div>
