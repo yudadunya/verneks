@@ -142,14 +142,14 @@ export default function ShareCard({ resultText, type = 'cv-review', onClose }) {
           {/* Top accent */}
           <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: 3, background: 'linear-gradient(90deg, #25D366, #34B7F1)' }} />
 
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 16 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 16 }}>
+            <img src="/diah-anna.png" alt="Diah Anna" style={{ width: 36, height: 36, borderRadius: '50%', objectFit: 'cover', border: '1.5px solid rgba(37,211,102,0.5)', flexShrink: 0 }}/>
             <div>
-              <div style={{ color: '#fff', fontWeight: 800, fontSize: '0.9rem' }}>LamarCerdas</div>
-              <div style={{ color: 'rgba(255,255,255,0.35)', fontSize: '0.72rem' }}>
+              <div style={{ color: '#fff', fontWeight: 800, fontSize: '0.88rem' }}>Diah Anna · LamarCerdas</div>
+              <div style={{ color: 'rgba(255,255,255,0.35)', fontSize: '0.7rem' }}>
                 {type === 'ats' ? 'ATS Score Checker' : 'CV Review'} · lamarcerdas.my.id
               </div>
             </div>
-            <div style={{ fontSize: '1.4rem' }}>{type === 'ats' ? '🎯' : '📄'}</div>
           </div>
 
           {score ? (
