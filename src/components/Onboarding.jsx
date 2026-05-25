@@ -2,7 +2,7 @@ import { useState } from 'react'
 
 const SLIDES = [
   {
-    emoji: '👋',
+    emoji: null,
     title: 'Halo! Aku Diah Anna',
     desc: 'AI Career Coach kamu yang siap bantu 24/7 — gratis. Dari review CV sampai curhat soal resign, aku siap dengerin.',
     cta: 'Kenalan dulu →',
@@ -60,8 +60,12 @@ export default function Onboarding({ onDone }) {
 
       {/* Content */}
       <div style={{ width: '100%', maxWidth: 340, textAlign: 'center' }}>
-        {/* Emoji */}
-        <div style={{ fontSize: '3.5rem', marginBottom: 16, lineHeight: 1 }}>{slide.emoji}</div>
+        {/* Avatar or Emoji */}
+        {slide.emoji === null ? (
+          <img src="/diah-anna.png" alt="Diah Anna" style={{ width: 88, height: 88, borderRadius: '50%', objectFit: 'cover', marginBottom: 16, border: '3px solid rgba(37,211,102,0.5)', boxShadow: '0 0 24px rgba(37,211,102,0.2)' }}/>
+        ) : (
+          <div style={{ fontSize: '3.5rem', marginBottom: 16, lineHeight: 1 }}>{slide.emoji}</div>
+        )}
 
         {/* Title */}
         <h2 style={{ color: '#fff', fontWeight: 800, fontSize: '1.35rem', letterSpacing: '-0.4px', marginBottom: 12, lineHeight: 1.3 }}>
