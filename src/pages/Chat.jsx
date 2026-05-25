@@ -52,20 +52,28 @@ export default function Chat({ user }) {
   const navigate = useNavigate()
   const { plan, loading: subLoading, checkUsage, logUsage } = useSubscription(user?.id)
 
-  // Storage keys — definisikan sebelum useState supaya lazy initializer bisa pakai
-  const storageKey     = user?.id ? `lc_chat_${user.id}` : null
-  const ONBOARDING_KEY = user?.id ? `onboarded_${user.id}` : null
+  // Storage keys — pakai email sebagai identifier (lebih stabil dari id yang bisa null saat mount)
+  const userKey        = user?.id || user?.email || null
+  const storageKey     = userKey ? `lc_chat_${userKey}` : null
+  const ONBOARDING_KEY = userKey ? `onboarded_${userKey}` : null
 
-  // Baca localStorage langsung di initializer — tidak perlu tunggu useEffect
+  // Baca localStorage langsung di initializer
   const [messages, setMessages] = useState(() => {
-    if (!storageKey) return []
-    try {
-      const saved = localStorage.getItem(storageKey)
-      if (saved) {
-        const parsed = JSON.parse(saved)
-        if (Array.isArray(parsed) && parsed.length > 0) return parsed
-      }
-    } catch {}
+    if (!userKey) return []
+    // Coba berbagai kemungkinan key (id atau email)
+    const keys = [
+      user?.id    ? `lc_chat_${user.id}`    : null,
+      user?.email ? `lc_chat_${user.email}` : null,
+    ].filter(Boolean)
+    for (const k of keys) {
+      try {
+        const saved = localStorage.getItem(k)
+        if (saved) {
+          const parsed = JSON.parse(saved)
+          if (Array.isArray(parsed) && parsed.length > 0) return parsed
+        }
+      } catch {}
+    }
     return []
   })
 
@@ -88,20 +96,39 @@ export default function Chat({ user }) {
   const bottomRef = useRef()
   const fileRef   = useRef()
 
-  // ── Auth guard + greeting (hanya kalau belum ada riwayat) ───────────────
+  // ── Auth guard + greeting ────────────────────────────────────────────────
   useEffect(() => {
     if (!user) { navigate('/'); return }
-    // Kalau sudah ada riwayat dari localStorage, langsung tampil — tidak perlu greeting
-    if (messages.length > 0) return
-    const firstName = (user.user_metadata?.name || user.user_metadata?.full_name || '').split(' ')[0]
-    pushBot(`Halo${firstName ? ` ${firstName}` : ''}! 👋 Aku Diah Anna, AI Career Coach kamu.\n\nPilih fitur di atas atau langsung ketik pertanyaanmu ya!`)
+    // Kalau sudah ada pesan (dari localStorage atau state), tidak perlu greeting
+    setMessages(prev => {
+      if (prev.length > 0) return prev
+      // Coba load dari localStorage saat user baru tersedia
+      const keys = [
+        user.id    ? `lc_chat_${user.id}`    : null,
+        user.email ? `lc_chat_${user.email}` : null,
+      ].filter(Boolean)
+      for (const k of keys) {
+        try {
+          const saved = localStorage.getItem(k)
+          if (saved) {
+            const parsed = JSON.parse(saved)
+            if (Array.isArray(parsed) && parsed.length > 0) return parsed
+          }
+        } catch {}
+      }
+      // Tidak ada riwayat — tampilkan greeting
+      const firstName = (user.user_metadata?.name || user.user_metadata?.full_name || '').split(' ')[0]
+      const greet = { id: Date.now(), role: 'bot', text: `Halo${firstName ? ` ${firstName}` : ''}! 👋 Aku Diah Anna, AI Career Coach kamu.\n\nPilih fitur di atas atau langsung ketik pertanyaanmu ya!` }
+      return [greet]
+    })
   }, [user?.id])
 
   // ── Simpan riwayat ke localStorage ────────────────────────────────────
   useEffect(() => {
-    if (!storageKey || messages.length === 0) return
-    try { localStorage.setItem(storageKey, JSON.stringify(messages.slice(-100))) } catch {}
-  }, [messages])
+    const key = user?.id ? `lc_chat_${user.id}` : user?.email ? `lc_chat_${user.email}` : null
+    if (!key || messages.length === 0) return
+    try { localStorage.setItem(key, JSON.stringify(messages.slice(-100))) } catch {}
+  }, [messages, user?.id])
 
   useEffect(() => { bottomRef.current?.scrollIntoView({ behavior: 'smooth' }) }, [messages, loading])
 
