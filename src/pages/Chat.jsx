@@ -58,7 +58,14 @@ export default function Chat({ user, chatMessages = [], setChatMessages }) {
   const ONBOARDING_KEY = userKey ? `onboarded_${userKey}` : null
 
   // messages dikelola di App.jsx agar survive re-mount saat login/logout
-  const [messages, setMessages] = useState(chatMessages)
+  const [messages, setMessages] = useState(() => chatMessages.length > 0 ? chatMessages : [])
+
+  // Sync dari App.jsx kalau prop berubah (misal setelah async load)
+  useEffect(() => {
+    if (chatMessages.length > 0 && messages.length === 0) {
+      setMessages(chatMessages)
+    }
+  }, [chatMessages.length])
 
   const [input, setInput]               = useState('')
   const [loading, setLoading]           = useState(false)
