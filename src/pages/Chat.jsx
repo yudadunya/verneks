@@ -52,10 +52,9 @@ export default function Chat({ user, chatMessages = [], setChatMessages }) {
   const navigate = useNavigate()
   const { plan, loading: subLoading, checkUsage, logUsage } = useSubscription(user?.id)
 
-  // Storage keys — pakai email sebagai identifier (lebih stabil dari id yang bisa null saat mount)
-  const userKey        = user?.id || user?.email || null
-  const storageKey     = userKey ? `lc_chat_${userKey}` : null
-  const ONBOARDING_KEY = userKey ? `onboarded_${userKey}` : null
+  // Storage keys — pakai user.id konsisten di semua tempat
+  const storageKey     = user?.id ? `lc_chat_${user.id}` : null
+  const ONBOARDING_KEY = user?.id ? `onboarded_${user.id}` : null
 
   // messages dikelola di App.jsx agar survive re-mount saat login/logout
   const [messages, setMessages] = useState(() => chatMessages.length > 0 ? chatMessages : [])
@@ -89,8 +88,8 @@ export default function Chat({ user, chatMessages = [], setChatMessages }) {
   // ── Auth guard + greeting ────────────────────────────────────────────────
   useEffect(() => {
     if (!user) { navigate('/'); return }
-    // Kalau sudah ada riwayat (dari App.jsx), tidak perlu greeting
-    if (chatMessages.length > 0) return
+    // Kalau sudah ada riwayat di localStorage, tidak perlu greeting
+    if (storageKey && localStorage.getItem(storageKey)) return
     const firstName = (user.user_metadata?.name || user.user_metadata?.full_name || '').split(' ')[0]
     pushBot(`Halo${firstName ? ` ${firstName}` : ''}! 👋 Aku Diah Anna, AI Career Coach kamu.\n\nPilih fitur di atas atau langsung ketik pertanyaanmu ya!`)
   }, [user?.id])
@@ -100,10 +99,9 @@ export default function Chat({ user, chatMessages = [], setChatMessages }) {
     if (messages.length === 0) return
     // Sync ke parent (App.jsx) agar tidak hilang saat re-mount
     if (setChatMessages) setChatMessages(messages)
-    // Simpan ke localStorage sebagai backup
-    const key = user?.id ? `lc_chat_${user.id}` : null
-    if (!key) return
-    try { localStorage.setItem(key, JSON.stringify(messages.slice(-100))) } catch {}
+    // Simpan ke localStorage
+    if (!storageKey) return
+    try { localStorage.setItem(storageKey, JSON.stringify(messages)) } catch {}
   }, [messages])
 
   useEffect(() => { bottomRef.current?.scrollIntoView({ behavior: 'smooth' }) }, [messages, loading])
