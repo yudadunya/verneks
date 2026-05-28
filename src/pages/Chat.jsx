@@ -75,8 +75,9 @@ export default function Chat({ user, chatMessages = [], setChatMessages }) {
     setShowOnboarding(false)
   }
 
-  const bottomRef = useRef()
-  const fileRef   = useRef()
+  const bottomRef     = useRef()
+  const fileRef       = useRef()
+  const greetedRef    = useRef(false)  // track greeting sudah tampil
 
   // ── Auth guard + greeting ────────────────────────────────────────────────
   useEffect(() => {
@@ -346,6 +347,7 @@ export default function Chat({ user, chatMessages = [], setChatMessages }) {
   }
 
   const handleSignOut = async () => {
+    if (storageKey) localStorage.removeItem(storageKey)
     await supabase.auth.signOut(); navigate('/')
   }
 
