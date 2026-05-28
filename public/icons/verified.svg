@@ -1,0 +1,4 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
+  <path d="M 50.00 2.00 L 59.32 15.23 L 74.00 8.43 L 75.46 24.54 L 91.57 26.00 L 84.77 40.68 L 98.00 50.00 L 84.77 59.32 L 91.57 74.00 L 75.46 75.46 L 74.00 91.57 L 59.32 84.77 L 50.00 98.00 L 40.68 84.77 L 26.00 91.57 L 24.54 75.46 L 8.43 74.00 L 15.23 59.32 L 2.00 50.00 L 15.23 40.68 L 8.43 26.00 L 24.54 24.54 L 26.00 8.43 L 40.68 15.23 Z" fill="#34B7F1"/>
+  <path d="M 28 51 L 42 66 L 72 34" stroke="white" stroke-width="8" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+</svg>

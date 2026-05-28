@@ -389,10 +389,7 @@ export default function Chat({ user, chatMessages = [], setChatMessages }) {
         <div style={{ flex: 1 }}>
           <div style={{ color: '#fff', fontWeight: 700, fontSize: '1rem', lineHeight: 1.2, display: 'flex', alignItems: 'center', gap: 5 }}>
             Diah Anna
-            <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg" style={{ flexShrink: 0, marginTop: 1 }}>
-              <path d="M8 1.2L9.2 2.5L10.9 2.0L11.5 3.8L13.3 4.2L13.0 6.1L14.5 7.5L13.7 9.2L14.5 10.8L13.0 11.8L13.3 13.7L11.5 14.1L10.9 15.8L9.2 15.3L8 16.5L6.8 15.3L5.1 15.8L4.5 14.1L2.7 13.7L3.0 11.8L1.5 10.8L2.3 9.2L1.5 7.5L3.0 6.1L2.7 4.2L4.5 3.8L5.1 2.0L6.8 2.5Z" fill="#34B7F1"/>
-              <path d="M5.2 8.2L7.0 10.3L10.8 5.8" stroke="#fff" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"/>
-            </svg>
+            <img src="/icons/verified.svg" width="16" height="16" alt="verified" style={{ flexShrink: 0, marginTop: 1 }} />
           </div>
           <div style={{ color: 'rgba(255,255,255,0.65)', fontSize: '0.73rem' }}>AI Career Coach • online</div>
         </div>
