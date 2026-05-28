@@ -77,6 +77,26 @@ export default function Chat({ user, chatMessages = [], setChatMessages }) {
 
   const bottomRef = useRef()
   const fileRef   = useRef()
+  const containerRef = useRef()
+
+  // ── visualViewport: adjust container saat keyboard muncul di mobile ──
+  useEffect(() => {
+    const vv = window.visualViewport
+    if (!vv) return
+    const update = () => {
+      if (containerRef.current) {
+        containerRef.current.style.height = vv.height + 'px'
+        containerRef.current.style.top    = vv.offsetTop + 'px'
+      }
+    }
+    vv.addEventListener('resize', update)
+    vv.addEventListener('scroll', update)
+    update()
+    return () => {
+      vv.removeEventListener('resize', update)
+      vv.removeEventListener('scroll', update)
+    }
+  }, [])
 
   // ── pushBot & pushUser didefinisikan DULU sebelum dipakai di useEffect ──
   const pushBot = useCallback((text, quickReplies = null) => {
@@ -90,17 +110,8 @@ export default function Chat({ user, chatMessages = [], setChatMessages }) {
   // ── Auth guard + greeting ────────────────────────────────────────────────
   useEffect(() => {
     if (!user) { navigate('/'); return }
-    // Cek localStorage langsung — bukan messages state yang mungkin belum sync
-    const key = user.id ? `lc_chat_${user.id}` : null
-    if (key) {
-      try {
-        const saved = localStorage.getItem(key)
-        if (saved) {
-          const parsed = JSON.parse(saved)
-          if (Array.isArray(parsed) && parsed.length > 0) return // ada riwayat, skip greeting
-        }
-      } catch {}
-    }
+    // Kalau messages sudah ada (dimuat dari localStorage di App.jsx), skip greeting
+    if (chatMessages && chatMessages.length > 0) return
     const firstName = (user.user_metadata?.name || user.user_metadata?.full_name || '').split(' ')[0]
     pushBot(`Halo${firstName ? ` ${firstName}` : ''}! 👋 Aku Diah Anna, AI Career Coach kamu.\n\nPilih fitur di atas atau langsung ketik pertanyaanmu ya!`)
   }, [user?.id])
@@ -349,8 +360,8 @@ export default function Chat({ user, chatMessages = [], setChatMessages }) {
   }
 
   const handleSignOut = async () => {
-    if (storageKey) localStorage.removeItem(storageKey)
-    await supabase.auth.signOut(); navigate('/')
+    await supabase.auth.signOut()
+    navigate('/')
   }
 
   const [shareCard, setShareCard] = useState(null)
@@ -360,11 +371,13 @@ export default function Chat({ user, chatMessages = [], setChatMessages }) {
 
   return (
     // ── FIX UTAMA: position fixed + inset 0 → header tidak pernah hilang ──
-    <div style={{
+    <div ref={containerRef} style={{
       position: 'fixed', top: 0, left: '50%', transform: 'translateX(-50%)',
-      width: '100%', maxWidth: 480, bottom: 0,
+      width: '100%', maxWidth: 480,
+      height: '100vh',
       display: 'flex', flexDirection: 'column',
       background: 'var(--wa-chat-bg)',
+      overflow: 'hidden',
     }}>
       {showOnboarding && <Onboarding onDone={handleOnboardingDone} />}
       {shareCard && <ShareCard resultText={shareCard.text} type={shareCard.type} onClose={() => setShareCard(null)} />}
@@ -374,7 +387,13 @@ export default function Chat({ user, chatMessages = [], setChatMessages }) {
       <div style={{ background: 'var(--wa-header)', padding: '10px 16px', display: 'flex', alignItems: 'center', gap: '12px', flexShrink: 0, zIndex: 10 }}>
         <img src="/diah-anna.png" alt="Diah Anna" style={{ width: 42, height: 42, borderRadius: '50%', objectFit: 'cover', flexShrink: 0, border: '2px solid rgba(37,211,102,0.4)' }}/>
         <div style={{ flex: 1 }}>
-          <div style={{ color: '#fff', fontWeight: 700, fontSize: '1rem', lineHeight: 1.2 }}>Diah Anna</div>
+          <div style={{ color: '#fff', fontWeight: 700, fontSize: '1rem', lineHeight: 1.2, display: 'flex', alignItems: 'center', gap: 5 }}>
+            Diah Anna
+            <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg" style={{ flexShrink: 0, marginTop: 1 }}>
+              <path d="M8 0.5L9.5 2.2L11.7 1.7L12.4 3.8L14.6 4.3L14.3 6.6L16 8L14.3 9.4L14.6 11.7L12.4 12.2L11.7 14.3L9.5 13.8L8 15.5L6.5 13.8L4.3 14.3L3.6 12.2L1.4 11.7L1.7 9.4L0 8L1.7 6.6L1.4 4.3L3.6 3.8L4.3 1.7L6.5 2.2Z" fill="#34B7F1"/>
+              <path d="M5 8.2L7 10.5L11.2 5.5" stroke="#fff" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/>
+            </svg>
+          </div>
           <div style={{ color: 'rgba(255,255,255,0.65)', fontSize: '0.73rem' }}>AI Career Coach • online</div>
         </div>
         <button
@@ -403,13 +422,25 @@ export default function Chat({ user, chatMessages = [], setChatMessages }) {
 
       {/* ── Messages — satu-satunya yang scroll ── */}
       <div style={{ flex: 1, overflowY: 'auto', padding: '10px 10px 4px', display: 'flex', flexDirection: 'column', gap: '2px', WebkitOverflowScrolling: 'touch' }}>
-        {messages.map(msg => (
+        {messages.map(msg => {
+          const isUser = msg.role === 'user'
+          const ts = new Date(Math.floor(msg.id))
+          const timeStr = ts.getHours().toString().padStart(2,'0') + ':' + ts.getMinutes().toString().padStart(2,'0')
+          return (
           <div key={msg.id} style={{ marginBottom: msg.quickReplies ? 2 : 1 }}>
-            <div style={{ display: 'flex', justifyContent: msg.role === 'user' ? 'flex-end' : 'flex-start' }}>
-              <div
-                style={{ maxWidth: '82%', background: msg.role === 'user' ? '#DCF8C6' : '#fff', borderRadius: msg.role === 'user' ? '14px 3px 14px 14px' : '3px 14px 14px 14px', padding: '9px 13px', fontSize: '0.875rem', lineHeight: 1.55, boxShadow: '0 1px 2px rgba(0,0,0,0.1)', color: '#111B21', wordBreak: 'break-word' }}
-                dangerouslySetInnerHTML={{ __html: renderMd(msg.text) }}
-              />
+            <div style={{ display: 'flex', justifyContent: isUser ? 'flex-end' : 'flex-start' }}>
+              <div style={{ maxWidth: '82%', background: isUser ? '#DCF8C6' : '#fff', borderRadius: isUser ? '14px 3px 14px 14px' : '3px 14px 14px 14px', padding: '9px 13px 5px', fontSize: '0.875rem', lineHeight: 1.55, boxShadow: '0 1px 2px rgba(0,0,0,0.1)', color: '#111B21', wordBreak: 'break-word' }}>
+                <div dangerouslySetInnerHTML={{ __html: renderMd(msg.text) }} />
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 2, marginTop: 2 }}>
+                  <span style={{ fontSize: '0.68rem', color: isUser ? '#5d8a6a' : '#999', lineHeight: 1 }}>{timeStr}</span>
+                  {isUser && (
+                    <svg width="18" height="12" viewBox="0 0 18 12" fill="none" xmlns="http://www.w3.org/2000/svg" style={{ display: 'block' }}>
+                      <path d="M1 6L4.5 9.5L10.5 2" stroke="#53BDEB" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/>
+                      <path d="M6 6L9.5 9.5L15.5 2" stroke="#53BDEB" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/>
+                    </svg>
+                  )}
+                </div>
+              </div>
             </div>
             {msg.quickReplies && (
               <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, padding: '5px 4px 6px' }}>
@@ -422,7 +453,8 @@ export default function Chat({ user, chatMessages = [], setChatMessages }) {
               </div>
             )}
           </div>
-        ))}
+          )
+        })}
 
         {loading && (
           <div style={{ display: 'flex', justifyContent: 'flex-start', marginTop: 2 }}>
