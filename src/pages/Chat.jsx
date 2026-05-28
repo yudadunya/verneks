@@ -55,18 +55,9 @@ export default function Chat({ user, chatMessages = [], setChatMessages }) {
   const storageKey     = user?.id ? `lc_chat_${user.id}` : null
   const ONBOARDING_KEY = user?.id ? `onboarded_${user.id}` : null
 
-  // Local state — initialize langsung dari localStorage saat mount
-  const [messages, setMessages] = useState(() => {
-    if (!user?.id) return []
-    try {
-      const saved = localStorage.getItem(`lc_chat_${user.id}`)
-      if (saved) {
-        const parsed = JSON.parse(saved)
-        if (Array.isArray(parsed) && parsed.length > 0) return parsed
-      }
-    } catch {}
-    return []
-  })
+  // Pakai chatMessages dari App.jsx langsung sebagai source of truth
+  const messages    = chatMessages
+  const setMessages = setChatMessages
 
   const [input, setInput]               = useState('')
   const [loading, setLoading]           = useState(false)
@@ -135,7 +126,13 @@ export default function Chat({ user, chatMessages = [], setChatMessages }) {
       { id: '__pricing', label: '⭐ Lihat Paket Upgrade' },
       { id: '__menu',    label: '🏠 Menu utama' },
     ])
-    setMode('menu')
+    // Tetap di mode coach + simpan konteks paywall ke history
+    // supaya kalau user nanya lanjut, Diah Anna punya konteks
+    setMode('coach')
+    setCoachHistory(prev => [
+      ...prev,
+      { role: 'assistant', content: msg },
+    ])
   }
 
   // ── File upload ────────────────────────────────────────────────────────
@@ -358,6 +355,7 @@ export default function Chat({ user, chatMessages = [], setChatMessages }) {
   }
 
   const handleSignOut = async () => {
+    if (storageKey) localStorage.removeItem(storageKey)
     await supabase.auth.signOut(); navigate('/')
   }
 
