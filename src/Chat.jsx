@@ -389,7 +389,7 @@ export default function Chat({ user, chatMessages = [], setChatMessages }) {
         <div style={{ flex: 1 }}>
           <div style={{ color: '#fff', fontWeight: 700, fontSize: '1rem', lineHeight: 1.2, display: 'flex', alignItems: 'center', gap: 5 }}>
             Diah Anna
-            <img src="/icons/verified.svg" width="16" height="16" alt="verified" style={{ flexShrink: 0, marginTop: 1 }} />
+            <img src="/icons/verified.png" width="16" height="16" alt="verified" style={{ flexShrink: 0, marginTop: 1 }} />
           </div>
           <div style={{ color: 'rgba(255,255,255,0.65)', fontSize: '0.73rem' }}>AI Career Coach • online</div>
         </div>
