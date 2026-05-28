@@ -41,8 +41,19 @@ export default function App() {
       }
       const u = session?.user ?? null
       setUser(u)
-      if (u) setChatMessages(loadMessages(u.id))
-      else setChatMessages([])
+      if (u) {
+        setChatMessages(loadMessages(u.id))
+        // Redirect ke /chat setelah OAuth login (Google, dll)
+        // Kalau masih di halaman root atau ada hash token di URL
+        if (
+          _event === 'SIGNED_IN' &&
+          (window.location.pathname === '/' || window.location.hash.includes('access_token'))
+        ) {
+          window.location.replace('/chat')
+        }
+      } else {
+        setChatMessages([])
+      }
     })
     return () => subscription.unsubscribe()
   }, [])
