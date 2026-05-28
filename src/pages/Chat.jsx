@@ -110,17 +110,8 @@ export default function Chat({ user, chatMessages = [], setChatMessages }) {
   // ── Auth guard + greeting ────────────────────────────────────────────────
   useEffect(() => {
     if (!user) { navigate('/'); return }
-    // Cek localStorage langsung — bukan messages state yang mungkin belum sync
-    const key = user.id ? `lc_chat_${user.id}` : null
-    if (key) {
-      try {
-        const saved = localStorage.getItem(key)
-        if (saved) {
-          const parsed = JSON.parse(saved)
-          if (Array.isArray(parsed) && parsed.length > 0) return // ada riwayat, skip greeting
-        }
-      } catch {}
-    }
+    // Kalau messages sudah ada (dimuat dari localStorage di App.jsx), skip greeting
+    if (chatMessages && chatMessages.length > 0) return
     const firstName = (user.user_metadata?.name || user.user_metadata?.full_name || '').split(' ')[0]
     pushBot(`Halo${firstName ? ` ${firstName}` : ''}! 👋 Aku Diah Anna, AI Career Coach kamu.\n\nPilih fitur di atas atau langsung ketik pertanyaanmu ya!`)
   }, [user?.id])
@@ -369,8 +360,8 @@ export default function Chat({ user, chatMessages = [], setChatMessages }) {
   }
 
   const handleSignOut = async () => {
-    if (storageKey) localStorage.removeItem(storageKey)
-    await supabase.auth.signOut(); navigate('/')
+    await supabase.auth.signOut()
+    navigate('/')
   }
 
   const [shareCard, setShareCard] = useState(null)
