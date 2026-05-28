@@ -55,9 +55,18 @@ export default function Chat({ user, chatMessages = [], setChatMessages }) {
   const storageKey     = user?.id ? `lc_chat_${user.id}` : null
   const ONBOARDING_KEY = user?.id ? `onboarded_${user.id}` : null
 
-  // Pakai chatMessages dari App.jsx langsung sebagai source of truth
-  const messages    = chatMessages
-  const setMessages = setChatMessages
+  // Local state — initialize langsung dari localStorage saat mount
+  const [messages, setMessages] = useState(() => {
+    if (!user?.id) return []
+    try {
+      const saved = localStorage.getItem(`lc_chat_${user.id}`)
+      if (saved) {
+        const parsed = JSON.parse(saved)
+        if (Array.isArray(parsed) && parsed.length > 0) return parsed
+      }
+    } catch {}
+    return []
+  })
 
   const [input, setInput]               = useState('')
   const [loading, setLoading]           = useState(false)
@@ -75,9 +84,17 @@ export default function Chat({ user, chatMessages = [], setChatMessages }) {
     setShowOnboarding(false)
   }
 
-  const bottomRef     = useRef()
-  const fileRef       = useRef()
-  const greetedRef    = useRef(false)  // track greeting sudah tampil
+  const bottomRef = useRef()
+  const fileRef   = useRef()
+
+  // ── pushBot & pushUser didefinisikan DULU sebelum dipakai di useEffect ──
+  const pushBot = useCallback((text, quickReplies = null) => {
+    setMessages(prev => [...prev, { id: Date.now() + Math.random(), role: 'bot', text, quickReplies }])
+  }, [])
+
+  const pushUser = useCallback((text) => {
+    setMessages(prev => [...prev, { id: Date.now() + Math.random(), role: 'user', text }])
+  }, [])
 
   // ── Auth guard + greeting ────────────────────────────────────────────────
   useEffect(() => {
@@ -105,13 +122,7 @@ export default function Chat({ user, chatMessages = [], setChatMessages }) {
 
   useEffect(() => { bottomRef.current?.scrollIntoView({ behavior: 'smooth' }) }, [messages, loading])
 
-  const pushBot = useCallback((text, quickReplies = null) => {
-    setMessages(prev => [...prev, { id: Date.now() + Math.random(), role: 'bot', text, quickReplies }])
-  }, [])
 
-  const pushUser = useCallback((text) => {
-    setMessages(prev => [...prev, { id: Date.now() + Math.random(), role: 'user', text }])
-  }, [])
 
   // ── Paywall ────────────────────────────────────────────────────────────
   const showPaywall = (feature) => {
@@ -347,7 +358,6 @@ export default function Chat({ user, chatMessages = [], setChatMessages }) {
   }
 
   const handleSignOut = async () => {
-    if (storageKey) localStorage.removeItem(storageKey)
     await supabase.auth.signOut(); navigate('/')
   }
 
