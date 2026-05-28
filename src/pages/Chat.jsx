@@ -393,8 +393,6 @@ export default function Chat({ user, chatMessages = [], setChatMessages }) {
           </div>
           <div style={{ color: 'rgba(255,255,255,0.65)', fontSize: '0.73rem' }}>AI Career Coach • online</div>
         </div>
-          <div style={{ color: 'rgba(255,255,255,0.65)', fontSize: '0.73rem' }}>AI Career Coach • online</div>
-        </div>
         <button
           onClick={() => navigate('/pricing')}
           style={{ color: '#fff', fontSize: '0.72rem', padding: '3px 8px', background: plan === 'free' ? 'rgba(255,200,0,0.25)' : 'rgba(255,255,255,0.15)', border: '1px solid rgba(255,255,255,0.3)', borderRadius: 12, fontWeight: 600, cursor: 'pointer', whiteSpace: 'nowrap' }}
