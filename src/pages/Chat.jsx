@@ -77,6 +77,26 @@ export default function Chat({ user, chatMessages = [], setChatMessages }) {
 
   const bottomRef = useRef()
   const fileRef   = useRef()
+  const containerRef = useRef()
+
+  // ── visualViewport: adjust container saat keyboard muncul di mobile ──
+  useEffect(() => {
+    const vv = window.visualViewport
+    if (!vv) return
+    const update = () => {
+      if (containerRef.current) {
+        containerRef.current.style.height = vv.height + 'px'
+        containerRef.current.style.top    = vv.offsetTop + 'px'
+      }
+    }
+    vv.addEventListener('resize', update)
+    vv.addEventListener('scroll', update)
+    update()
+    return () => {
+      vv.removeEventListener('resize', update)
+      vv.removeEventListener('scroll', update)
+    }
+  }, [])
 
   // ── pushBot & pushUser didefinisikan DULU sebelum dipakai di useEffect ──
   const pushBot = useCallback((text, quickReplies = null) => {
@@ -360,11 +380,13 @@ export default function Chat({ user, chatMessages = [], setChatMessages }) {
 
   return (
     // ── FIX UTAMA: position fixed + inset 0 → header tidak pernah hilang ──
-    <div style={{
+    <div ref={containerRef} style={{
       position: 'fixed', top: 0, left: '50%', transform: 'translateX(-50%)',
-      width: '100%', maxWidth: 480, bottom: 0,
+      width: '100%', maxWidth: 480,
+      height: '100vh',
       display: 'flex', flexDirection: 'column',
       background: 'var(--wa-chat-bg)',
+      overflow: 'hidden',
     }}>
       {showOnboarding && <Onboarding onDone={handleOnboardingDone} />}
       {shareCard && <ShareCard resultText={shareCard.text} type={shareCard.type} onClose={() => setShareCard(null)} />}
@@ -403,28 +425,13 @@ export default function Chat({ user, chatMessages = [], setChatMessages }) {
 
       {/* ── Messages — satu-satunya yang scroll ── */}
       <div style={{ flex: 1, overflowY: 'auto', padding: '10px 10px 4px', display: 'flex', flexDirection: 'column', gap: '2px', WebkitOverflowScrolling: 'touch' }}>
-        {messages.map((msg, idx) => {
-          const isUser = msg.role === 'user'
-          // Waktu dari id (timestamp)
-          const ts = new Date(Math.floor(msg.id))
-          const timeStr = ts.getHours().toString().padStart(2,'0') + ':' + ts.getMinutes().toString().padStart(2,'0')
-          return (
+        {messages.map(msg => (
           <div key={msg.id} style={{ marginBottom: msg.quickReplies ? 2 : 1 }}>
-            <div style={{ display: 'flex', justifyContent: isUser ? 'flex-end' : 'flex-start' }}>
-              <div style={{ maxWidth: '82%', background: isUser ? '#DCF8C6' : '#fff', borderRadius: isUser ? '14px 3px 14px 14px' : '3px 14px 14px 14px', padding: '9px 13px 6px', fontSize: '0.875rem', lineHeight: 1.55, boxShadow: '0 1px 2px rgba(0,0,0,0.1)', color: '#111B21', wordBreak: 'break-word' }}>
-                <div dangerouslySetInnerHTML={{ __html: renderMd(msg.text) }} />
-                {/* Timestamp + centang WA persis */}
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 3, marginTop: 3 }}>
-                  <span style={{ fontSize: '0.68rem', color: isUser ? '#5d8a6a' : '#999', lineHeight: 1 }}>{timeStr}</span>
-                  {isUser && (
-                    <svg width="16" height="11" viewBox="0 0 16 11" fill="none" xmlns="http://www.w3.org/2000/svg">
-                      {/* Double centang WA — biru kalau sudah dibaca (kita set biru langsung karena bot sudah terima) */}
-                      <path d="M1 5.5L4.5 9L10 3" stroke="#53BDEB" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round"/>
-                      <path d="M5 5.5L8.5 9L14 3" stroke="#53BDEB" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round"/>
-                    </svg>
-                  )}
-                </div>
-              </div>
+            <div style={{ display: 'flex', justifyContent: msg.role === 'user' ? 'flex-end' : 'flex-start' }}>
+              <div
+                style={{ maxWidth: '82%', background: msg.role === 'user' ? '#DCF8C6' : '#fff', borderRadius: msg.role === 'user' ? '14px 3px 14px 14px' : '3px 14px 14px 14px', padding: '9px 13px', fontSize: '0.875rem', lineHeight: 1.55, boxShadow: '0 1px 2px rgba(0,0,0,0.1)', color: '#111B21', wordBreak: 'break-word' }}
+                dangerouslySetInnerHTML={{ __html: renderMd(msg.text) }}
+              />
             </div>
             {msg.quickReplies && (
               <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, padding: '5px 4px 6px' }}>
@@ -437,8 +444,7 @@ export default function Chat({ user, chatMessages = [], setChatMessages }) {
               </div>
             )}
           </div>
-          )
-        })}
+        ))}
 
         {loading && (
           <div style={{ display: 'flex', justifyContent: 'flex-start', marginTop: 2 }}>
