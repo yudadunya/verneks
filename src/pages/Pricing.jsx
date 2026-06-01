@@ -55,10 +55,10 @@ const PLANS = [
     popular: true,
     badge: '⭐ PALING POPULER',
     features: [
-      { label: 'CV Review', val: '20x/bulan' },
+      { label: 'CV Review', val: '30x/bulan' },
       { label: 'Career Coach (Diah Anna)', val: 'Bebas' },
-      { label: 'CV Maker AI', val: '20x/bulan' },
-      { label: 'Mock Interview', val: '20x/bulan' },
+      { label: 'CV Maker AI', val: '30x/bulan' },
+      { label: 'Mock Interview', val: '30x/bulan' },
       { label: 'Priority response', val: true },
     ],
   },
