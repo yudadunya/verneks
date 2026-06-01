@@ -157,6 +157,9 @@ export default function Chat({ user, chatMessages = [], setChatMessages }) {
       } else if (mode === 'ats-upload') {
         setMode('ats-jd')
         pushBot('CV berhasil dibaca! 🎯\n\nPaste job description yang mau dilamar di sini. (opsional)', [{ id: '__skip_jd', label: 'Skip, cek aja' }])
+      } else if (mode === 'cv-maker-upload') {
+        setMode('cv-maker-format')
+        pushBot('CV lama berhasil dibaca! ✨\n\nSekarang pilih format CV baru yang kamu mau — AI akan tulis ulang jadi lebih optimal:', CV_FORMATS)
       }
     } catch (e) { pushBot(`Gagal baca file: ${e.message}\n\nCoba paste teks CV kamu langsung ya.`) }
     setLoading(false)
@@ -173,6 +176,11 @@ export default function Chat({ user, chatMessages = [], setChatMessages }) {
   // ── Router ─────────────────────────────────────────────────────────────
   const route = async (id, label) => {
     if (id === '__menu' || id === 'menu') { setMode('menu'); pushBot('Oke! Mau ngapain lagi?', MAIN_MENU); return }
+    if (id === '__download_docx') {
+      const lastBot = [...messages].reverse().find(m => m.role === 'bot' && (m.text?.length || 0) > 200)
+      if (lastBot?.text) await downloadDocx(lastBot.text)
+      return
+    }
     if (id === '__share_app') { setShowShareApp(true); return }
     if (id === '__share_cv')  { const m = [...messages].reverse().find(m => m.role === 'bot' && (m.text?.length || 0) > 100); setShareCard({ text: m?.text || '', type: 'cv-review' }); return }
     if (id === '__share_ats') { const m = [...messages].reverse().find(m => m.role === 'bot' && (m.text?.length || 0) > 100); setShareCard({ text: m?.text || '', type: 'ats' }); return }
@@ -194,7 +202,7 @@ export default function Chat({ user, chatMessages = [], setChatMessages }) {
       case 'interview-level':    { setInterview(prev => ({ ...prev, level: id })); await startInterviewSession(interview.position, id); return }
       case 'interview-active':   { await answerInterview(id); return }
       case 'cv-maker-info':   { setCvMakerInfo(prev => ({ ...prev, text: id })); setMode('cv-maker-format'); pushBot('Mau format CV apa?', CV_FORMATS); return }
-      case 'cv-maker-format': { if (CV_FORMATS.find(f => f.id === id)) await doCvMaker(cvMakerInfo.text, id); return }
+      case 'cv-maker-format': { if (CV_FORMATS.find(f => f.id === id)) await doCvMaker(id); return }
       case 'coach': {
         // Cek keyword fitur berbayar bahkan saat dalam sesi coach
         const msg = id.toLowerCase()
@@ -250,8 +258,9 @@ export default function Chat({ user, chatMessages = [], setChatMessages }) {
 
   const startCvMaker = async () => {
     if (!await checkUsage('cv-maker')) { showPaywall('cv-maker'); return }
-    setMode('cv-maker-info'); setCvMakerInfo({ text: '', format: '' })
-    pushBot('Oke, kita bikin CV kamu dari nol! ✨\n\nIsi data berikut ya (copy-paste format ini):\n\nNama: [nama lengkap]\nPosisi target: [posisi yang dilamar]\nEmail: [email]\nNo HP: [nomor hp]\nKota: [kota domisili]\n\nPengalaman Kerja:\n[nama perusahaan, jabatan, tahun, tanggung jawab & pencapaian]\n\nPendidikan:\n[universitas, jurusan, tahun lulus, IPK]\n\nKeahlian:\n[skill teknis, tools, bahasa, dll]\n\nSertifikasi/Organisasi (opsional):\n[kalau ada]\n\nKirim semua sekaligus, nanti aku langsung buatkan CV-nya!')
+    setMode('cv-maker-upload')
+    setCvMakerInfo({ text: '', format: '' })
+    pushBot('Oke, kita optimalkan CV kamu! ✨\n\nUpload CV lama kamu (PDF atau Word) — nanti AI tulis ulang jadi CV baru yang lolos ATS, JobStreet, atau LinkedIn.')
   }
 
   const startCoach = async () => {
@@ -309,39 +318,39 @@ export default function Chat({ user, chatMessages = [], setChatMessages }) {
     setLoading(false)
   }
 
-  const doCvMaker = async (infoText, format) => {
+  const doCvMaker = async (format) => {
     setMode('cv-maker-done'); setLoading(true)
-
-    // Parse input terstruktur dari user
-    const extract = (label, text) => {
-      const regex = new RegExp(`${label}\\s*:?\\s*([^\\n]+(?:\\n(?![A-Z][a-zA-Z ]+:)[^\\n]+)*)`, 'i')
-      const m = text.match(regex)
-      return m ? m[1].trim() : ''
-    }
-
-    const formData = {
-      name:       extract('Nama', infoText) || 'Nama Pengguna',
-      email:      extract('Email', infoText),
-      phone:      extract('No HP|Telepon|Phone', infoText),
-      location:   extract('Kota|Lokasi|Domisili', infoText),
-      experience: extract('Pengalaman Kerja|Pengalaman', infoText) || infoText,
-      education:  extract('Pendidikan', infoText),
-      skills:     extract('Keahlian|Skills|Skill', infoText),
-      extra:      extract('Sertifikasi|Organisasi|Tambahan', infoText),
-    }
-
-    const jobTarget = extract('Posisi target|Posisi|Target posisi', infoText)
-
     try {
-      const data = await apiFetch('/api/cv-maker', { mode: 'scratch', format, formData, jobTarget })
+      // pakai cvText dari hasil upload file
+      const data = await apiFetch('/api/cv-maker', { mode: 'optimize', format, cvText })
       logUsage('cv-maker')
       pushBot(data.result, [
+        { id: '__download_docx', label: '📥 Download Word (.docx)' },
         { id: '__share_cv', label: '📤 Bagikan CV' },
         { id: '__share_app', label: '👥 Ajak teman coba' },
         { id: '__menu', label: '🏠 Kembali ke menu' },
       ])
     } catch (e) { pushBot(`Error: ${e.message}`); setMode('menu') }
     setLoading(false)
+  }
+
+  // Download hasil CV sebagai .docx
+  const downloadDocx = async (markdown) => {
+    try {
+      const res = await fetch('/api/cv-to-docx', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ markdown, filename: 'CV-LamarCerdas' })
+      })
+      if (!res.ok) throw new Error('Gagal generate file')
+      const blob = await res.blob()
+      const url = URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url; a.download = 'CV-LamarCerdas.docx'; a.click()
+      URL.revokeObjectURL(url)
+    } catch (e) {
+      pushBot('Gagal download file Word. Coba lagi ya!')
+    }
   }
 
   // Keyword yang trigger paywall langsung
@@ -391,7 +400,7 @@ export default function Chat({ user, chatMessages = [], setChatMessages }) {
   const [shareCard, setShareCard] = useState(null)
   const [showShareApp, setShowShareApp] = useState(false)
 
-  const canUpload = ['cv-review-upload', 'ats-upload'].includes(mode)
+  const canUpload = ['cv-review-upload', 'ats-upload', 'cv-maker-upload'].includes(mode)
 
   return (
     // ── FIX UTAMA: position fixed + inset 0 → header tidak pernah hilang ──
