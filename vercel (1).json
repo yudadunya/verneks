@@ -1,7 +1,0 @@
-{
-  "outputDirectory": "dist",
-  "rewrites": [
-    { "source": "/api/(.*)", "destination": "/api/$1" },
-    { "source": "/((?!sitemap.xml|robots.txt|.*\\.ico|.*\\.png|.*\\.jpg|.*\\.svg|.*\\.css|.*\\.js).*)", "destination": "/index.html" }
-  ]
-}
