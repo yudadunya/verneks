@@ -4,7 +4,7 @@ import { supabase } from '../lib/supabase'
 export const LIMITS = {
   free:    { 'cv-review': 1,  ats: 1,  coach: 999, interview: 0,  'cv-maker': 1  },
   starter: { 'cv-review': 5,  ats: 5,  coach: 999, interview: 0,  'cv-maker': 5  },
-  pro:     { 'cv-review': 20, ats: 20, coach: 999, interview: 20, 'cv-maker': 20 },
+  pro:     { 'cv-review': 30, ats: 30, coach: 999, interview: 30, 'cv-maker': 30 },
 }
 
 export const PLAN_LABEL  = { free: 'Free', starter: 'Starter', pro: 'Pro ⭐' }
