@@ -8,6 +8,8 @@ import ForgotPassword from './pages/ForgotPassword'
 import ResetPassword from './pages/ResetPassword'
 import Chat from './pages/Chat'
 import Pricing from './pages/Pricing'
+import Blog from './pages/Blog'
+import BlogPost from './pages/BlogPost'
 
 // Helper baca localStorage
 function loadMessages(userId) {
@@ -80,6 +82,9 @@ export default function App() {
         <Route path="/reset-password"  element={<ResetPassword />} />
         <Route path="/pricing"       element={<Pricing user={user} />} />
         <Route path="/chat"          element={<Chat user={user} chatMessages={chatMessages} setChatMessages={setChatMessages} />} />
+        {/* Blog */}
+        <Route path="/blog"          element={<Blog user={user} />} />
+        <Route path="/blog/:slug"    element={<BlogPost user={user} />} />
         {/* Semua route fitur redirect ke /chat */}
         <Route path="/dashboard"      element={<Chat user={user} chatMessages={chatMessages} setChatMessages={setChatMessages} />} />
         <Route path="/cv-review"      element={<Chat user={user} chatMessages={chatMessages} setChatMessages={setChatMessages} />} />
