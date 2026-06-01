@@ -1,4 +1,3 @@
-// Data artikel blog — tambah artikel baru di sini
 export const BLOG_POSTS = [
   {
     slug: 'cara-lolos-ats-2024',
@@ -9,6 +8,13 @@ export const BLOG_POSTS = [
     date: '2025-01-15',
     readTime: '5 menit',
     keywords: ['ATS', 'CV ATS friendly', 'cara lolos ATS', 'tips CV 2025'],
+    faq: [
+      { q: 'Apa itu ATS dalam rekrutmen?', a: 'ATS (Applicant Tracking System) adalah software yang digunakan perusahaan untuk menyaring lamaran secara otomatis sebelum dilihat HRD. ATS membaca CV dan memberi skor berdasarkan kata kunci dan format.' },
+      { q: 'Berapa persen lamaran yang ditolak ATS?', a: 'Sekitar 75% lamaran ditolak ATS sebelum dibaca manusia. Artinya hanya 1 dari 4 CV yang sampai ke meja HRD.' },
+      { q: 'Format CV apa yang paling ramah ATS?', a: 'Format PDF satu kolom tanpa tabel, header/footer, atau gambar adalah yang paling ramah ATS. Gunakan font standar dan struktur linear dari atas ke bawah.' },
+      { q: 'Bagaimana cara meningkatkan ATS score CV saya?', a: 'Masukkan kata kunci dari job description secara natural, gunakan format satu kolom, hindari tabel dan gambar, simpan sebagai PDF yang bisa di-copy teksnya, dan pastikan setiap section diberi label yang jelas.' },
+      { q: 'Apakah CV dengan desain bagus bisa gagal ATS?', a: 'Ya. CV dengan desain grafis yang berat, banyak kolom, tabel, atau elemen visual memang bagus untuk mata manusia tapi sering gagal dibaca ATS dengan benar.' },
+    ],
     content: `
 ## Apa itu ATS dan Kenapa Penting?
 
@@ -47,19 +53,15 @@ Desain CV yang penuh grafik memang bagus untuk mata manusia, tapi menyulitkan AT
 
 Struktur ideal CV yang lolos ATS:
 
-1. **Header** — Nama, nomor HP, email, LinkedIn
-2. **Ringkasan Profesional** — 3-4 kalimat tentang siapa kamu dan value yang kamu bawa
-3. **Pengalaman Kerja** — Urutan terbalik (terbaru dulu), bullet points dengan angka
-4. **Pendidikan**
-5. **Skill** — Daftar skill teknis yang relevan dengan posisi
+- **Header** — Nama, nomor HP, email, LinkedIn
+- **Ringkasan Profesional** — 3-4 kalimat tentang siapa kamu dan value yang kamu bawa
+- **Pengalaman Kerja** — Urutan terbalik (terbaru dulu), bullet points dengan angka
+- **Pendidikan**
+- **Skill** — Daftar skill teknis yang relevan dengan posisi
 
 ## Cek ATS Score CV Kamu Sekarang
 
-Tidak perlu tebak-tebakan. Di LamarCerdas, kamu bisa cek ATS score CV kamu **gratis** dalam 30 detik. AI kami akan:
-
-- Kasih skor ATS dari 0-100
-- Tunjukkan bagian mana yang perlu diperbaiki
-- Berikan saran konkret yang bisa langsung kamu terapkan
+Tidak perlu tebak-tebakan. Di LamarCerdas, kamu bisa cek ATS score CV kamu **gratis** dalam 30 detik. AI kami akan kasih skor ATS dari 0-100, tunjukkan bagian mana yang perlu diperbaiki, dan berikan saran konkret yang bisa langsung kamu terapkan.
 
 **Ribuan job seeker sudah meningkatkan ATS score mereka dari rata-rata 48 menjadi 78+ setelah menggunakan LamarCerdas.**
     `
@@ -73,6 +75,13 @@ Tidak perlu tebak-tebakan. Di LamarCerdas, kamu bisa cek ATS score CV kamu **gra
     date: '2025-01-22',
     readTime: '6 menit',
     keywords: ['tips interview', 'fresh graduate', 'cara interview kerja', 'persiapan interview'],
+    faq: [
+      { q: 'Apa yang harus dipersiapkan fresh graduate sebelum interview?', a: 'Riset perusahaan secara mendalam, siapkan jawaban untuk pertanyaan umum menggunakan metode STAR, latihan mock interview, dan siapkan 2-3 pertanyaan untuk HRD.' },
+      { q: 'Bagaimana cara menjawab "ceritakan tentang diri kamu" saat interview?', a: 'Jangan baca ulang CV. Ceritakan perjalanan singkat: latar belakang pendidikan, pengalaman relevan (organisasi, magang, proyek), skill utama yang kamu bawa, dan kenapa kamu tertarik posisi ini.' },
+      { q: 'Apa itu metode STAR dalam interview?', a: 'STAR adalah Situation (konteks), Task (tugas/tantangan), Action (apa yang kamu lakukan), Result (hasilnya). Gunakan struktur ini untuk menjawab pertanyaan berbasis pengalaman.' },
+      { q: 'Bolehkah fresh graduate tidak punya pengalaman kerja saat interview?', a: 'Boleh. Gantikan dengan pengalaman organisasi, kepanitiaan, proyek kuliah, lomba, atau magang. Yang penting ceritakan dengan struktur yang jelas dan tunjukkan dampak nyata.' },
+      { q: 'Apakah perlu follow up setelah interview kerja?', a: 'Sangat disarankan. Kirim email terima kasih dalam 24 jam setelah interview. Ini jarang dilakukan tapi memberi kesan sangat positif ke recruiter.' },
+    ],
     content: `
 ## Kenapa Fresh Graduate Sering Gagal Interview?
 
@@ -84,54 +93,40 @@ Kabar baiknya: ini bisa dilatih. Berikut 7 tips yang terbukti efektif.
 
 ### 1. Gunakan Metode STAR
 Setiap jawaban tentang pengalaman, gunakan struktur STAR:
+
 - **S**ituation — Apa konteksnya?
 - **T**ask — Apa tugas/tantanganmu?
 - **A**ction — Apa yang kamu lakukan?
 - **R**esult — Apa hasilnya?
 
-Contoh jawaban pertanyaan "Ceritakan pengalaman kerja tim kamu":
-> "Saat lomba bisnis plan tingkat nasional (Situation), tim kami kesulitan membagi tugas karena semua ingin mengerjakan bagian yang sama (Task). Saya ambil inisiatif memetakan kekuatan masing-masing anggota dan redistribusi tugas (Action). Akhirnya kami masuk 10 besar dari 200+ tim (Result)."
+Contoh jawaban pertanyaan "Ceritakan pengalaman kerja tim kamu": Saat lomba bisnis plan tingkat nasional, tim kami kesulitan membagi tugas. Saya ambil inisiatif memetakan kekuatan masing-masing anggota dan redistribusi tugas. Akhirnya kami masuk 10 besar dari 200+ tim.
 
 ### 2. Riset Perusahaan Sebelum Interview
-HRD langsung tahu siapa yang asal melamar dan siapa yang serius. Pelajari:
-- Produk/layanan utama perusahaan
-- Nilai dan budaya perusahaan
-- Berita terbaru tentang perusahaan
-- Kompetitor mereka
+HRD langsung tahu siapa yang asal melamar dan siapa yang serius. Pelajari produk/layanan utama, nilai dan budaya perusahaan, berita terbaru, dan kompetitor mereka.
 
 ### 3. Siapkan Jawaban untuk Pertanyaan Wajib
 Latih jawaban untuk pertanyaan yang hampir selalu ditanyakan:
+
 - "Ceritakan tentang diri kamu" (jangan baca ulang CV!)
 - "Kenapa kamu tertarik bergabung di sini?"
 - "Apa kelebihan dan kekurangan kamu?"
 - "Di mana kamu ingin berada 5 tahun lagi?"
 
 ### 4. Siapkan 2-3 Pertanyaan untuk HRD
-Di akhir interview, pasti ditanya "Ada pertanyaan?" Jangan jawab tidak ada. Tanyakan:
-- "Seperti apa hari-hari pertama onboarding di sini?"
-- "Apa yang membuat seseorang sukses di posisi ini?"
+Di akhir interview, pasti ditanya "Ada pertanyaan?" Jangan jawab tidak ada. Tanyakan seperti apa hari-hari pertama onboarding atau apa yang membuat seseorang sukses di posisi ini.
 
 ### 5. Latihan Mock Interview
-Berlatih sendirian di depan cermin tidak cukup efektif. Kamu butuh feedback dari "pihak luar". Beberapa cara:
-- Minta teman atau senior untuk mock interview
-- Gunakan AI seperti LamarCerdas untuk simulasi HRD
+Berlatih sendirian di depan cermin tidak cukup efektif. Kamu butuh feedback dari luar. Minta teman atau senior untuk mock interview, atau gunakan AI seperti LamarCerdas untuk simulasi HRD.
 
 ### 6. Perhatikan Bahasa Tubuh
-55% kesan pertama berasal dari bahasa tubuh:
-- Duduk tegak, jangan bungkuk
-- Tatap mata pewawancara (jangan terlalu intens, tapi jangan menghindari)
-- Senyum wajar saat memperkenalkan diri
+55% kesan pertama berasal dari bahasa tubuh. Duduk tegak, tatap mata pewawancara, dan senyum wajar saat memperkenalkan diri.
 
 ### 7. Follow Up Setelah Interview
-Kirim email terima kasih 24 jam setelah interview. Ini jarang dilakukan tapi memberi kesan sangat positif. Contoh:
-> "Terima kasih atas kesempatan interview hari ini. Saya semakin antusias dengan posisi [nama posisi] dan yakin bisa berkontribusi di [nama perusahaan]."
+Kirim email terima kasih 24 jam setelah interview. Ini jarang dilakukan tapi memberi kesan sangat positif.
 
 ## Latihan Mock Interview Gratis di LamarCerdas
 
-Di LamarCerdas, kamu bisa latihan interview dengan AI yang berperan sebagai HRD — kapan saja, tanpa perlu takut dihakimi. AI akan:
-- Ajukan pertanyaan sesuai posisi dan industri yang kamu tuju
-- Evaluasi jawaban kamu secara jujur
-- Kasih saran konkret cara memperbaiki jawaban
+Di LamarCerdas, kamu bisa latihan interview dengan AI yang berperan sebagai HRD — kapan saja, tanpa perlu takut dihakimi. AI akan ajukan pertanyaan sesuai posisi, evaluasi jawaban kamu secara jujur, dan kasih saran konkret.
 
 **Latihan membuat sempurna. Mulai mock interview gratis sekarang.**
     `
@@ -145,6 +140,13 @@ Di LamarCerdas, kamu bisa latihan interview dengan AI yang berperan sebagai HRD 
     date: '2025-02-05',
     readTime: '7 menit',
     keywords: ['negosiasi gaji', 'cara minta naik gaji', 'gaji interview', 'tips negosiasi'],
+    faq: [
+      { q: 'Kapan waktu yang tepat untuk negosiasi gaji?', a: 'Tunda sampai mereka jelas tertarik dengan kamu — biasanya di akhir interview atau saat offer formal masuk. Jangan tanya gaji di awal interview sebelum mereka melihat value kamu.' },
+      { q: 'Berapa persen karyawan yang bernegosiasi gaji?', a: 'Hanya 43% karyawan yang bernegosiasi gaji. Padahal 85% recruiter masih punya ruang untuk menaikkan offer pertama mereka.' },
+      { q: 'Apa yang harus dikatakan saat negosiasi gaji?', a: 'Contoh kalimat efektif: "Berdasarkan riset saya tentang standar industri dan pengalaman X tahun di bidang Y, apakah ada ruang untuk menyesuaikan ke kisaran [angka target]?" Selalu anchor ke nilai yang kamu bawa.' },
+      { q: 'Apakah negosiasi gaji bisa membuat offer dicabut?', a: 'Sangat jarang. Selama kamu profesional dan reasonable, negosiasi justru menunjukkan kamu tahu nilai diri. Offer hampir tidak pernah dicabut karena negosiasi yang sopan.' },
+      { q: 'Selain gaji, apa lagi yang bisa dinegosiasikan?', a: 'Banyak! Bonus signing, tunjangan transport atau makan, flexible working, budget training/sertifikasi, tanggal mulai kerja, dan jadwal review gaji yang lebih cepat.' },
+    ],
     content: `
 ## Kenapa Banyak Orang Takut Negosiasi Gaji?
 
@@ -154,13 +156,10 @@ Padahal, kebanyakan HRD **mengharapkan** negosiasi. Bahkan ada yang sengaja memb
 
 ## Langkah 1: Riset Gaji Pasar
 
-Sebelum negosiasi, kamu harus tahu angka yang realistis. Sumber riset:
-- **Glassdoor** dan **LinkedIn Salary** — data gaji berdasarkan posisi dan kota
-- **JobStreet** — ada fitur salary insight
-- **ITGid** dan komunitas profesi — untuk posisi tech
-- Tanya teman atau senior yang bekerja di industri serupa
+Sebelum negosiasi, kamu harus tahu angka yang realistis. Gunakan Glassdoor, LinkedIn Salary, JobStreet, atau tanya teman/senior di industri serupa.
 
 Faktor yang memengaruhi range gaji:
+
 - Lokasi (Jakarta vs kota lain)
 - Industri (tech vs manufaktur vs retail)
 - Ukuran perusahaan (startup vs korporat)
@@ -168,45 +167,28 @@ Faktor yang memengaruhi range gaji:
 
 ## Langkah 2: Tentukan Angka Kamu
 
-Siapkan 3 angka:
-- **Ideal** — angka impian kamu
-- **Target** — angka yang realistis ingin kamu dapatkan
-- **Minimum** — angka terbawah yang masih bisa kamu terima
-
-Mulai negosiasi dari angka **di antara Ideal dan Target**, bukan dari Target langsung.
+Siapkan 3 angka: Ideal (angka impian), Target (angka realistis), dan Minimum (terbawah yang masih bisa kamu terima). Mulai negosiasi dari angka di antara Ideal dan Target.
 
 ## Langkah 3: Timing yang Tepat
 
-❌ Jangan tanya gaji di awal interview (sebelum mereka tertarik dengan kamu)
-✅ Tunda sampai mereka jelas tertarik — biasanya di akhir interview atau saat offer formal
+❌ Jangan tanya gaji di awal interview sebelum mereka tertarik dengan kamu.
+✅ Tunda sampai mereka jelas tertarik — biasanya di akhir interview atau saat offer formal.
 
-Kalau dipaksa menyebut angka duluan, gunakan kalimat:
-> "Saya terbuka untuk mendiskusikan kompensasi yang kompetitif sesuai standar industri dan scope pekerjaan ini. Boleh saya tahu range yang disiapkan untuk posisi ini?"
+Kalau dipaksa menyebut angka duluan, katakan bahwa kamu terbuka untuk mendiskusikan kompensasi yang kompetitif sesuai standar industri, lalu balik tanya berapa range yang mereka siapkan.
 
 ## Kalimat Negosiasi yang Efektif
 
-Saat offer masuk dan angkanya kurang:
-
-> "Terima kasih atas tawaran ini. Saya sangat tertarik dengan posisi ini dan yakin bisa memberikan kontribusi besar. Berdasarkan riset saya tentang standar industri dan pengalaman [X tahun] di bidang [Y], apakah ada ruang untuk menyesuaikan ke kisaran [angka target]?"
+Saat offer masuk dan angkanya kurang, katakan bahwa kamu sangat tertarik dengan posisi ini dan yakin bisa berkontribusi besar. Berdasarkan riset standar industri dan pengalamanmu, tanyakan apakah ada ruang untuk menyesuaikan ke kisaran target kamu.
 
 Kunci: selalu anchor alasan ke **nilai yang kamu bawa**, bukan kebutuhan pribadi.
 
 ## Apa yang Bisa Dinegosiasi Selain Gaji?
 
-Kalau gaji tidak bisa dinaikkan, coba negosiasi:
-- Tanggal mulai kerja (minta lebih lama untuk transisi)
-- Bonus signing
-- Tunjangan transport atau makan
-- Flexible working arrangement
-- Budget training/sertifikasi
-- Review gaji lebih cepat (3 bulan vs 12 bulan)
+Kalau gaji tidak bisa dinaikkan, coba negosiasi bonus signing, tunjangan transport atau makan, flexible working arrangement, budget training atau sertifikasi, atau review gaji lebih cepat.
 
 ## Latihan Negosiasi dengan AI
 
-Negosiasi adalah skill — semakin sering dilatih, semakin natural. Di LamarCerdas, kamu bisa:
-- Simulasikan skenario negosiasi gaji dengan AI
-- Dapat feedback tentang kalimat dan pendekatan kamu
-- Latihan sampai percaya diri sebelum menghadapi HRD asli
+Negosiasi adalah skill — semakin sering dilatih, semakin natural. Di LamarCerdas, kamu bisa simulasikan skenario negosiasi gaji dengan AI dan dapat feedback tentang kalimat dan pendekatan kamu.
 
 **Career coach Diah Anna siap membantu kamu mempersiapkan negosiasi gaji yang sukses.**
     `
@@ -220,84 +202,57 @@ Negosiasi adalah skill — semakin sering dilatih, semakin natural. Di LamarCerd
     date: '2025-02-18',
     readTime: '8 menit',
     keywords: ['career switch', 'pindah karir', 'ganti profesi', 'cara switch karir'],
+    faq: [
+      { q: 'Berapa lama waktu yang dibutuhkan untuk career switch?', a: 'Rata-rata 6-18 bulan tergantung seberapa jauh gap skill yang perlu dijembatani dan seberapa aktif kamu membangun portfolio dan network di industri baru.' },
+      { q: 'Apakah career switch bisa tanpa pengalaman sama sekali?', a: 'Bisa, tapi kamu perlu membangun portfolio nyata — proyek mandiri, freelance, atau kontribusi open source — untuk membuktikan kemampuan ke employer baru.' },
+      { q: 'Apa itu transferable skills dalam career switch?', a: 'Transferable skills adalah kemampuan yang berguna di banyak industri, seperti analytical thinking, komunikasi, project management, dan problem solving. Ini aset utama saat switch karir.' },
+      { q: 'Haruskah saya resign dulu sebelum switch karir?', a: 'Tidak disarankan. Proses switch karir membutuhkan waktu dan kamu butuh income selama transisi. Lakukan persiapan sambil masih bekerja, baru resign setelah ada offer.' },
+      { q: 'Bagaimana cara menulis CV untuk career switch?', a: 'Reframe pengalaman lama agar relevan dengan posisi baru, tonjolkan transferable skills, tambahkan portfolio atau proyek yang menunjukkan kemampuan di bidang baru, dan tulis professional summary yang menjelaskan alasan switch.' },
+    ],
     content: `
 ## Apakah Career Switch Itu Realistis?
 
-Ya, sangat realistis — tapi butuh strategi. Career switch tanpa rencana sering berakhir dengan:
-- Posisi entry-level dengan gaji jauh lebih rendah
-- Kesulitan melewati screening ATS karena tidak ada pengalaman relevan
-- Frustrasi karena tidak tahu harus mulai dari mana
+Ya, sangat realistis — tapi butuh strategi. Career switch tanpa rencana sering berakhir dengan posisi entry-level bergaji jauh lebih rendah atau frustrasi karena tidak tahu harus mulai dari mana.
 
 Dengan pendekatan yang tepat, banyak orang berhasil switch karir dalam **6-18 bulan** bahkan ke industri yang sangat berbeda.
 
 ## Kenali "Transferable Skills" Kamu
 
-Ini aset terbesar kamu saat switch karir. Transferable skills adalah skill yang berguna di banyak industri:
+Ini aset terbesar kamu saat switch karir. Transferable skills adalah skill yang berguna di banyak industri.
 
-**Dari marketing:**
-- Data analysis → berguna di product management, business intelligence
-- Storytelling → berguna di UX writing, content strategy
-- Customer insight → berguna di product, UX research
+Dari marketing: data analysis berguna di product management, storytelling berguna di UX writing, dan customer insight berguna di product atau UX research.
 
-**Dari finance/accounting:**
-- Analytical thinking → berguna di data analyst, business analyst
-- Attention to detail → berguna di QA, project management
-- Risk assessment → berguna di product strategy
-
-**Dari HR:**
-- Communication → berguna di customer success, sales
-- People management → berguna di project management
-- Process design → berguna di operations
+Dari finance: analytical thinking berguna di data analyst, attention to detail berguna di QA, dan risk assessment berguna di product strategy.
 
 ## 5 Langkah Career Switch yang Berhasil
 
 ### Langkah 1: Pilih Target Karir yang Spesifik
-Jangan bilang "mau ke tech." Tentukan posisi spesifik:
-- Product Manager di startup fintech
-- UX Designer di e-commerce
-- Data Analyst di perusahaan FMCG
+Jangan bilang "mau ke tech." Tentukan posisi spesifik seperti Product Manager di startup fintech atau Data Analyst di perusahaan FMCG.
 
 ### Langkah 2: Audit Gap Skill Kamu
-Bandingkan skill yang kamu punya dengan requirement posisi target. Buat daftar:
-- Skill yang sudah kamu miliki ✅
-- Skill yang perlu dipelajari 📚
-- Skill yang bisa dibuktikan dari pengalaman lama 🔄
+Bandingkan skill yang kamu punya dengan requirement posisi target. Buat daftar skill yang sudah kamu miliki, skill yang perlu dipelajari, dan skill yang bisa dibuktikan dari pengalaman lama.
 
 ### Langkah 3: Bangun Portfolio Nyata
-Pengalaman kerja di industri lama tidak relevan? Kompensasi dengan portfolio:
-- Untuk data analyst: buat proyek analisis data di Kaggle atau GitHub
-- Untuk UX designer: redesign app yang sudah ada, dokumentasikan prosesnya
-- Untuk product manager: tulis product case study tentang produk yang kamu pakai sehari-hari
+Untuk data analyst: buat proyek analisis data di Kaggle atau GitHub. Untuk UX designer: redesign app yang sudah ada dan dokumentasikan prosesnya. Untuk product manager: tulis product case study tentang produk yang kamu pakai sehari-hari.
 
 ### Langkah 4: Reframe CV Kamu
-CV kamu tidak perlu menyembunyikan background lama — tapi harus **di-frame ulang** untuk relevan ke posisi baru.
+CV kamu tidak perlu menyembunyikan background lama — tapi harus di-frame ulang untuk relevan ke posisi baru.
 
-Contoh: Seorang marketing manager yang ingin jadi Product Manager.
-
-❌ Pengalaman lama:
-> "Mengelola kampanye iklan di berbagai platform digital"
-
-✅ Setelah di-reframe:
-> "Menganalisis data 50K+ user behavior untuk mengoptimalkan funnel konversi; menghasilkan 35% peningkatan conversion rate"
+❌ Pengalaman lama: "Mengelola kampanye iklan di berbagai platform digital"
+✅ Setelah di-reframe: "Menganalisis data 50K+ user behavior untuk mengoptimalkan funnel konversi; menghasilkan 35% peningkatan conversion rate"
 
 ### Langkah 5: Bangun Network di Industri Baru
-80% posisi terisi melalui networking, bukan job board. Cara membangun network baru:
-- Ikuti komunitas LinkedIn yang relevan
-- Hadiri meetup atau konferensi industri
-- Reach out ke orang-orang di posisi yang kamu inginkan untuk "informational interview"
+80% posisi terisi melalui networking. Ikuti komunitas LinkedIn yang relevan, hadiri meetup industri, dan reach out ke orang-orang di posisi yang kamu inginkan untuk informational interview.
 
 ## Hindari Kesalahan Umum Ini
 
-❌ **Keluar kerja sebelum ada offer** — switch karir butuh waktu, jangan burn savings
-❌ **Ekspektasi gaji terlalu tinggi di awal** — siap menerima step back sementara untuk step up lebih besar
-❌ **Tidak memanfaatkan pengalaman lama** — background berbeda bisa jadi keunggulan kompetitif
+❌ Keluar kerja sebelum ada offer — switch karir butuh waktu, jangan burn savings.
+❌ Ekspektasi gaji terlalu tinggi di awal — siap menerima step back sementara untuk step up lebih besar.
+❌ Tidak memanfaatkan pengalaman lama — background berbeda bisa jadi keunggulan kompetitif.
 
 ## Diskusi Career Switch dengan Diah Anna
 
-Setiap orang punya situasi unik. Diah Anna, career coach AI di LamarCerdas, bisa bantu kamu:
-- Identifikasi transferable skills yang kamu miliki
-- Buat roadmap switch karir yang realistis
-- Review CV yang sudah di-reframe untuk posisi baru
+Setiap orang punya situasi unik. Diah Anna di LamarCerdas bisa bantu kamu identifikasi transferable skills, buat roadmap switch karir yang realistis, dan review CV yang sudah di-reframe.
 
 **Gratis, 24/7, tanpa judgement. Mulai diskusi sekarang.**
     `
@@ -311,81 +266,59 @@ Setiap orang punya situasi unik. Diah Anna, career coach AI di LamarCerdas, bisa
     date: '2025-03-01',
     readTime: '9 menit',
     keywords: ['cara membuat CV', 'template CV', 'CV menarik', 'CV profesional 2025'],
+    faq: [
+      { q: 'Berapa panjang CV yang ideal?', a: '1 halaman untuk pengalaman kurang dari 7 tahun, maksimal 2 halaman untuk yang lebih senior. HRD rata-rata hanya menghabiskan 6-7 detik per CV, jadi ringkas dan padat.' },
+      { q: 'Apakah CV harus pakai foto?', a: 'Di Indonesia umumnya iya. Gunakan foto formal dengan background netral, pakaian profesional, dan ekspresi ramah. Hindari foto selfie atau foto liburan.' },
+      { q: 'Apa perbedaan CV dan resume?', a: 'Di Indonesia keduanya sering digunakan bergantian. Secara internasional, CV lebih panjang dan detail, sedangkan resume lebih singkat (1-2 halaman). Untuk melamar kerja di Indonesia, cukup buat yang 1-2 halaman.' },
+      { q: 'Bagaimana cara menulis achievement di CV?', a: 'Gunakan formula: kata kerja kuat + apa yang dilakukan + hasil dalam angka. Contoh: "Meningkatkan penjualan 45% dalam 6 bulan melalui strategi upselling yang baru diimplementasikan."' },
+      { q: 'Apakah perlu membuat CV berbeda untuk setiap lamaran?', a: 'Idealnya ya — setidaknya sesuaikan professional summary dan kata kunci skill dengan job description masing-masing posisi. Ini signifikan meningkatkan ATS score dan relevansi CV kamu.' },
+    ],
     content: `
 ## Apa Bedanya CV Biasa dengan CV yang Dipanggil Interview?
 
-HRD rata-rata menghabiskan **6-7 detik** untuk memutuskan apakah mereka akan membaca CV lebih lanjut. Dalam waktu secepat itu, yang dilihat adalah:
-
-1. Apakah format CV mudah dibaca?
-2. Apakah nama posisi terakhir relevan?
-3. Apakah ada angka/achievement yang menonjol?
+HRD rata-rata menghabiskan **6-7 detik** untuk memutuskan apakah mereka akan membaca CV lebih lanjut. Yang dilihat pertama adalah apakah format mudah dibaca, apakah nama posisi terakhir relevan, dan apakah ada angka atau achievement yang menonjol.
 
 CV yang dipanggil interview bukan yang paling cantik desainnya — tapi yang paling **efektif** menyampaikan value kamu dalam 6 detik pertama.
 
 ## Anatomi CV yang Optimal
 
 ### 1. Header (Wajib Ada)
-- Nama lengkap (font besar, bold)
-- Nomor HP aktif
-- Email profesional (bukan yang alay!)
-- LinkedIn profile URL (wajib untuk profesional)
-- Kota domisili (tidak perlu alamat lengkap)
+Nama lengkap, nomor HP aktif, email profesional, LinkedIn profile URL, dan kota domisili. Tidak perlu alamat lengkap.
 
 ### 2. Professional Summary (2-4 Kalimat)
-Ini "elevator pitch" kamu dalam teks. Harus menjawab:
-- Kamu siapa?
-- Berapa tahun pengalaman di bidang apa?
-- Apa achievement atau value terbesar kamu?
-- Apa yang kamu cari?
+Ini elevator pitch kamu dalam teks. Harus menjawab siapa kamu, berapa tahun pengalaman di bidang apa, apa achievement terbesar kamu, dan apa yang kamu cari.
 
-Contoh buruk:
-> "Saya adalah lulusan S1 Manajemen yang memiliki passion tinggi dan motivasi kuat untuk berkembang."
+❌ Buruk: "Saya adalah lulusan S1 Manajemen yang memiliki passion tinggi dan motivasi kuat untuk berkembang."
 
-Contoh baik:
-> "Digital Marketing Specialist dengan 4 tahun pengalaman di industri e-commerce. Berhasil meningkatkan organic traffic 340% dan menurunkan CAC 28% melalui strategi content dan SEO. Mencari peluang membangun growth function di startup Series A-B."
+✅ Baik: "Digital Marketing Specialist dengan 4 tahun pengalaman di industri e-commerce. Berhasil meningkatkan organic traffic 340% dan menurunkan CAC 28% melalui strategi content dan SEO."
 
 ### 3. Pengalaman Kerja (Inti CV)
-Format terbaik untuk setiap posisi:
-- Nama perusahaan | Nama posisi | Bulan/Tahun – Bulan/Tahun
-- 3-5 bullet points, **dimulai dengan kata kerja aktif**
-- Setiap bullet idealnya punya angka/metrik
+Untuk setiap posisi: nama perusahaan, nama posisi, periode, lalu 3-5 bullet points dimulai dengan kata kerja aktif. Setiap bullet idealnya punya angka atau metrik.
 
-Formula bullet point CV:
-> [Kata kerja kuat] + [apa yang dilakukan] + [hasil dalam angka jika ada]
+Formula bullet point: kata kerja kuat + apa yang dilakukan + hasil dalam angka.
 
-Contoh:
-- ❌ "Bertanggung jawab atas social media perusahaan"
-- ✅ "Mengelola 5 akun social media dengan total 120K followers; meningkatkan engagement rate dari 1.2% ke 4.8% dalam 6 bulan"
+❌ "Bertanggung jawab atas social media perusahaan"
+✅ "Mengelola 5 akun social media dengan 120K followers; meningkatkan engagement rate dari 1.2% ke 4.8% dalam 6 bulan"
 
 ### 4. Pendidikan
-Untuk yang sudah punya pengalaman kerja > 2 tahun, bagian ini cukup singkat:
-- Nama universitas | Jurusan | Tahun lulus
-
-Untuk fresh graduate: boleh tambahkan IPK (jika > 3.2), prestasi akademik, atau organisasi relevan.
+Untuk yang sudah punya pengalaman kerja lebih dari 2 tahun, cukup nama universitas, jurusan, dan tahun lulus.
 
 ### 5. Skill
-Bagi menjadi dua bagian:
-- **Hard Skills:** Skill teknis yang bisa diukur (Excel, Python, Figma, Google Analytics)
-- **Soft Skills:** Pilih maksimal 3, yang benar-benar relevan (jangan tulis "kerja keras" dan "jujur")
+Bagi menjadi hard skills (Excel, Python, Figma) dan soft skills — pilih maksimal 3 yang benar-benar relevan.
 
 ## Kesalahan CV yang Sering Dilakukan
 
-❌ Satu CV untuk semua lamaran — seharusnya customize untuk setiap posisi
-❌ Terlalu panjang — 1 halaman untuk < 7 tahun pengalaman, 2 halaman max
-❌ Foto tidak profesional — pakai foto formal dengan background netral
-❌ Tidak ada achievement — hanya deskripsi tugas tanpa hasil
-❌ Typo dan grammar error — langsung kesan negatif
+❌ Satu CV untuk semua lamaran — seharusnya customize untuk setiap posisi.
+❌ Terlalu panjang — 1 halaman untuk kurang dari 7 tahun pengalaman.
+❌ Foto tidak profesional — pakai foto formal dengan background netral.
+❌ Tidak ada achievement — hanya deskripsi tugas tanpa hasil.
+❌ Typo dan grammar error — langsung kesan negatif.
 
 ## Buat CV Profesional dengan AI dalam 2 Menit
 
-Tidak tahu harus mulai dari mana? CV Maker AI di LamarCerdas bisa membantu:
+CV Maker AI di LamarCerdas bisa membantu. Ceritakan pengalamanmu, AI menyusun CV dengan format ATS-friendly, otomatis mengoptimalkan kata kerja dan achievement, lalu export ke PDF siap kirim.
 
-1. Ceritakan pengalaman kamu dalam bahasa sehari-hari
-2. AI akan menyusun CV dengan format ATS-friendly
-3. Otomatis mengoptimalkan kata kerja dan achievement
-4. Export ke format PDF siap kirim
-
-**Tidak perlu template berbayar. Tidak perlu bingung soal format. Mulai gratis sekarang.**
+**Tidak perlu template berbayar. Mulai gratis sekarang.**
     `
   },
   {
@@ -397,6 +330,13 @@ Tidak tahu harus mulai dari mana? CV Maker AI di LamarCerdas bisa membantu:
     date: '2025-03-15',
     readTime: '6 menit',
     keywords: ['LinkedIn tips', 'optimasi LinkedIn', 'profile LinkedIn', 'dicari recruiter LinkedIn'],
+    faq: [
+      { q: 'Apakah LinkedIn penting untuk mencari kerja di Indonesia?', a: 'Sangat penting, terutama untuk posisi profesional dan korporat. Banyak recruiter Indonesia aktif mencari kandidat di LinkedIn setiap hari, dan banyak posisi tidak diiklankan di job board manapun.' },
+      { q: 'Bagaimana cara menulis headline LinkedIn yang menarik?', a: 'Jangan hanya tulis jabatan. Tambahkan spesialisasi dan value yang kamu bawa. Contoh: "Digital Marketing Manager | SEO & Growth | Bantu brand tumbuh 3x melalui organic strategy".' },
+      { q: 'Berapa kali sebaiknya posting di LinkedIn?', a: '2-3 kali per minggu sudah cukup untuk menjaga algoritma aktif. Konsistensi lebih penting dari frekuensi. Kualitas konten lebih penting dari kuantitas.' },
+      { q: 'Apakah perlu mengaktifkan Open to Work di LinkedIn?', a: 'Ya, aktifkan fitur Open to Work. Kamu bisa atur agar hanya terlihat oleh recruiter (bukan koneksi umum) jika tidak ingin bos tahu kamu sedang cari kerja.' },
+      { q: 'Apa konten LinkedIn yang paling sering viral?', a: 'Lesson learned dari pengalaman kerja, tips praktis di bidang keahlian, cerita perjalanan karir termasuk kegagalan, dan opini tentang tren industri. Konten personal dan jujur cenderung lebih engage.' },
+    ],
     content: `
 ## LinkedIn Bukan Sekadar Online CV
 
@@ -407,70 +347,37 @@ Dengan optimasi yang tepat, kamu bisa masuk daftar pencarian recruiter tanpa har
 ## 7 Elemen LinkedIn yang Wajib Dioptimalkan
 
 ### 1. Foto Profil
-Foto profil yang baik meningkatkan kemungkinan dilihat recruiter **21x lebih tinggi**.
-- Pakai foto profesional, bukan foto selfie atau foto liburan
-- Background polos atau blur
-- Wajah terlihat jelas, senyum wajar
-- Pakaian sesuai industri target
+Foto profil yang baik meningkatkan kemungkinan dilihat recruiter 21x lebih tinggi. Pakai foto profesional, background polos atau blur, wajah terlihat jelas, dan pakaian sesuai industri target.
 
 ### 2. Headline (Bukan Cuma Nama Jabatan)
-Headline adalah teks di bawah nama kamu — ini yang pertama dilihat recruiter.
 
 ❌ Biasa: "Marketing Manager at PT. XYZ"
 ✅ Dioptimalkan: "Digital Marketing Manager | SEO & Growth | Bantu brand tumbuh 3x melalui organic strategy"
 
 Masukkan keyword yang sering dicari recruiter di industri kamu.
 
-### 3. Bagian "About" yang Menjual
-Tulis dalam orang pertama, conversational, tapi profesional. Struktur:
-1. Kalimat pembuka yang hook (bukan "Saya adalah...")
-2. Pengalaman dan keahlian utama
-3. Achievement terbesar (dengan angka)
-4. Apa yang kamu cari selanjutnya
-5. CTA — bagaimana cara menghubungi kamu
+### 3. Bagian About yang Menjual
+Tulis dalam orang pertama, conversational tapi profesional. Mulai dengan kalimat pembuka yang menarik (bukan "Saya adalah..."), ceritakan pengalaman dan achievement dengan angka, lalu tutup dengan cara menghubungi kamu.
 
 ### 4. Keyword di Seluruh Profile
-LinkedIn punya algoritma seperti search engine. Tentukan 5-10 keyword untuk bidang kamu dan masukkan secara natural di:
-- Headline
-- About
-- Deskripsi pengalaman kerja
-- Skill section
+Tentukan 5-10 keyword untuk bidang kamu dan masukkan secara natural di headline, about, deskripsi pengalaman, dan skill section.
 
-Contoh untuk Data Analyst: data analysis, SQL, Python, Tableau, business intelligence, dashboard, insight.
-
-### 5. Skills Section — Pilih yang Relevan
-Pilih maksimal 10 skill yang paling relevan dengan posisi yang kamu inginkan. Minta endorsement dari rekan kerja atau atasan untuk skill utama.
+### 5. Skills Section
+Pilih maksimal 10 skill yang paling relevan dengan posisi yang kamu inginkan. Minta endorsement dari rekan kerja untuk skill utama.
 
 ### 6. Featured Section
-Tampilkan karya terbaik kamu:
-- Link ke artikel atau tulisan
-- Portofolio atau case study
-- Sertifikat atau penghargaan
-- Media coverage jika ada
+Tampilkan karya terbaik: link ke artikel atau tulisan, portofolio, sertifikat, atau media coverage jika ada.
 
 ### 7. Aktif Posting Konten
-Akun yang aktif disukai algoritma LinkedIn. Tidak perlu posting setiap hari — 2-3x per minggu sudah cukup.
+2-3 kali per minggu sudah cukup. Ide konten yang sering viral: lesson learned dari pengalaman kerja, tips praktis, dan cerita perjalanan karir.
 
-Ide konten yang sering viral di LinkedIn:
-- Lesson learned dari pengalaman kerja
-- Tips praktis di bidang kamu
-- Story tentang perjalanan karir (termasuk kegagalan)
-- Opinion tentang tren industri
+## Aktifkan Open to Work
 
-## Aktifkan "Open to Work"
-
-Di setting profile, aktifkan "Open to Work" dan pilih siapa yang bisa melihatnya:
-- **Semua orang** — termasuk recruiters dan jaringan kamu (bagus kalau tidak apa-apa bos tahu)
-- **Recruiter saja** — hanya terlihat oleh recruiter yang pakai LinkedIn Recruiter
-
-Ini sinyal langsung ke recruiter bahwa kamu available.
+Di setting profile, aktifkan Open to Work. Pilih "Recruiter saja" jika tidak ingin bos tahu. Ini sinyal langsung ke recruiter bahwa kamu available.
 
 ## Optimalkan Profile LinkedIn dengan Diah Anna
 
-Bingung bagaimana menulis headline atau bagian About yang menarik? Ceritakan background kamu ke Diah Anna di LamarCerdas, dan dapatkan:
-- Saran headline LinkedIn yang keyword-rich
-- Draft bagian About yang menjual
-- Tips posisi dan industri spesifik kamu
+Bingung bagaimana menulis headline atau bagian About? Ceritakan background kamu ke Diah Anna di LamarCerdas dan dapatkan saran headline yang keyword-rich, draft bagian About yang menjual, dan tips spesifik untuk industri kamu.
 
 **Konsultasi gratis, langsung dapat actionable advice.**
     `
