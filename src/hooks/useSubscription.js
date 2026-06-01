@@ -7,7 +7,7 @@ export const LIMITS = {
   pro:     { 'cv-review': 20, ats: 20, coach: 999, interview: 20, 'cv-maker': 20 },
 }
 
-export const PLAN_LABEL = { free: 'Free', starter: 'Starter', pro: 'Pro ⭐' }
+export const PLAN_LABEL  = { free: 'Free', starter: 'Starter', pro: 'Pro ⭐' }
 
 export const FEATURE_LABEL = {
   'cv-review': 'CV Review',
@@ -29,7 +29,7 @@ export function useSubscription(userId) {
   const fetchPlan = async () => {
     setLoading(true)
     try {
-      const { data } = await supabase
+      const { data, error } = await supabase
         .from('subscriptions')
         .select('plan')
         .eq('user_id', userId)
@@ -37,35 +37,59 @@ export function useSubscription(userId) {
         .gte('expires_at', new Date().toISOString())
         .order('created_at', { ascending: false })
         .limit(1)
-        .single()
+        .maybeSingle() // pakai maybeSingle() bukan single() agar tidak throw kalau kosong
+      if (error) console.error('[useSubscription] fetchPlan error:', error.message)
       if (data?.plan && LIMITS[data.plan]) setPlan(data.plan)
-    } catch {}
+      else setPlan('free') // default free kalau tidak ada subscription
+    } catch (e) {
+      console.error('[useSubscription] fetchPlan exception:', e)
+      setPlan('free')
+    }
     setLoading(false)
   }
 
-  // Cek usage langsung ke DB — dipanggil saat user klik fitur
+  // Cek usage langsung ke DB
   const checkUsage = async (feature) => {
     const limit = LIMITS[plan]?.[feature] ?? 0
-    if (limit === 0) return false
-    if (limit >= 999) return true   // unlimited (coach)
+    if (limit === 0) return false       // fitur tidak ada di plan ini
+    if (limit >= 999) return true       // unlimited
+
+    if (!userId) return false
+
     try {
       const monthStart = new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString()
-      const { count } = await supabase
+      const since = plan === 'free' ? '2000-01-01T00:00:00Z' : monthStart
+
+      const { count, error } = await supabase
         .from('usage_logs')
         .select('*', { count: 'exact', head: true })
         .eq('user_id', userId)
         .eq('feature', feature)
-        .gte('created_at', plan === 'free' ? '2000-01-01' : monthStart)   // free = all-time
-      return (count ?? 0) < limit
-    } catch {
-      return true   // kalau error, biarkan lewat daripada block user
+        .gte('created_at', since)
+
+      if (error) {
+        console.error('[useSubscription] checkUsage error:', error.message)
+        // Jika tabel tidak ada atau error RLS — BLOCK, jangan biarkan lewat
+        return false
+      }
+
+      const used = count ?? 0
+      console.log(`[usage] ${feature}: ${used}/${limit}`)
+      return used < limit
+
+    } catch (e) {
+      console.error('[useSubscription] checkUsage exception:', e)
+      return false // BLOCK kalau error, bukan biarkan lewat
     }
   }
 
   // Log usage ke DB
-  const logUsage = (feature) => {
+  const logUsage = async (feature) => {
     if (!userId) return
-    supabase.from('usage_logs').insert({ user_id: userId, feature }).then(() => {})
+    const { error } = await supabase
+      .from('usage_logs')
+      .insert({ user_id: userId, feature })
+    if (error) console.error('[useSubscription] logUsage error:', error.message)
   }
 
   return { plan, loading, checkUsage, logUsage, fetchPlan }
