@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react'
 import { supabase } from '../lib/supabase'
 
 export const LIMITS = {
-  free:    { 'cv-review': 1,  ats: 1,  coach: 999, interview: 0,  'cv-maker': 1  },
+  free:    { 'cv-review': 1,  ats: 1,  coach: 999, interview: 0,  'cv-maker': 0  },
   starter: { 'cv-review': 5,  ats: 5,  coach: 999, interview: 0,  'cv-maker': 5  },
   pro:     { 'cv-review': 30, ats: 30, coach: 999, interview: 30, 'cv-maker': 30 },
 }
