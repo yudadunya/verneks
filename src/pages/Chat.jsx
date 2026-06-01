@@ -251,7 +251,7 @@ export default function Chat({ user, chatMessages = [], setChatMessages }) {
   const startCvMaker = async () => {
     if (!await checkUsage('cv-maker')) { showPaywall('cv-maker'); return }
     setMode('cv-maker-info'); setCvMakerInfo({ text: '', format: '' })
-    pushBot('Oke, kita bikin CV kamu! ✨\n\nCeritakan tentang dirimu:\n• Nama lengkap\n• Posisi yang dituju\n• Pengalaman kerja\n• Pendidikan\n• Keahlian / skills\n\nBisa panjang, nanti aku rapikan jadi CV profesional.')
+    pushBot('Oke, kita bikin CV kamu dari nol! ✨\n\nIsi data berikut ya (copy-paste format ini):\n\nNama: [nama lengkap]\nPosisi target: [posisi yang dilamar]\nEmail: [email]\nNo HP: [nomor hp]\nKota: [kota domisili]\n\nPengalaman Kerja:\n[nama perusahaan, jabatan, tahun, tanggung jawab & pencapaian]\n\nPendidikan:\n[universitas, jurusan, tahun lulus, IPK]\n\nKeahlian:\n[skill teknis, tools, bahasa, dll]\n\nSertifikasi/Organisasi (opsional):\n[kalau ada]\n\nKirim semua sekaligus, nanti aku langsung buatkan CV-nya!')
   }
 
   const startCoach = async () => {
@@ -311,11 +311,35 @@ export default function Chat({ user, chatMessages = [], setChatMessages }) {
 
   const doCvMaker = async (infoText, format) => {
     setMode('cv-maker-done'); setLoading(true)
-    const nameGuess = infoText.split('\n')[0].replace(/nama\s*:?\s*/i, '').trim()
+
+    // Parse input terstruktur dari user
+    const extract = (label, text) => {
+      const regex = new RegExp(`${label}\\s*:?\\s*([^\\n]+(?:\\n(?![A-Z][a-zA-Z ]+:)[^\\n]+)*)`, 'i')
+      const m = text.match(regex)
+      return m ? m[1].trim() : ''
+    }
+
+    const formData = {
+      name:       extract('Nama', infoText) || 'Nama Pengguna',
+      email:      extract('Email', infoText),
+      phone:      extract('No HP|Telepon|Phone', infoText),
+      location:   extract('Kota|Lokasi|Domisili', infoText),
+      experience: extract('Pengalaman Kerja|Pengalaman', infoText) || infoText,
+      education:  extract('Pendidikan', infoText),
+      skills:     extract('Keahlian|Skills|Skill', infoText),
+      extra:      extract('Sertifikasi|Organisasi|Tambahan', infoText),
+    }
+
+    const jobTarget = extract('Posisi target|Posisi|Target posisi', infoText)
+
     try {
-      const data = await apiFetch('/api/cv-maker', { mode: 'scratch', format, formData: { name: nameGuess || 'Nama Pengguna', experience: infoText, education: '', skills: '' } })
+      const data = await apiFetch('/api/cv-maker', { mode: 'scratch', format, formData, jobTarget })
       logUsage('cv-maker')
-      pushBot(data.result, [{ id: 'ats', label: '🎯 Cek ATS Score' }, { id: '__menu', label: '🏠 Kembali ke menu' }])
+      pushBot(data.result, [
+        { id: '__share_cv', label: '📤 Bagikan CV' },
+        { id: '__share_app', label: '👥 Ajak teman coba' },
+        { id: '__menu', label: '🏠 Kembali ke menu' },
+      ])
     } catch (e) { pushBot(`Error: ${e.message}`); setMode('menu') }
     setLoading(false)
   }
