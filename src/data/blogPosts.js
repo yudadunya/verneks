@@ -31,7 +31,7 @@ Banyak pelamar screenshot CV lalu kirim sebagai gambar. ATS tidak bisa membaca g
 ### 3. Nama File Asal-asalan
 File bernama "cv-final-final-v3.pdf" terlihat tidak profesional dan sulit dicari HRD.
 
-**Solusi:** Beri nama seperti `NamaKamu-CV-2025.pdf`
+**Solusi:** Beri nama seperti NamaKamu-CV-2025.pdf
 
 ### 4. Tidak Ada Kata Kunci yang Relevan
 ATS mencari kata kunci spesifik dari deskripsi pekerjaan. Kalau CV kamu tidak menyebut skill yang diminta, skor ATS kamu rendah.
