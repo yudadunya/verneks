@@ -206,9 +206,7 @@ export default function Chat({ user, chatMessages = [], setChatMessages }) {
         if (id.length > 100) {
           setCvText(id)
           setMode('cv-maker-format')
-          pushBot('CV berhasil dibaca! ✨
-
-Pilih format CV baru yang kamu mau:', CV_FORMATS)
+          pushBot('CV berhasil dibaca! ✨\n\nPilih format CV baru yang kamu mau:', CV_FORMATS)
         } else {
           pushBot('Paste teks CV kamu di sini, atau upload file PDF/Word pakai tombol 📎 di bawah.')
         }
