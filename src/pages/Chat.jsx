@@ -43,9 +43,9 @@ const INTERVIEW_LEVELS = [
 ]
 
 const CV_FORMATS = [
-  { id: 'ats',       label: '✅ ATS Friendly'    },
-  { id: 'jobstreet', label: '🔍 JobStreet'        },
-  { id: 'linkedin',  label: '💼 LinkedIn Profile' },
+  { id: 'fmt_ats',       label: '✅ ATS Friendly'    },
+  { id: 'fmt_jobstreet', label: '🔍 JobStreet'        },
+  { id: 'fmt_linkedin',  label: '💼 LinkedIn Profile' },
 ]
 
 export default function Chat({ user, chatMessages = [], setChatMessages }) {
@@ -212,7 +212,7 @@ export default function Chat({ user, chatMessages = [], setChatMessages }) {
         }
         return
       }
-      case 'cv-maker-format': { if (CV_FORMATS.find(f => f.id === id)) await doCvMaker(id); return }
+      case 'cv-maker-format': { if (CV_FORMATS.find(f => f.id === id)) await doCvMaker(id.replace('fmt_', '')); return }
       case 'coach': {
         // Cek keyword fitur berbayar bahkan saat dalam sesi coach
         const msg = id.toLowerCase()
