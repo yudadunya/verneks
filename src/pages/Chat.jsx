@@ -201,7 +201,19 @@ export default function Chat({ user, chatMessages = [], setChatMessages }) {
       case 'interview-position': { setInterview(prev => ({ ...prev, position: id })); setMode('interview-level'); pushBot(`Posisi: **${id}**\n\nLevel pengalaman kamu?`, INTERVIEW_LEVELS); return }
       case 'interview-level':    { setInterview(prev => ({ ...prev, level: id })); await startInterviewSession(interview.position, id); return }
       case 'interview-active':   { await answerInterview(id); return }
-      case 'cv-maker-info':   { setCvMakerInfo(prev => ({ ...prev, text: id })); setMode('cv-maker-format'); pushBot('Mau format CV apa?', CV_FORMATS); return }
+      case 'cv-maker-upload': {
+        // User paste teks CV langsung — terima dan lanjut ke pilih format
+        if (id.length > 100) {
+          setCvText(id)
+          setMode('cv-maker-format')
+          pushBot('CV berhasil dibaca! ✨
+
+Pilih format CV baru yang kamu mau:', CV_FORMATS)
+        } else {
+          pushBot('Paste teks CV kamu di sini, atau upload file PDF/Word pakai tombol 📎 di bawah.')
+        }
+        return
+      }
       case 'cv-maker-format': { if (CV_FORMATS.find(f => f.id === id)) await doCvMaker(id); return }
       case 'coach': {
         // Cek keyword fitur berbayar bahkan saat dalam sesi coach
@@ -219,6 +231,9 @@ export default function Chat({ user, chatMessages = [], setChatMessages }) {
         await doCoach(id); return
       }
       default: {
+        // Kalau sedang dalam flow cv-maker, jangan masuk coach
+        if (mode.startsWith('cv-maker')) return
+
         // Deteksi keyword fitur berbayar sebelum masuk coach
         const msg = id.toLowerCase()
         const isInterviewTopic = /interview|wawancara|latihan interview|mock|pertanyaan interview|simulasi interview/.test(msg)
