@@ -48,6 +48,9 @@ const CV_FORMATS = [
   { id: 'fmt_linkedin',  label: '💼 LinkedIn Profile' },
 ]
 
+// ── Berapa pesan coach sebelum trigger ekstraksi profil ──
+const EXTRACT_EVERY_N_MESSAGES = 6
+
 export default function Chat({ user, chatMessages = [], setChatMessages }) {
   const navigate = useNavigate()
   const { plan, loading: subLoading, checkUsage, logUsage } = useSubscription(user?.id)
@@ -55,7 +58,6 @@ export default function Chat({ user, chatMessages = [], setChatMessages }) {
   const storageKey     = user?.id ? `lc_chat_${user.id}` : null
   const ONBOARDING_KEY = user?.id ? `onboarded_${user.id}` : null
 
-  // Pakai chatMessages dari App.jsx langsung sebagai source of truth
   const messages    = chatMessages
   const setMessages = setChatMessages
 
@@ -70,13 +72,18 @@ export default function Chat({ user, chatMessages = [], setChatMessages }) {
     if (!ONBOARDING_KEY) return false
     return !localStorage.getItem(ONBOARDING_KEY)
   })
+
+  // FIX 2: Track jumlah pesan coach sejak ekstraksi terakhir
+  const coachMsgCountRef = useRef(0)
+  const isExtractingRef  = useRef(false)
+
   const handleOnboardingDone = () => {
     if (ONBOARDING_KEY) localStorage.setItem(ONBOARDING_KEY, '1')
     setShowOnboarding(false)
   }
 
-  const bottomRef = useRef()
-  const fileRef   = useRef()
+  const bottomRef    = useRef()
+  const fileRef      = useRef()
   const containerRef = useRef()
 
   // ── visualViewport: adjust container saat keyboard muncul di mobile ──
@@ -98,7 +105,6 @@ export default function Chat({ user, chatMessages = [], setChatMessages }) {
     }
   }, [])
 
-  // ── pushBot & pushUser didefinisikan DULU sebelum dipakai di useEffect ──
   const pushBot = useCallback((text, quickReplies = null) => {
     setMessages(prev => [...prev, { id: Date.now() + Math.random(), role: 'bot', text, quickReplies }])
   }, [])
@@ -107,16 +113,15 @@ export default function Chat({ user, chatMessages = [], setChatMessages }) {
     setMessages(prev => [...prev, { id: Date.now() + Math.random(), role: 'user', text }])
   }, [])
 
-  // ── Auth guard + greeting ────────────────────────────────────────────────
+  // ── Auth guard + greeting ──
   useEffect(() => {
     if (!user) { navigate('/'); return }
-    // Kalau messages sudah ada (dimuat dari localStorage di App.jsx), skip greeting
     if (chatMessages && chatMessages.length > 0) return
     const firstName = (user.user_metadata?.name || user.user_metadata?.full_name || '').split(' ')[0]
     pushBot(`Halo${firstName ? ` ${firstName}` : ''}! 👋 Aku Diah Anna, AI Career Coach kamu.\n\nPilih fitur di atas atau langsung ketik pertanyaanmu ya!`)
   }, [user?.id])
 
-  // ── Simpan ke localStorage setiap messages berubah ───────────────────
+  // ── Simpan ke localStorage setiap messages berubah ──
   useEffect(() => {
     if (!storageKey || messages.length === 0) return
     try { localStorage.setItem(storageKey, JSON.stringify(messages)) } catch {}
@@ -124,9 +129,36 @@ export default function Chat({ user, chatMessages = [], setChatMessages }) {
 
   useEffect(() => { bottomRef.current?.scrollIntoView({ behavior: 'smooth' }) }, [messages, loading])
 
+  // ── FIX 3: Fungsi ekstraksi profil dari riwayat obrolan coach ──
+  const triggerProfileExtraction = useCallback(async (history) => {
+    if (!user?.id || isExtractingRef.current) return
+    if (!history || history.length < 4) return
 
+    isExtractingRef.current = true
+    try {
+      // Format history ke format yang diharapkan API
+      const formattedMessages = history.map(m => ({
+        role: m.role === 'assistant' ? 'assistant' : 'user',
+        content: m.content,
+      }))
 
-  // ── Paywall (Diah Anna persuasive messages) ───────────────────────────
+      await apiFetch('/api/extract-profile', {
+        userId: user.id,
+        messages: formattedMessages,
+      })
+
+      // Reset counter setelah ekstraksi berhasil
+      coachMsgCountRef.current = 0
+      console.log('[Chat] Profil berhasil diekstrak dari obrolan coach')
+    } catch (e) {
+      // Silent fail — ekstraksi profil bukan fitur kritis
+      console.warn('[Chat] Ekstraksi profil gagal (non-fatal):', e.message)
+    } finally {
+      isExtractingRef.current = false
+    }
+  }, [user?.id])
+
+  // ── Paywall messages ──
   const PAYWALL_LOCKED = {
     'cv-review': `Hei, aku Diah Anna — career coach AI kamu 😊\n\nKamu udah sampai di sini, artinya kamu serius soal karir. Sayang banget kalau berhenti di sini.\n\n**CV Review** adalah fitur yang paling banyak bantu user aku lolos ke tahap interview. Rata-rata ATS score naik dari 48 ke 78+ setelah direvisi.\n\nFitur ini tersedia mulai paket Starter (Rp 49rb/bulan). Mau lanjut?`,
     'ats': `Aku tau kamu udah usaha keras nulis CV itu 💙\n\nTapi tanpa cek ATS score, kamu gak tau apakah CV kamu bahkan dibaca manusia — atau langsung dibuang algoritma.\n\n**75% lamaran ditolak ATS** sebelum HRD lihat. Fitur ATS Checker ini bisa kasih tahu persis di mana masalahnya.\n\nTersedia di paket Starter. Investasinya lebih murah dari satu kali ngopi bareng teman 😄`,
@@ -140,7 +172,6 @@ export default function Chat({ user, chatMessages = [], setChatMessages }) {
     'interview': `Kamu udah latihan mock interview sebanyak itu? Luar biasa serius! 🏆\n\nKuota kamu udah habis bulan ini. Tapi justru ini saat yang tepat untuk upgrade — karena semakin banyak latihan, semakin percaya diri kamu saat interview beneran.\n\nUpgrade sekarang dan teruskan latihan!`,
   }
 
-  // showPaywallInCoach: khusus saat di dalam coach — tidak setMode, context tetap nyambung
   const showPaywallInCoach = (feature) => {
     const limit = LIMITS[plan]?.[feature] ?? 0
     const isLocked = limit === 0
@@ -151,13 +182,11 @@ export default function Chat({ user, chatMessages = [], setChatMessages }) {
     const msg = isLocked
       ? (PAYWALL_LOCKED[feature] || fallback)
       : (PAYWALL_EXHAUSTED[feature] || fallback)
-    // Tambah ke coachHistory agar context tetap nyambung
     setCoachHistory(prev => [...prev, { role: 'assistant', content: msg }])
     pushBot(msg, [
       { id: '__pricing', label: '⭐ Lihat Paket & Harga' },
       { id: '__continue_coach', label: '💬 Lanjut ngobrol' },
     ])
-    // Tidak setMode — tetap di coach!
   }
 
   const showPaywall = (feature) => {
@@ -177,7 +206,7 @@ export default function Chat({ user, chatMessages = [], setChatMessages }) {
     setMode('menu')
   }
 
-  // ── File upload ────────────────────────────────────────────────────────
+  // ── File upload ──
   const handleFile = async (file) => {
     if (!file) return
     pushUser(`📎 ${file.name}`)
@@ -210,7 +239,7 @@ export default function Chat({ user, chatMessages = [], setChatMessages }) {
     setInput(''); pushUser(msg); route(msg, msg)
   }
 
-  // ── Router ─────────────────────────────────────────────────────────────
+  // ── Router ──
   const route = async (id, label) => {
     if (id === '__menu' || id === 'menu') { setMode('menu'); pushBot('Oke! Mau ngapain lagi?', MAIN_MENU); return }
     if (id === '__download_docx') {
@@ -223,7 +252,6 @@ export default function Chat({ user, chatMessages = [], setChatMessages }) {
     if (id === '__share_ats') { const m = [...messages].reverse().find(m => m.role === 'bot' && (m.text?.length || 0) > 100); setShareCard({ text: m?.text || '', type: 'ats' }); return }
     if (id === '__pricing') { navigate('/pricing'); return }
     if (id === '__continue_coach') {
-      // User mau lanjut ngobrol setelah lihat paywall — tetap di coach, context aman
       pushBot('Oke, lanjut ya! Ada yang mau kamu ceritakan atau tanyakan soal karir? 😊')
       return
     }
@@ -244,7 +272,6 @@ export default function Chat({ user, chatMessages = [], setChatMessages }) {
       case 'interview-level':    { setInterview(prev => ({ ...prev, level: id })); await startInterviewSession(interview.position, id); return }
       case 'interview-active':   { await answerInterview(id); return }
       case 'cv-maker-upload': {
-        // User paste teks CV langsung — terima dan lanjut ke pilih format
         if (id.length > 100) {
           setCvText(id)
           setMode('cv-maker-format')
@@ -256,7 +283,6 @@ export default function Chat({ user, chatMessages = [], setChatMessages }) {
       }
       case 'cv-maker-format': { if (CV_FORMATS.find(f => f.id === id)) await doCvMaker(id.replace('fmt_', '')); return }
       case 'coach': {
-        // Cek keyword fitur berbayar bahkan saat dalam sesi coach
         const msg = id.toLowerCase()
         const isInterviewTopic = /interview|wawancara|latihan interview|mock|pertanyaan interview|simulasi interview/.test(msg)
         const isCvReviewTopic  = /review cv|cek cv|koreksi cv|nilai cv|feedback cv|benerin cv/.test(msg)
@@ -271,10 +297,8 @@ export default function Chat({ user, chatMessages = [], setChatMessages }) {
         await doCoach(id); return
       }
       default: {
-        // Kalau sedang dalam flow cv-maker, jangan masuk coach
         if (mode.startsWith('cv-maker')) return
 
-        // Deteksi keyword fitur berbayar sebelum masuk coach
         const msg = id.toLowerCase()
         const isInterviewTopic = /interview|wawancara|latihan interview|mock|pertanyaan interview|simulasi interview/.test(msg)
         const isCvReviewTopic  = /review cv|cek cv|koreksi cv|nilai cv|feedback cv|benerin cv/.test(msg)
@@ -292,7 +316,7 @@ export default function Chat({ user, chatMessages = [], setChatMessages }) {
     }
   }
 
-  // ── Feature starters ────────────────────────────────────────────────────
+  // ── Feature starters ──
   const startCvReview = async () => {
     if (!await checkUsage('cv-review')) { showPaywall('cv-review'); return }
     setMode('cv-review-upload'); setCvText('')
@@ -319,12 +343,12 @@ export default function Chat({ user, chatMessages = [], setChatMessages }) {
   }
 
   const startCoach = async () => {
-    // coach unlimited — langsung masuk
     setMode('coach'); setCoachHistory([])
+    coachMsgCountRef.current = 0
     pushBot('Halo! Aku Diah Anna 💙\n\nMau ngobrolin apa soal karir kamu?')
   }
 
-  // ── API calls ────────────────────────────────────────────────────────────
+  // ── API calls ──
   const doCvReview = async (jobTarget) => {
     setMode('cv-review-done'); setLoading(true)
     try {
@@ -376,7 +400,6 @@ export default function Chat({ user, chatMessages = [], setChatMessages }) {
   const doCvMaker = async (format) => {
     setMode('cv-maker-done'); setLoading(true)
     try {
-      // pakai cvText dari hasil upload file
       const data = await apiFetch('/api/cv-maker', { mode: 'optimize', format, cvText })
       logUsage('cv-maker')
       pushBot(data.result, [
@@ -389,7 +412,6 @@ export default function Chat({ user, chatMessages = [], setChatMessages }) {
     setLoading(false)
   }
 
-  // Download hasil CV sebagai .docx
   const downloadDocx = async (markdown) => {
     try {
       const res = await fetch('/api/cv-to-docx', {
@@ -408,9 +430,6 @@ export default function Chat({ user, chatMessages = [], setChatMessages }) {
     }
   }
 
-  // Keyword yang trigger paywall — hanya jika user EKSPLISIT minta mulai fitur
-  // Sengaja dibuat ketat: harus ada kata kerja imperatif + objek fitur
-  // "cerita tentang interview" atau "switch karir" TIDAK trigger
   const PAID_TRIGGERS = {
     mock_interview: [
       'mulai mock interview', 'mau mock interview', 'coba mock interview',
@@ -435,7 +454,6 @@ export default function Chat({ user, chatMessages = [], setChatMessages }) {
 
   const checkPaidTrigger = (msg) => {
     const lower = msg.toLowerCase().trim()
-    // Minimal 3 kata agar tidak salah trigger kalimat panjang
     if (lower.split(' ').length < 2) return null
     for (const [feature, keywords] of Object.entries(PAID_TRIGGERS)) {
       if (keywords.some(kw => lower.includes(kw))) return feature
@@ -444,12 +462,10 @@ export default function Chat({ user, chatMessages = [], setChatMessages }) {
   }
 
   const doCoach = async (msg) => {
-    // Cek apakah user EKSPLISIT minta fitur berbayar
     const triggeredFeature = checkPaidTrigger(msg)
     if (triggeredFeature) {
       const canUse = await checkUsage(triggeredFeature)
       if (!canUse) {
-        // FIX: Jangan setMode('menu') — tetap di coach agar context tidak hilang
         showPaywallInCoach(triggeredFeature)
         return
       }
@@ -458,27 +474,44 @@ export default function Chat({ user, chatMessages = [], setChatMessages }) {
     setCoachHistory(newHistory); setLoading(true); await callCoachApi(newHistory); setLoading(false)
   }
 
+  // FIX: callCoachApi sekarang kirim userId dan trigger ekstraksi profil
   const callCoachApi = async (history) => {
     try {
-      const name = user.user_metadata?.name || user.user_metadata?.full_name || ''
-      const data = await apiFetch('/api/career-coach', { messages: history, userProfile: name ? `Nama: ${name}` : '' })
-      setCoachHistory(prev => [...prev, { role: 'assistant', content: data.reply }])
+      const data = await apiFetch('/api/career-coach', {
+        messages: history,
+        userId: user?.id,   // FIX 1: kirim userId agar profil dari DB dimuat
+      })
+
+      const assistantMsg = { role: 'assistant', content: data.reply }
+      const updatedHistory = [...history, assistantMsg]
+      setCoachHistory(updatedHistory)
       pushBot(data.reply, history.length <= 1 ? [{ id: '__menu', label: '🏠 Menu utama' }] : null)
+
+      // FIX 2: Hitung pesan dan trigger ekstraksi setiap N pesan
+      coachMsgCountRef.current += 2 // +1 user, +1 assistant
+      if (coachMsgCountRef.current >= EXTRACT_EVERY_N_MESSAGES) {
+        // Fire-and-forget — tidak block UI
+        triggerProfileExtraction(updatedHistory)
+      }
+
     } catch { pushBot('Diah Anna lagi sibuk sebentar, coba lagi ya! 🙏') }
   }
 
   const handleSignOut = async () => {
+    // Trigger ekstraksi profil terakhir sebelum keluar (kalau ada history cukup)
+    if (coachHistory.length >= 4) {
+      await triggerProfileExtraction(coachHistory)
+    }
     await supabase.auth.signOut()
     navigate('/')
   }
 
-  const [shareCard, setShareCard] = useState(null)
+  const [shareCard, setShareCard]   = useState(null)
   const [showShareApp, setShowShareApp] = useState(false)
 
   const canUpload = ['cv-review-upload', 'ats-upload', 'cv-maker-upload'].includes(mode)
 
   return (
-    // ── FIX UTAMA: position fixed + inset 0 → header tidak pernah hilang ──
     <div ref={containerRef} style={{
       position: 'fixed', top: 0, left: '50%', transform: 'translateX(-50%)',
       width: '100%', maxWidth: 480,
@@ -491,7 +524,7 @@ export default function Chat({ user, chatMessages = [], setChatMessages }) {
       {shareCard && <ShareCard resultText={shareCard.text} type={shareCard.type} onClose={() => setShareCard(null)} />}
       {showShareApp && <ShareAppModal onClose={() => setShowShareApp(false)} />}
 
-      {/* ── Header — selalu fixed di atas ── */}
+      {/* ── Header ── */}
       <div style={{ background: 'var(--wa-header)', padding: '10px 16px', display: 'flex', alignItems: 'center', gap: '12px', flexShrink: 0, zIndex: 10 }}>
         <img src="/diah-anna.png" alt="Diah Anna" style={{ width: 42, height: 42, borderRadius: '50%', objectFit: 'cover', flexShrink: 0, border: '2px solid rgba(37,211,102,0.4)' }}/>
         <div style={{ flex: 1 }}>
@@ -525,7 +558,7 @@ export default function Chat({ user, chatMessages = [], setChatMessages }) {
         ))}
       </div>
 
-      {/* ── Messages — satu-satunya yang scroll ── */}
+      {/* ── Messages ── */}
       <div style={{ flex: 1, overflowY: 'auto', padding: '10px 10px 4px', display: 'flex', flexDirection: 'column', gap: '2px', WebkitOverflowScrolling: 'touch' }}>
         {messages.map(msg => {
           const isUser = msg.role === 'user'
