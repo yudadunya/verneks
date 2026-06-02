@@ -35,7 +35,8 @@ Review CV dalam format RINGKAS berikut — tiap seksi maksimal 3 baris:
 
 Jangan tambah seksi lain. Langsung mulai dari "Kesan Pertama", tanpa kalimat pembuka.`
 
-    const userPrompt = `${jobTarget ? `Target posisi: ${jobTarget}\n\n` : ''}Ini CV saya:\n\n${cvText}`
+    const trimmedCv = cvText.slice(0, 4000)
+    const userPrompt = `${jobTarget ? `Target posisi: ${jobTarget}\n\n` : ''}Ini CV saya:\n\n${trimmedCv}`
 
     const message = await client.messages.create({
       model: 'claude-sonnet-4-6',
