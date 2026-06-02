@@ -140,6 +140,26 @@ export default function Chat({ user, chatMessages = [], setChatMessages }) {
     'interview': `Kamu udah latihan mock interview sebanyak itu? Luar biasa serius! 🏆\n\nKuota kamu udah habis bulan ini. Tapi justru ini saat yang tepat untuk upgrade — karena semakin banyak latihan, semakin percaya diri kamu saat interview beneran.\n\nUpgrade sekarang dan teruskan latihan!`,
   }
 
+  // showPaywallInCoach: khusus saat di dalam coach — tidak setMode, context tetap nyambung
+  const showPaywallInCoach = (feature) => {
+    const limit = LIMITS[plan]?.[feature] ?? 0
+    const isLocked = limit === 0
+    const label = FEATURE_LABEL[feature] || feature
+    const fallback = isLocked
+      ? `Fitur **${label}** ada di paket berbayar. Mau aku tunjukkan pilihan paketnya? 😊`
+      : `Kuota **${label}** kamu udah habis bulan ini. Upgrade untuk lanjut! 💪`
+    const msg = isLocked
+      ? (PAYWALL_LOCKED[feature] || fallback)
+      : (PAYWALL_EXHAUSTED[feature] || fallback)
+    // Tambah ke coachHistory agar context tetap nyambung
+    setCoachHistory(prev => [...prev, { role: 'assistant', content: msg }])
+    pushBot(msg, [
+      { id: '__pricing', label: '⭐ Lihat Paket & Harga' },
+      { id: '__continue_coach', label: '💬 Lanjut ngobrol' },
+    ])
+    // Tidak setMode — tetap di coach!
+  }
+
   const showPaywall = (feature) => {
     const limit = LIMITS[plan]?.[feature] ?? 0
     const isLocked = limit === 0
@@ -202,6 +222,11 @@ export default function Chat({ user, chatMessages = [], setChatMessages }) {
     if (id === '__share_cv')  { const m = [...messages].reverse().find(m => m.role === 'bot' && (m.text?.length || 0) > 100); setShareCard({ text: m?.text || '', type: 'cv-review' }); return }
     if (id === '__share_ats') { const m = [...messages].reverse().find(m => m.role === 'bot' && (m.text?.length || 0) > 100); setShareCard({ text: m?.text || '', type: 'ats' }); return }
     if (id === '__pricing') { navigate('/pricing'); return }
+    if (id === '__continue_coach') {
+      // User mau lanjut ngobrol setelah lihat paywall — tetap di coach, context aman
+      pushBot('Oke, lanjut ya! Ada yang mau kamu ceritakan atau tanyakan soal karir? 😊')
+      return
+    }
     if (id === 'cv-review') { startCvReview(); return }
     if (id === 'ats')       { startAts(); return }
     if (id === 'interview') { startInterview(); return }
@@ -383,16 +408,35 @@ export default function Chat({ user, chatMessages = [], setChatMessages }) {
     }
   }
 
-  // Keyword yang trigger paywall langsung
+  // Keyword yang trigger paywall — hanya jika user EKSPLISIT minta mulai fitur
+  // Sengaja dibuat ketat: harus ada kata kerja imperatif + objek fitur
+  // "cerita tentang interview" atau "switch karir" TIDAK trigger
   const PAID_TRIGGERS = {
-    mock_interview: ['mock interview', 'latihan interview', 'simulasi interview', 'interview aku', 'interview saya', 'practice interview'],
-    cv_review:      ['review cv', 'review cv aku', 'cek cv', 'koreksi cv', 'nilai cv', 'analisa cv', 'feedback cv'],
-    cv_maker:       ['bikin cv', 'buat cv', 'buatkan cv', 'generate cv', 'cv maker', 'template cv', 'tulis cv'],
-    ats_checker:    ['cek ats', 'ats score', 'skor ats', 'lolos ats'],
+    mock_interview: [
+      'mulai mock interview', 'mau mock interview', 'coba mock interview',
+      'simulasikan interview', 'roleplay interview', 'latihan interview sekarang',
+      'mulai latihan interview', 'mau latihan interview', 'interview sekarang',
+    ],
+    cv_review:      [
+      'review cv ku', 'review cv saya', 'tolong review cv', 'cek cv ku', 'cek cv saya',
+      'koreksi cv ku', 'koreksi cv saya', 'nilai cv ku', 'nilai cv saya',
+      'analisa cv ku', 'analisa cv saya', 'feedback cv ku', 'feedback cv saya',
+      'upload cv', 'kirim cv',
+    ],
+    cv_maker:       [
+      'buatkan cv', 'bikin cv ku', 'bikin cv saya', 'buat cv ku', 'buat cv saya',
+      'generate cv', 'tolong bikin cv', 'tolong buat cv', 'bantu bikin cv', 'bantu buat cv',
+    ],
+    ats_checker:    [
+      'cek ats', 'cek skor ats', 'cek score ats', 'tes ats', 'test ats',
+      'analisa ats', 'lihat ats score',
+    ],
   }
 
   const checkPaidTrigger = (msg) => {
-    const lower = msg.toLowerCase()
+    const lower = msg.toLowerCase().trim()
+    // Minimal 3 kata agar tidak salah trigger kalimat panjang
+    if (lower.split(' ').length < 2) return null
     for (const [feature, keywords] of Object.entries(PAID_TRIGGERS)) {
       if (keywords.some(kw => lower.includes(kw))) return feature
     }
@@ -400,12 +444,13 @@ export default function Chat({ user, chatMessages = [], setChatMessages }) {
   }
 
   const doCoach = async (msg) => {
-    // Cek apakah user minta fitur berbayar secara eksplisit
+    // Cek apakah user EKSPLISIT minta fitur berbayar
     const triggeredFeature = checkPaidTrigger(msg)
     if (triggeredFeature) {
       const canUse = await checkUsage(triggeredFeature)
       if (!canUse) {
-        showPaywall(triggeredFeature)
+        // FIX: Jangan setMode('menu') — tetap di coach agar context tidak hilang
+        showPaywallInCoach(triggeredFeature)
         return
       }
     }
