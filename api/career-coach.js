@@ -9,8 +9,9 @@ const supabase = createClient(
 export default async function handler(req, res) {
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' })
 
+  // FIX 1: Terima userId dari request body
   const { messages: rawMessages, userId } = req.body
-  const messages = rawMessages.slice(-8)
+  const messages = rawMessages.slice(-12) // sedikit lebih banyak agar context richer
 
   if (!messages?.length) return res.status(400).json({ error: 'Pesan tidak boleh kosong.' })
 
@@ -20,7 +21,7 @@ export default async function handler(req, res) {
     try {
       const { data } = await supabase
         .from('user_career_profiles')
-        .select('summary, nama, posisi_saat_ini, target_posisi, tantangan_karir, progress_lamaran, topik_dibahas, sesi_count')
+        .select('summary, nama, posisi_saat_ini, target_posisi, tantangan_karir, progress_lamaran, topik_dibahas, sesi_count, domisili, industri, lama_pengalaman, target_gaji, timeline_karir')
         .eq('user_id', userId)
         .maybeSingle()
       careerProfile = data
@@ -33,13 +34,42 @@ export default async function handler(req, res) {
   let personalContext = ''
   if (careerProfile?.summary) {
     const sesi = careerProfile.sesi_count || 1
-    personalContext = `\n\n=== PROFIL USER (dari ${sesi} sesi sebelumnya) ===
+
+    // Bangun detail profil yang spesifik agar Diah Anna benar-benar "kenal" user
+    const details = []
+    if (careerProfile.nama)             details.push(`Nama: ${careerProfile.nama}`)
+    if (careerProfile.domisili)         details.push(`Domisili: ${careerProfile.domisili}`)
+    if (careerProfile.posisi_saat_ini)  details.push(`Posisi saat ini: ${careerProfile.posisi_saat_ini}`)
+    if (careerProfile.industri)         details.push(`Industri: ${careerProfile.industri}`)
+    if (careerProfile.lama_pengalaman)  details.push(`Pengalaman: ${careerProfile.lama_pengalaman}`)
+    if (careerProfile.target_posisi)    details.push(`Target posisi: ${careerProfile.target_posisi}`)
+    if (careerProfile.target_gaji)      details.push(`Target gaji: ${careerProfile.target_gaji}`)
+    if (careerProfile.timeline_karir)   details.push(`Timeline: ${careerProfile.timeline_karir}`)
+    if (careerProfile.tantangan_karir)  details.push(`Tantangan utama: ${careerProfile.tantangan_karir}`)
+    if (careerProfile.progress_lamaran) details.push(`Progress lamaran aktif: ${careerProfile.progress_lamaran}`)
+
+    personalContext = `
+
+=== PROFIL USER (dari ${sesi} sesi sebelumnya) ===
 ${careerProfile.summary}
-${careerProfile.progress_lamaran ? `\nUpdate terkini: ${careerProfile.progress_lamaran}` : ''}
+
+${details.length ? `Detail:\n${details.map(d => `• ${d}`).join('\n')}` : ''}
 ${careerProfile.topik_dibahas?.length ? `\nTopik yang sudah pernah dibahas: ${careerProfile.topik_dibahas.join(', ')}` : ''}
 ===
 
-Karena kamu sudah mengenal user ini, langsung lanjutkan dari konteks di atas. Tidak perlu kenalan ulang atau tanya hal yang sudah kamu tahu. Jika relevan, referensikan apa yang sudah dibahas sebelumnya untuk menunjukkan kamu ingat.`
+INSTRUKSI PENTING karena kamu sudah kenal user ini:
+- Langsung lanjutkan dari konteks di atas. JANGAN kenalan ulang atau tanya hal yang sudah kamu tahu.
+- Jika relevan, referensikan detail spesifik (posisi, target, tantangan) untuk menunjukkan kamu ingat dan peduli.
+- Berikan advice yang SPESIFIK berdasarkan situasi mereka, bukan saran generik.
+- Kalau ada progress baru yang disebutkan (dapat panggilan interview, dapat offer, dll), acknowledge itu dengan antusias.`
+  } else if (userId) {
+    // User baru — Diah Anna perlu kenalan dan gali info
+    personalContext = `
+
+INSTRUKSI: Ini sepertinya pertama kali atau belum ada profil user ini. Dalam percakapan awal, secara natural gali informasi:
+- Posisi/pekerjaan saat ini (atau fresh grad?)
+- Apa yang sedang dicari atau tantangan karir yang dihadapi
+Jangan interogasi — alir natural dalam obrolan.`
   }
 
   try {
@@ -83,7 +113,7 @@ Ingat: Kamu Diah Anna — career coach yang genuinely peduli, jawab singkat tapi
     const reply = await generateChat({
       system: systemContent,
       messages,
-      maxTokens: 400,
+      maxTokens: 450,
       tier: 'fast',
     })
 
