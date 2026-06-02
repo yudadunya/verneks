@@ -1,8 +1,4 @@
-import Anthropic from '@anthropic-ai/sdk'
-
-const client = new Anthropic({
-  apiKey: process.env.ANTHROPIC_API_KEY,
-})
+import { generateChat } from './lib/ai.js'
 
 export default async function handler(req, res) {
   if (req.method !== 'POST') {
@@ -10,7 +6,7 @@ export default async function handler(req, res) {
   }
 
   const { messages: rawMessages, userProfile } = req.body
-  // Hemat token: hanya kirim 10 pesan terakhir, konteks tetap nyambung
+  // Hemat token: hanya kirim 8 pesan terakhir, konteks tetap nyambung
   const messages = rawMessages.slice(-8)
 
   if (!messages || messages.length === 0) {
@@ -60,20 +56,13 @@ ${userProfile ? `Info user: ${userProfile}` : ''}
 
 Ingat: Kamu Diah Anna — career coach yang genuinely peduli, jawab singkat tapi bermakna.`
 
-    const response = await client.messages.create({
-      model: 'claude-haiku-4-5-20251001',
-      max_tokens: 400,
-      system: [
-        {
-          type: 'text',
-          text: systemContent,
-          cache_control: { type: 'ephemeral' },
-        }
-      ],
-      messages: messages,
+    const reply = await generateChat({
+      system: systemContent,
+      messages,
+      maxTokens: 400,
+      tier: 'fast',
     })
 
-    const reply = response.content[0].text
     return res.status(200).json({ reply })
 
   } catch (error) {

@@ -1,7 +1,5 @@
-import Anthropic from '@anthropic-ai/sdk'
+import { generateText, generateChat } from './lib/ai.js'
 import { createClient } from '@supabase/supabase-js'
-
-const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY })
 
 const supabase = createClient(
   process.env.VITE_SUPABASE_URL,
@@ -18,7 +16,7 @@ const WA_LIMITS = {
 const MAX_MESSAGES_PER_DAY = 20
 const COOLDOWN_MINUTES = 60
 
-// Generate semua pesan via Claude — tidak ada template hardcode
+// Generate pesan situasional (unregistered, free gate, limit, abuse)
 async function generateMessage(situation, context) {
   const situations = {
     unregistered_first: `User ini belum terdaftar di LamarCerdas dan ini pertama kali mereka WA. Sapa dengan hangat, perkenalkan dirimu sebagai Diah Anna dari LamarCerdas, dan ajak mereka daftar gratis di lamarcerdas.my.id — dengan cara yang natural, tidak seperti iklan.`,
@@ -36,21 +34,16 @@ async function generateMessage(situation, context) {
     abuse_warning: `User ini sudah kirim terlalu banyak pesan hari ini dan akan di-block 24 jam. Beritahu dengan cara yang tetap respectful — ini bukan punishment, tapi batas penggunaan. Sarankan untuk serius upgrade kalau mau coaching lebih intens.`,
   }
 
-  const response = await anthropic.messages.create({
-    model: 'claude-sonnet-4-6',
-    max_tokens: 300,
+  return generateText({
     system: `Kamu adalah Diah Anna, AI Career Coach dari LamarCerdas. 
 Kepribadian: hangat, genuine, seperti kakak perempuan senior yang peduli.
 Adaptasi gaya bicara sesuai pesan user: ${context.lastUserMessage || ''}
 PENTING: Plain text saja — tidak pakai *, _, atau markdown apapun. Ini WA.
 Nama user: ${context.name || 'Kak'}`,
-    messages: [{
-      role: 'user',
-      content: situations[situation]
-    }]
+    prompt: situations[situation],
+    maxTokens: 300,
+    tier: 'smart',
   })
-
-  return response.content[0].text
 }
 
 export default async function handler(req, res) {
@@ -179,7 +172,10 @@ export default async function handler(req, res) {
         const reply = await generateMessage(situation, context)
         await saveAndSend(sender, message, reply, name)
       } else {
-        const shortReply = await generateMessage(userPlan === 'starter' ? 'limit_starter' : 'limit_pro', { ...context, lastUserMessage: 'singkat saja' })
+        const shortReply = await generateMessage(
+          userPlan === 'starter' ? 'limit_starter' : 'limit_pro',
+          { ...context, lastUserMessage: 'singkat saja' }
+        )
         await sendWA(sender, shortReply)
       }
       return res.status(200).json({ status: 'limit_reached' })
@@ -205,10 +201,7 @@ export default async function handler(req, res) {
       ? `\n\nBtw, sesi WA kamu tinggal ${remaining} lagi bulan ini ya.`
       : ''
 
-    const response = await anthropic.messages.create({
-      model: 'claude-sonnet-4-6',
-      max_tokens: 500,
-      system: `Kamu adalah Diah Anna, AI Career Coach dari LamarCerdas — platform AI karir untuk fresh grad Indonesia.
+    const systemPrompt = `Kamu adalah Diah Anna, AI Career Coach dari LamarCerdas — platform AI karir untuk fresh grad Indonesia.
 
 Kepribadian:
 - Hangat, genuine, seperti kakak perempuan senior yang peduli
@@ -233,11 +226,16 @@ Info paket:
 - PLATINUM: WA unlimited — Rp 399rb
 - Upgrade: lamarcerdas.my.id/pricing
 
-User: paket ${userPlan} | sisa sesi WA: ${remaining} | nama: ${name || 'Kak'}`,
+User: paket ${userPlan} | sisa sesi WA: ${remaining} | nama: ${name || 'Kak'}`
+
+    const aiReply = await generateChat({
+      system: systemPrompt,
       messages,
+      maxTokens: 500,
+      tier: 'smart',
     })
 
-    const reply = response.content[0].text + warningNote
+    const reply = aiReply + warningNote
 
     await saveAndSend(sender, message, reply, name)
 

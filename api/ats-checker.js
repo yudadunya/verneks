@@ -1,8 +1,4 @@
-import Anthropic from '@anthropic-ai/sdk'
-
-const client = new Anthropic({
-  apiKey: process.env.ANTHROPIC_API_KEY,
-})
+import { generateText } from './lib/ai.js'
 
 export default async function handler(req, res) {
   if (req.method !== 'POST') {
@@ -57,22 +53,13 @@ Analisis CV dan berikan output dalam format EXACT ini:
 
     const userPrompt = `${jobDescription ? `Job Description Target:\n${jobDescription}\n\n` : ''}CV saya:\n\n${cvText}`
 
-    const message = await client.messages.create({
-      model: 'claude-haiku-4-5-20251001',
-      max_tokens: 1000,
-      system: [
-        {
-          type: 'text',
-          text: systemPrompt,
-          cache_control: { type: 'ephemeral' },
-        }
-      ],
-      messages: [
-        { role: 'user', content: userPrompt }
-      ],
+    const result = await generateText({
+      system: systemPrompt,
+      prompt: userPrompt,
+      maxTokens: 1000,
+      tier: 'fast',
     })
 
-    const result = message.content[0].text
     return res.status(200).json({ result })
 
   } catch (error) {

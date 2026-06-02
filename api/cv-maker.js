@@ -1,8 +1,4 @@
-import Anthropic from '@anthropic-ai/sdk'
-
-const client = new Anthropic({
-  apiKey: process.env.ANTHROPIC_API_KEY,
-})
+import { generateText } from './lib/ai.js'
 
 const FORMAT_PROMPTS = {
   ats: {
@@ -137,20 +133,13 @@ ${fd.extra ? `Info tambahan (sertifikasi, organisasi, proyek, dll):\n${fd.extra}
 Jika ada informasi yang kurang, buat yang masuk akal dan realistis, tandai dengan [sesuaikan].`
     }
 
-    const message = await client.messages.create({
-      model: 'claude-sonnet-4-6',
-      max_tokens: 1500,
-      system: [
-        {
-          type: 'text',
-          text: fmt.system,
-          cache_control: { type: 'ephemeral' },
-        }
-      ],
-      messages: [{ role: 'user', content: userPrompt }],
+    const result = await generateText({
+      system: fmt.system,
+      prompt: userPrompt,
+      maxTokens: 1500,
+      tier: 'smart',
     })
 
-    const result = message.content[0].text
     return res.status(200).json({ result })
 
   } catch (error) {

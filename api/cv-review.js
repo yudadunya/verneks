@@ -1,8 +1,4 @@
-import Anthropic from '@anthropic-ai/sdk'
-
-const client = new Anthropic({
-  apiKey: process.env.ANTHROPIC_API_KEY,
-})
+import { generateText } from './lib/ai.js'
 
 export default async function handler(req, res) {
   if (req.method !== 'POST') {
@@ -38,22 +34,13 @@ Jangan tambah seksi lain. Langsung mulai dari "Kesan Pertama", tanpa kalimat pem
     const trimmedCv = cvText.slice(0, 4000)
     const userPrompt = `${jobTarget ? `Target posisi: ${jobTarget}\n\n` : ''}Ini CV saya:\n\n${trimmedCv}`
 
-    const message = await client.messages.create({
-      model: 'claude-sonnet-4-6',
-      max_tokens: 700,
-      system: [
-        {
-          type: 'text',
-          text: systemPrompt,
-          cache_control: { type: 'ephemeral' },
-        }
-      ],
-      messages: [
-        { role: 'user', content: userPrompt }
-      ],
+    const review = await generateText({
+      system: systemPrompt,
+      prompt: userPrompt,
+      maxTokens: 700,
+      tier: 'smart',
     })
 
-    const review = message.content[0].text
     return res.status(200).json({ review })
 
   } catch (error) {

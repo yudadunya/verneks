@@ -1,8 +1,4 @@
-import Anthropic from '@anthropic-ai/sdk'
-
-const client = new Anthropic({
-  apiKey: process.env.ANTHROPIC_API_KEY,
-})
+import { generateText, generateChat } from './lib/ai.js'
 
 export default async function handler(req, res) {
   if (req.method !== 'POST') {
@@ -14,27 +10,16 @@ export default async function handler(req, res) {
   try {
     // Action: start — generate first question
     if (action === 'start') {
-      const message = await client.messages.create({
-        model: 'claude-haiku-4-5-20251001',
-        max_tokens: 300,
-        system: [
-          {
-            type: 'text',
-            text: `Kamu adalah Diah Anna, career coach yang sedang melakukan mock interview.
+      const reply = await generateText({
+        system: `Kamu adalah Diah Anna, career coach yang sedang melakukan mock interview.
 Gaya kamu hangat tapi profesional, seperti HRD senior yang supportif.
 Bahasa Indonesia natural, sesekali campur Inggris.`,
-            cache_control: { type: 'ephemeral' },
-          }
-        ],
-        messages: [{
-          role: 'user',
-          content: `Mulai mock interview untuk posisi ${position} level ${level}. 
-Sapa user dengan hangat, jelaskan singkat sesi ini (5-7 pertanyaan), lalu langsung ajukan pertanyaan pertama.
-Format: sapa + penjelasan singkat + "Pertanyaan 1: [pertanyaan]"
-Jangan terlalu panjang.`
-        }]
+        prompt: `Mulai mock interview untuk posisi ${position} level ${level}. \nSapa user dengan hangat, jelaskan singkat sesi ini (5-7 pertanyaan), lalu langsung ajukan pertanyaan pertama.\nFormat: sapa + penjelasan singkat + "Pertanyaan 1: [pertanyaan]"\nJangan terlalu panjang.`,
+        maxTokens: 300,
+        tier: 'fast',
       })
-      return res.status(200).json({ reply: message.content[0].text, questionNumber: 1 })
+
+      return res.status(200).json({ reply, questionNumber: 1 })
     }
 
     // Action: answer — respond to user's answer and ask next question or give feedback
@@ -46,29 +31,22 @@ Jangan terlalu panjang.`
         ? `Ini jawaban terakhir. Berikan feedback singkat untuk jawaban ini, lalu katakan sesi selesai dan minta user tunggu feedback lengkap.`
         : `Berikan feedback SINGKAT (2-3 kalimat) untuk jawaban ini — apa yang bagus dan apa yang bisa diperbaiki. Lalu langsung ajukan "Pertanyaan ${questionNumber + 1}: [pertanyaan baru yang relevan untuk posisi ini]"`
 
-      const message = await client.messages.create({
-        model: 'claude-haiku-4-5-20251001',
-        max_tokens: 350,
-        system: [
-          {
-            type: 'text',
-            text: `Kamu adalah Diah Anna, career coach yang sedang melakukan mock interview untuk posisi ${position} level ${level}.
+      const allMessages = [
+        ...messages,
+        { role: 'user', content: nextAction }
+      ]
+
+      const reply = await generateChat({
+        system: `Kamu adalah Diah Anna, career coach yang sedang melakukan mock interview untuk posisi ${position} level ${level}.
 Gaya kamu hangat, jujur, dan konstruktif.
 Bahasa Indonesia natural.`,
-            cache_control: { type: 'ephemeral' },
-          }
-        ],
-        messages: [
-          ...messages,
-          {
-            role: 'user',
-            content: nextAction
-          }
-        ]
+        messages: allMessages,
+        maxTokens: 350,
+        tier: 'fast',
       })
 
       return res.status(200).json({
-        reply: message.content[0].text,
+        reply,
         questionNumber: questionNumber + 1,
         isComplete: isLastQuestion
       })
@@ -76,23 +54,11 @@ Bahasa Indonesia natural.`,
 
     // Action: feedback — generate comprehensive final feedback
     if (action === 'feedback') {
-      const message = await client.messages.create({
-        model: 'claude-sonnet-4-6',
-        max_tokens: 2000,
-        system: [
-          {
-            type: 'text',
-            text: `Kamu adalah Diah Anna, career coach expert untuk posisi ${position} level ${level}.
-Berikan feedback interview yang jujur, spesifik, dan actionable.
-Bahasa Indonesia natural. Format pakai markdown yang rapi.`,
-            cache_control: { type: 'ephemeral' },
-          }
-        ],
-        messages: [
-          ...messages,
-          {
-            role: 'user',
-            content: `Berikan feedback lengkap untuk seluruh sesi interview ini dalam format:
+      const allMessages = [
+        ...messages,
+        {
+          role: 'user',
+          content: `Berikan feedback lengkap untuk seluruh sesi interview ini dalam format:
 
 ## 🎯 Overall Score: [X]/100
 
@@ -109,11 +75,19 @@ Bahasa Indonesia natural. Format pakai markdown yang rapi.`,
 [3 tips actionable]
 
 Jujur tapi tetap supportif ya!`
-          }
-        ]
+        }
+      ]
+
+      const feedback = await generateChat({
+        system: `Kamu adalah Diah Anna, career coach expert untuk posisi ${position} level ${level}.
+Berikan feedback interview yang jujur, spesifik, dan actionable.
+Bahasa Indonesia natural. Format pakai markdown yang rapi.`,
+        messages: allMessages,
+        maxTokens: 2000,
+        tier: 'smart',
       })
 
-      return res.status(200).json({ feedback: message.content[0].text })
+      return res.status(200).json({ feedback })
     }
 
     return res.status(400).json({ error: 'Invalid action' })
