@@ -1,18 +1,12 @@
 import { generateText } from './lib/ai.js'
 
 export default async function handler(req, res) {
-  if (req.method !== 'POST') {
-    return res.status(405).json({ error: 'Method not allowed' })
-  }
-
+  if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' })
   const { cvText, jobDescription } = req.body
-
-  if (!cvText || cvText.trim().length < 50) {
-    return res.status(400).json({ error: 'CV terlalu pendek atau kosong.' })
-  }
+  if (!cvText || cvText.trim().length < 50) return res.status(400).json({ error: 'CV terlalu pendek atau kosong.' })
 
   try {
-    const systemPrompt = `Kamu adalah Cerdas, ATS expert yang bantu job seeker Indonesia optimasi CV mereka.
+    const system = `Kamu adalah Cerdas, ATS expert yang bantu job seeker Indonesia optimasi CV mereka.
 
 Gaya kamu:
 - Bahasa Indonesia natural, sesekali campur istilah teknis dalam bahasa Inggris
@@ -51,17 +45,13 @@ Analisis CV dan berikan output dalam format EXACT ini:
 2. [aksi 2]
 3. [aksi 3]`
 
-    const userPrompt = `${jobDescription ? `Job Description Target:\n${jobDescription}\n\n` : ''}CV saya:\n\n${cvText}`
-
     const result = await generateText({
-      system: systemPrompt,
-      prompt: userPrompt,
+      system,
+      prompt: `${jobDescription ? `Job Description Target:\n${jobDescription}\n\n` : ''}CV saya:\n\n${cvText}`,
       maxTokens: 1000,
       tier: 'fast',
     })
-
     return res.status(200).json({ result })
-
   } catch (error) {
     console.error('ATS Checker error:', error)
     return res.status(500).json({ error: 'AI lagi sibuk, coba lagi dalam beberapa detik.' })

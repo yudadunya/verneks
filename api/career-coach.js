@@ -1,16 +1,45 @@
 import { generateChat } from './lib/ai.js'
+import { createClient } from '@supabase/supabase-js'
+
+const supabase = createClient(
+  process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL,
+  process.env.SUPABASE_SERVICE_ROLE_KEY
+)
 
 export default async function handler(req, res) {
-  if (req.method !== 'POST') {
-    return res.status(405).json({ error: 'Method not allowed' })
-  }
+  if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' })
 
-  const { messages: rawMessages, userProfile } = req.body
-  // Hemat token: hanya kirim 8 pesan terakhir, konteks tetap nyambung
+  const { messages: rawMessages, userId } = req.body
   const messages = rawMessages.slice(-8)
 
-  if (!messages || messages.length === 0) {
-    return res.status(400).json({ error: 'Pesan tidak boleh kosong.' })
+  if (!messages?.length) return res.status(400).json({ error: 'Pesan tidak boleh kosong.' })
+
+  // ── Load profil karir user dari DB (jika ada) ──
+  let careerProfile = null
+  if (userId) {
+    try {
+      const { data } = await supabase
+        .from('user_career_profiles')
+        .select('summary, nama, posisi_saat_ini, target_posisi, tantangan_karir, progress_lamaran, topik_dibahas, sesi_count')
+        .eq('user_id', userId)
+        .maybeSingle()
+      careerProfile = data
+    } catch (e) {
+      console.error('[career-coach] load profile error:', e.message)
+    }
+  }
+
+  // ── Bangun konteks personal Diah Anna ──
+  let personalContext = ''
+  if (careerProfile?.summary) {
+    const sesi = careerProfile.sesi_count || 1
+    personalContext = `\n\n=== PROFIL USER (dari ${sesi} sesi sebelumnya) ===
+${careerProfile.summary}
+${careerProfile.progress_lamaran ? `\nUpdate terkini: ${careerProfile.progress_lamaran}` : ''}
+${careerProfile.topik_dibahas?.length ? `\nTopik yang sudah pernah dibahas: ${careerProfile.topik_dibahas.join(', ')}` : ''}
+===
+
+Karena kamu sudah mengenal user ini, langsung lanjutkan dari konteks di atas. Tidak perlu kenalan ulang atau tanya hal yang sudah kamu tahu. Jika relevan, referensikan apa yang sudah dibahas sebelumnya untuk menunjukkan kamu ingat.`
   }
 
   try {
@@ -39,20 +68,15 @@ Yang BUKAN tugasmu (ada fitur khusus untuk ini):
 - Simulasi atau role-play sesi interview langsung → arahkan ke fitur "Mock Interview"
 - Menganalisis skor ATS CV → arahkan ke fitur "Cek ATS Score"
 
-Kalau user minta hal di atas, tolak dengan halus dan arahkan ke fitur yang tepat.
-Contoh: "Untuk review CV secara detail, kamu bisa pakai fitur Review CV di menu atas ya — hasilnya lebih akurat dan langsung kasih feedback spesifik! 📄"
-Jangan pernah langsung mengerjakan permintaan review CV, membuat CV, atau simulasi interview di chat ini.
-
 Cara berkomunikasi:
 - Tanya konteks dulu sebelum kasih advice
 - Advice spesifik, bukan generik
 - Kalau ada yang perlu diperbaiki, bilang dengan empathy
-- **Jawaban RINGKAS dan PADAT** — maksimal 3-5 kalimat atau 3 poin per respons
+- Jawaban RINGKAS dan PADAT — maksimal 3-5 kalimat atau 3 poin per respons
 - Gunakan poin-poin pendek kalau ada beberapa saran
-- Kalau perlu info lebih, tanya 1 pertanyaan follow-up yang spesifik — kalau tidak perlu, langsung jawab saja
+- Kalau perlu info lebih, tanya 1 pertanyaan follow-up yang spesifik
 - JANGAN ulang pertanyaan user di awal jawaban
-
-${userProfile ? `Info user: ${userProfile}` : ''}
+${personalContext}
 
 Ingat: Kamu Diah Anna — career coach yang genuinely peduli, jawab singkat tapi bermakna.`
 
