@@ -12,8 +12,8 @@ const PROVIDER = process.env.AI_PROVIDER || 'gemini'
 
 const MODELS = {
   claude: {
-    fast: 'claude-haiku-4-5-20251001',   // career-coach, mock-interview, ats-checker
-    smart: 'claude-sonnet-4-6',           // cv-maker, cv-review, wa-webhook, feedback
+    fast: 'claude-haiku-4-5-20251001',   // career-coach, mock-interview, ats-checker, extract-profile
+    smart: 'claude-sonnet-4-6',           // cv-maker, cv-review, wa-webhook, mock-interview feedback
   },
   gemini: {
     fast: 'gemini-2.5-flash',
@@ -22,7 +22,7 @@ const MODELS = {
 }
 
 // ─── Single-turn ──────────────────────────────────────────────────────────────
-// Untuk: cv-review, ats-checker, cv-maker, wa-webhook (generateMessage)
+// Untuk: cv-review, ats-checker, cv-maker, extract-profile, wa-webhook (generateMessage)
 export async function generateText({ system, prompt, maxTokens = 1000, tier = 'fast' }) {
   const model = MODELS[PROVIDER][tier]
 
