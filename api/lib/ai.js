@@ -79,7 +79,7 @@ export async function generateChat({ system, messages, maxTokens = 500, tier = '
         model,
         max_tokens: maxTokens,
         system,
-        messages: history,
+        messages,
       })
       return msg.content[0].text
 
