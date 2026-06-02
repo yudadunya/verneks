@@ -111,7 +111,8 @@ export default async function handler(req, res) {
     let userPrompt = ''
 
     if (mode === 'optimize') {
-      userPrompt = `${jobTarget ? `Target posisi: ${jobTarget}\n\n` : ''}Optimasi dan tulis ulang CV berikut menjadi format ${fmt.label}. Pertahankan semua fakta dan pengalaman yang ada, tapi tulis ulang sepenuhnya sesuai standar ${fmt.label}:\n\n${cvText}`
+      const trimmedCv = cvText.slice(0, 4000)
+      userPrompt = `${jobTarget ? `Target posisi: ${jobTarget}\n\n` : ''}Optimasi dan tulis ulang CV berikut menjadi format ${fmt.label}. Pertahankan semua fakta dan pengalaman yang ada, tapi tulis ulang sepenuhnya sesuai standar ${fmt.label}:\n\n${trimmedCv}`
     } else {
       const fd = formData
       userPrompt = `Buat CV format ${fmt.label} berdasarkan data berikut:
