@@ -2,6 +2,7 @@ import { useState, useRef, useEffect } from 'react'
 import ReactMarkdown from 'react-markdown'
 import { useSubscription } from '../hooks/useSubscription'
 import FeatureGate from '../components/FeatureGate'
+import { supabase } from '../lib/supabase'
 
 const SUGGESTED_TOPICS = [
   'Review CV aku dong',
@@ -12,17 +13,77 @@ const SUGGESTED_TOPICS = [
   'LinkedIn aku perlu dibenahi gak?',
 ]
 
+const MAX_HISTORY = 50 // maksimal pesan yang disimpan & diload per user
+
 export default function CareerCoach({ user }) {
   const { plan, canUse, getRemainingUses, trackUsage, loading: subLoading } = useSubscription(user?.id)
-  const [messages, setMessages] = useState([])
-  const [input, setInput] = useState('')
-  const [loading, setLoading] = useState(false)
+  const [messages, setMessages]           = useState([])
+  const [input, setInput]                 = useState('')
+  const [loading, setLoading]             = useState(false)
+  const [historyLoaded, setHistoryLoaded] = useState(false)
   const bottomRef = useRef(null)
-  const inputRef = useRef(null)
+  const inputRef  = useRef(null)
+
+  const isPaid = plan === 'starter' || plan === 'pro'
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' })
   }, [messages, loading])
+
+  // ── Load histori dari Supabase (hanya untuk plan berbayar) ──
+  useEffect(() => {
+    if (subLoading || historyLoaded) return
+    if (!user?.id || !isPaid) { setHistoryLoaded(true); return }
+    loadHistory()
+  }, [subLoading, user?.id, isPaid])
+
+  const loadHistory = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('career_coach_messages')
+        .select('role, content')
+        .eq('user_id', user.id)
+        .order('created_at', { ascending: true })
+        .limit(MAX_HISTORY)
+      if (error) throw error
+      if (data?.length) setMessages(data)
+    } catch (e) {
+      console.error('[CareerCoach] loadHistory error:', e.message)
+    }
+    setHistoryLoaded(true)
+  }
+
+  // ── Simpan 2 pesan terakhir (user + assistant) ke Supabase ──
+  const saveToSupabase = async (msgs) => {
+    if (!isPaid || !user?.id) return
+    try {
+      const newMsgs = msgs.slice(-2)
+      await supabase.from('career_coach_messages').insert(
+        newMsgs.map(m => ({ user_id: user.id, role: m.role, content: m.content }))
+      )
+      // Trim pesan lama kalau melebihi MAX_HISTORY
+      const { count } = await supabase
+        .from('career_coach_messages')
+        .select('*', { count: 'exact', head: true })
+        .eq('user_id', user.id)
+      if (count > MAX_HISTORY) {
+        const { data: oldest } = await supabase
+          .from('career_coach_messages')
+          .select('id')
+          .eq('user_id', user.id)
+          .order('created_at', { ascending: true })
+          .limit(count - MAX_HISTORY)
+        if (oldest?.length) {
+          await supabase
+            .from('career_coach_messages')
+            .delete()
+            .in('id', oldest.map(r => r.id))
+        }
+      }
+    } catch (e) {
+      console.error('[CareerCoach] saveToSupabase error:', e.message)
+    }
+  }
 
   const sendMessage = async (text) => {
     const userText = text || input.trim()
@@ -41,12 +102,16 @@ export default function CareerCoach({ user }) {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           messages: newMessages,
+          userId: user?.id,
           userProfile: user ? `Nama: ${user.user_metadata?.full_name || 'User'}` : null,
         }),
       })
       const data = await res.json()
       if (data.error) throw new Error(data.error)
-      setMessages([...newMessages, { role: 'assistant', content: data.reply }])
+
+      const finalMessages = [...newMessages, { role: 'assistant', content: data.reply }]
+      setMessages(finalMessages)
+      await saveToSupabase(finalMessages)
     } catch (e) {
       setMessages([...newMessages, { role: 'assistant', content: 'Waduh, koneksi lagi gangguan nih. Coba kirim lagi ya! 🙏' }])
     }
@@ -60,7 +125,7 @@ export default function CareerCoach({ user }) {
     }
   }
 
-  if (subLoading) return (
+  if (subLoading || (isPaid && !historyLoaded)) return (
     <div className="wa-screen">
       <div className="wa-header">
         <div className="wa-header-avatar">🧠</div>
@@ -76,7 +141,7 @@ export default function CareerCoach({ user }) {
   )
 
   const remaining = getRemainingUses('diah_anna')
-  const isFirst = messages.length === 0
+  const isFirst   = messages.length === 0
 
   return (
     <div className="wa-screen" style={{ height: '100vh', display: 'flex', flexDirection: 'column' }}>
@@ -120,6 +185,22 @@ export default function CareerCoach({ user }) {
               </div>
             </div>
           </>
+        )}
+
+        {/* Notice untuk Free user */}
+        {!isPaid && messages.length === 0 && (
+          <div style={{
+            margin: '8px 16px',
+            padding: '8px 12px',
+            background: 'rgba(0,0,0,0.05)',
+            borderRadius: '8px',
+            fontSize: '0.72rem',
+            color: '#666',
+            textAlign: 'center',
+          }}>
+            💡 Histori chat tidak tersimpan di perangkat lain.{' '}
+            <a href="/pricing" style={{ color: '#1a73e8', fontWeight: 600 }}>Upgrade ke Starter</a> untuk sinkronisasi antar device.
+          </div>
         )}
 
         {/* Messages */}
