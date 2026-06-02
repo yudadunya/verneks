@@ -15,8 +15,8 @@ export default async function handler(req, res) {
     // Action: start — generate first question
     if (action === 'start') {
       const message = await client.messages.create({
-        model: 'claude-sonnet-4-6',
-        max_tokens: 500,
+        model: 'claude-haiku-4-5-20251001',
+        max_tokens: 300,
         system: [
           {
             type: 'text',
@@ -47,8 +47,8 @@ Jangan terlalu panjang.`
         : `Berikan feedback SINGKAT (2-3 kalimat) untuk jawaban ini — apa yang bagus dan apa yang bisa diperbaiki. Lalu langsung ajukan "Pertanyaan ${questionNumber + 1}: [pertanyaan baru yang relevan untuk posisi ini]"`
 
       const message = await client.messages.create({
-        model: 'claude-sonnet-4-6',
-        max_tokens: 600,
+        model: 'claude-haiku-4-5-20251001',
+        max_tokens: 350,
         system: [
           {
             type: 'text',
