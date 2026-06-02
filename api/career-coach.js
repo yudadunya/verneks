@@ -11,7 +11,7 @@ export default async function handler(req, res) {
 
   const { messages: rawMessages, userProfile } = req.body
   // Hemat token: hanya kirim 10 pesan terakhir, konteks tetap nyambung
-  const messages = rawMessages.slice(-10)
+  const messages = rawMessages.slice(-8)
 
   if (!messages || messages.length === 0) {
     return res.status(400).json({ error: 'Pesan tidak boleh kosong.' })
@@ -61,8 +61,8 @@ ${userProfile ? `Info user: ${userProfile}` : ''}
 Ingat: Kamu Diah Anna — career coach yang genuinely peduli, jawab singkat tapi bermakna.`
 
     const response = await client.messages.create({
-      model: 'claude-sonnet-4-6',
-      max_tokens: 650,
+      model: 'claude-haiku-4-5-20251001',
+      max_tokens: 400,
       system: [
         {
           type: 'text',
