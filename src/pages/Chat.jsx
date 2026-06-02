@@ -126,15 +126,32 @@ export default function Chat({ user, chatMessages = [], setChatMessages }) {
 
 
 
-  // ── Paywall ────────────────────────────────────────────────────────────
+  // ── Paywall (Diah Anna persuasive messages) ───────────────────────────
+  const PAYWALL_LOCKED = {
+    'cv-review': `Hei, aku Diah Anna — career coach AI kamu 😊\n\nKamu udah sampai di sini, artinya kamu serius soal karir. Sayang banget kalau berhenti di sini.\n\n**CV Review** adalah fitur yang paling banyak bantu user aku lolos ke tahap interview. Rata-rata ATS score naik dari 48 ke 78+ setelah direvisi.\n\nFitur ini tersedia mulai paket Starter (Rp 49rb/bulan). Mau lanjut?`,
+    'ats': `Aku tau kamu udah usaha keras nulis CV itu 💙\n\nTapi tanpa cek ATS score, kamu gak tau apakah CV kamu bahkan dibaca manusia — atau langsung dibuang algoritma.\n\n**75% lamaran ditolak ATS** sebelum HRD lihat. Fitur ATS Checker ini bisa kasih tahu persis di mana masalahnya.\n\nTersedia di paket Starter. Investasinya lebih murah dari satu kali ngopi bareng teman 😄`,
+    'cv-maker': `Wah, kamu mau bikin CV baru! Bagus banget 🎉\n\nAku bisa bantu kamu bikin CV yang langsung ATS-friendly dan menarik HRD — tapi fitur **CV Maker AI** ini ada di paket berbayar.\n\nDaripada kamu buang waktu berjam-jam di Canva tapi hasilnya mungkin ditolak ATS, mending aku yang buatkan dengan format yang terbukti lolos 😊\n\nMau coba?`,
+    'interview': `Mock Interview adalah fitur favorit user aku yang akhirnya berhasil dapat kerja 🎤\n\nBanyak yang bilang: setelah latihan sama aku, interview benerannya jauh lebih gampang.\n\nFitur ini ada di paket **Pro** — karena aku mau mastiin kamu beneran siap, bukan cuma latihan asal-asalan.\n\nKalau kamu lagi aktif cari kerja, ini investasi paling worth it yang bisa kamu lakukan sekarang.`,
+  }
+  const PAYWALL_EXHAUSTED = {
+    'cv-review': `Wah, kamu udah pakai semua kuota CV Review bulan ini — artinya kamu serius banget soal karir ini! 💪\n\nAku senang bisa bantu sejauh ini. Kalau kamu mau terus improve dan makin dekat ke pekerjaan impian, upgrade ke paket yang lebih tinggi biar aku bisa review lebih banyak lagi.\n\nYuk lanjut — kamu udah di jalur yang benar!`,
+    'ats': `Kuota ATS Checker kamu udah habis untuk periode ini 🎯\n\nKamu udah cek beberapa versi CV — itu langkah yang tepat! Banyak yang nyerah di langkah pertama, kamu tidak.\n\nUpgrade sekarang biar aku bisa terus bantu kamu optimalkan CV sampai beneran siap kirim ke perusahaan impian kamu.`,
+    'cv-maker': `Kamu udah aktif banget pakai CV Maker — keren! ✨\n\nKuota bulan ini udah habis, tapi perjalanan kamu belum selesai. Upgrade biar aku bisa terus bantu kamu poles CV sampai sempurna.\n\nInget: CV yang tepat bisa mengubah segalanya.`,
+    'interview': `Kamu udah latihan mock interview sebanyak itu? Luar biasa serius! 🏆\n\nKuota kamu udah habis bulan ini. Tapi justru ini saat yang tepat untuk upgrade — karena semakin banyak latihan, semakin percaya diri kamu saat interview beneran.\n\nUpgrade sekarang dan teruskan latihan!`,
+  }
+
   const showPaywall = (feature) => {
     const limit = LIMITS[plan]?.[feature] ?? 0
+    const isLocked = limit === 0
     const label = FEATURE_LABEL[feature] || feature
-    const msg = limit === 0
-      ? `🔒 **${label}** tidak tersedia di paket **${PLAN_LABEL[plan]}**.\n\nUpgrade ke Pro untuk akses fitur ini!`
-      : `🔒 Jatah **${label}** kamu sudah habis (${limit}x${plan !== 'free' ? '/bulan' : ''}).\n\nUpgrade untuk lanjut pakai fitur ini!`
+    const fallback = isLocked
+      ? `Hai! Fitur **${label}** belum tersedia di paket kamu sekarang.\n\nUpgrade untuk akses fitur ini dan bantu aku bantu kamu lebih maksimal ya 😊`
+      : `Kuota **${label}** kamu udah habis bulan ini.\n\nUpgrade untuk lanjut — kamu udah di jalur yang benar! 💪`
+    const msg = isLocked
+      ? (PAYWALL_LOCKED[feature] || fallback)
+      : (PAYWALL_EXHAUSTED[feature] || fallback)
     pushBot(msg, [
-      { id: '__pricing', label: '⭐ Lihat Paket Upgrade' },
+      { id: '__pricing', label: '⭐ Lihat Paket & Harga' },
       { id: '__menu',    label: '🏠 Menu utama' },
     ])
     setMode('menu')
