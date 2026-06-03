@@ -493,15 +493,6 @@ export default function Chat({ user, chatMessages = [], setChatMessages }) {
   const countUserMessages = (history) => history.filter(m => m.role === 'user').length
 
   const doCoach = async (msg) => {
-    // Cek apakah user EKSPLISIT minta fitur berbayar
-    const triggeredFeature = checkPaidTrigger(msg)
-    if (triggeredFeature) {
-      const canUse = await checkUsage(triggeredFeature)
-      if (!canUse) {
-        showPaywallInCoach(triggeredFeature)
-        return
-      }
-    }
     const newHistory = [...coachHistory, { role: 'user', content: msg }]
     setCoachHistory(newHistory); setLoading(true); await callCoachApi(newHistory); setLoading(false)
 
