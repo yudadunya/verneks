@@ -1,44 +1,37 @@
 // scripts/generate-sitemap.js
-import { writeFileSync, readFileSync, existsSync } from 'fs'
-import { resolve, dirname, join } from 'path'
+// Tambah artikel baru? Tambahkan di BLOG_ARTICLES di bawah.
+
+import { writeFileSync, existsSync } from 'fs'
+import { resolve, dirname } from 'path'
 import { fileURLToPath } from 'url'
 
 const __dirname = dirname(fileURLToPath(import.meta.url))
-
 const BASE_URL = 'https://lamarcerdas.my.id'
 const today = new Date().toISOString().split('T')[0]
 
-// Cari blogPosts.js dari beberapa kemungkinan lokasi
-const candidates = [
-  resolve(__dirname, '../src/data/blogPosts.js'),     // scripts/ di root
-  resolve(__dirname, '../../src/data/blogPosts.js'),  // scripts/ di dalam src/
-  resolve(__dirname, '../data/blogPosts.js'),          // scripts/ di dalam src/
+// ── TAMBAH ARTIKEL BARU DI SINI ──────────────────────────────────────────
+const BLOG_ARTICLES = [
+  { slug: 'cara-lolos-ats-2024',                  date: '2025-01-15' },
+  { slug: 'tips-interview-kerja-fresh-graduate',   date: '2025-01-22' },
+  { slug: 'cara-negosiasi-gaji-saat-interview',    date: '2025-02-05' },
+  { slug: 'cara-switch-karir-tanpa-pengalaman',    date: '2025-02-18' },
+  { slug: 'cara-membuat-cv-yang-menarik',          date: '2025-03-01' },
+  { slug: 'linkedin-tips-untuk-dicari-recruiter',  date: '2025-03-15' },
 ]
-const blogPostsPath = candidates.find(p => existsSync(p))
-if (!blogPostsPath) {
-  console.error('❌ blogPosts.js tidak ditemukan. Coba path:', candidates)
-  process.exit(1)
-}
-
-console.log(`📄 blogPosts.js ditemukan di: ${blogPostsPath}`)
-const blogContent = readFileSync(blogPostsPath, 'utf-8')
-
-// Ekstrak slugs dan dates via regex — tidak perlu execute JS
-const slugMatches = [...blogContent.matchAll(/slug:\s*['"`]([^'"`]+)['"`]/g)]
-const dateMatches = [...blogContent.matchAll(/date:\s*['"`]([^'"`]+)['"`]/g)]
-
-const blogPages = slugMatches.map((m, i) => ({
-  url: `/blog/${m[1]}`,
-  changefreq: 'monthly',
-  priority: '0.8',
-  lastmod: dateMatches[i]?.[1] || today,
-}))
+// ─────────────────────────────────────────────────────────────────────────
 
 const staticPages = [
   { url: '/',        changefreq: 'weekly',  priority: '1.0', lastmod: today },
   { url: '/blog',    changefreq: 'weekly',  priority: '0.9', lastmod: today },
   { url: '/pricing', changefreq: 'monthly', priority: '0.7', lastmod: today },
 ]
+
+const blogPages = BLOG_ARTICLES.map(a => ({
+  url: `/blog/${a.slug}`,
+  changefreq: 'monthly',
+  priority: '0.8',
+  lastmod: a.date,
+}))
 
 const allPages = [...staticPages, ...blogPages]
 
@@ -52,12 +45,12 @@ ${allPages.map(p => `  <url>
   </url>`).join('\n')}
 </urlset>`
 
-// Cari public/ dari beberapa kemungkinan lokasi
-const publicCandidates = [
+// Cari folder public/ dari root project
+const candidates = [
   resolve(__dirname, '../public/sitemap.xml'),
   resolve(__dirname, '../../public/sitemap.xml'),
 ]
-const outPath = publicCandidates.find(p => existsSync(dirname(p))) || publicCandidates[0]
+const outPath = candidates.find(p => existsSync(dirname(p))) || candidates[0]
 
 writeFileSync(outPath, xml, 'utf-8')
-console.log(`✅ Sitemap: ${allPages.length} URLs → ${outPath}`)
+console.log(`Sitemap: ${allPages.length} URLs -> ${outPath}`)
