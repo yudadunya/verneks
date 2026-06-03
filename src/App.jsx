@@ -1,4 +1,4 @@
-import { BrowserRouter, Routes, Route } from 'react-router-dom'
+import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import { useState, useEffect } from 'react'
 import { supabase } from './lib/supabase'
 import Home from './pages/Home'
@@ -22,6 +22,12 @@ function loadMessages(userId) {
     }
   } catch {}
   return []
+}
+
+// Komponen untuk redirect file statis keluar dari React Router
+function StaticRedirect({ to }) {
+  window.location.href = to
+  return null
 }
 
 export default function App() {
@@ -92,6 +98,11 @@ export default function App() {
         <Route path="/mock-interview" element={<Chat user={user} chatMessages={chatMessages} setChatMessages={setChatMessages} />} />
         <Route path="/career-coach"   element={<Chat user={user} chatMessages={chatMessages} setChatMessages={setChatMessages} />} />
         <Route path="/cv-maker"       element={<Chat user={user} chatMessages={chatMessages} setChatMessages={setChatMessages} />} />
+        {/* File statis — redirect ke URL langsung agar tidak error di React Router */}
+        <Route path="/sitemap.xml" element={<StaticRedirect to="/sitemap.xml" />} />
+        <Route path="/robots.txt"  element={<StaticRedirect to="/robots.txt" />} />
+        {/* 404 catch-all */}
+        <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </BrowserRouter>
   )
