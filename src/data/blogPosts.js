@@ -1,9 +1,6 @@
 // scripts/generate-sitemap.js
-// Dijalankan otomatis saat: npm run build
-// Tambah artikel baru? Tambahkan slug-nya di BLOG_SLUGS di bawah.
-
-import { writeFileSync, readFileSync } from 'fs'
-import { resolve, dirname } from 'path'
+import { writeFileSync, readFileSync, existsSync } from 'fs'
+import { resolve, dirname, join } from 'path'
 import { fileURLToPath } from 'url'
 
 const __dirname = dirname(fileURLToPath(import.meta.url))
@@ -11,11 +8,22 @@ const __dirname = dirname(fileURLToPath(import.meta.url))
 const BASE_URL = 'https://lamarcerdas.my.id'
 const today = new Date().toISOString().split('T')[0]
 
-// ── Ambil slugs langsung dari blogPosts.js tanpa import (hindari JSX issues) ──
-const blogPostsPath = resolve(__dirname, '../src/data/blogPosts.js')
+// Cari blogPosts.js dari beberapa kemungkinan lokasi
+const candidates = [
+  resolve(__dirname, '../src/data/blogPosts.js'),     // scripts/ di root
+  resolve(__dirname, '../../src/data/blogPosts.js'),  // scripts/ di dalam src/
+  resolve(__dirname, '../data/blogPosts.js'),          // scripts/ di dalam src/
+]
+const blogPostsPath = candidates.find(p => existsSync(p))
+if (!blogPostsPath) {
+  console.error('❌ blogPosts.js tidak ditemukan. Coba path:', candidates)
+  process.exit(1)
+}
+
+console.log(`📄 blogPosts.js ditemukan di: ${blogPostsPath}`)
 const blogContent = readFileSync(blogPostsPath, 'utf-8')
 
-// Ekstrak semua slug dan date pakai regex — tidak perlu execute JS
+// Ekstrak slugs dan dates via regex — tidak perlu execute JS
 const slugMatches = [...blogContent.matchAll(/slug:\s*['"`]([^'"`]+)['"`]/g)]
 const dateMatches = [...blogContent.matchAll(/date:\s*['"`]([^'"`]+)['"`]/g)]
 
@@ -44,7 +52,12 @@ ${allPages.map(p => `  <url>
   </url>`).join('\n')}
 </urlset>`
 
-const outPath = resolve(__dirname, '../public/sitemap.xml')
+// Cari public/ dari beberapa kemungkinan lokasi
+const publicCandidates = [
+  resolve(__dirname, '../public/sitemap.xml'),
+  resolve(__dirname, '../../public/sitemap.xml'),
+]
+const outPath = publicCandidates.find(p => existsSync(dirname(p))) || publicCandidates[0]
+
 writeFileSync(outPath, xml, 'utf-8')
 console.log(`✅ Sitemap: ${allPages.length} URLs → ${outPath}`)
-blogPages.forEach(p => console.log(`   ${p.url}`))
