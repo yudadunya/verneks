@@ -337,6 +337,19 @@ export default function Chat({ user, chatMessages = [], setChatMessages }) {
       const data = await apiFetch('/api/cv-review', { cvText, jobTarget })
       logUsage('cv-review')
       pushBot(data.review, [{ id: 'ats', label: '🎯 Cek ATS Score juga' }, { id: '__share_cv', label: '📤 Bagikan hasil' }, { id: '__share_app', label: '👥 Ajak teman coba' }, { id: '__menu', label: '🏠 Kembali ke menu' }])
+      // Inject hasil review ke coachHistory agar Diah Anna ingat konteksnya
+      // saat user lanjut ngobrol setelah review selesai
+      setCoachHistory([
+        {
+          role: 'user',
+          content: `Tolong review CV saya${jobTarget ? ` untuk posisi ${jobTarget}` : ''}.\n\nIsi CV:\n${cvText.slice(0, 2000)}`
+        },
+        {
+          role: 'assistant',
+          content: data.review
+        }
+      ])
+      setMode('coach')
     } catch (e) { pushBot(`Aduh, ada error: ${e.message}\n\nCoba lagi ya! 🙏`); setMode('menu') }
     setLoading(false)
   }
@@ -347,6 +360,18 @@ export default function Chat({ user, chatMessages = [], setChatMessages }) {
       const data = await apiFetch('/api/ats-checker', { cvText, jobDescription })
       logUsage('ats')
       pushBot(data.result, [{ id: 'cv-review', label: '📄 Review CV juga' }, { id: '__share_ats', label: '📤 Bagikan hasil' }, { id: '__share_app', label: '👥 Ajak teman coba' }, { id: '__menu', label: '🏠 Kembali ke menu' }])
+      // Inject hasil ATS ke coachHistory agar Diah Anna ingat konteksnya
+      setCoachHistory([
+        {
+          role: 'user',
+          content: `Tolong cek ATS score CV saya${jobDescription ? ` untuk job description: ${jobDescription.slice(0, 500)}` : ''}.`
+        },
+        {
+          role: 'assistant',
+          content: data.result
+        }
+      ])
+      setMode('coach')
     } catch (e) { pushBot(`Error: ${e.message}`); setMode('menu') }
     setLoading(false)
   }
@@ -373,7 +398,17 @@ export default function Chat({ user, chatMessages = [], setChatMessages }) {
         pushBot(data.reply)
         const fbData = await apiFetch('/api/mock-interview', { action: 'feedback', position: interview.position, level: interview.level, messages: updatedMsgs })
         setMode('interview-done')
-        pushBot(fbData.feedback || 'Sesi selesai! Kamu hebat! 🎉', [{ id: 'interview', label: '🔄 Interview lagi' }, { id: '__menu', label: '🏠 Kembali ke menu' }])
+        const feedbackText = fbData.feedback || 'Sesi selesai! Kamu hebat! 🎉'
+        pushBot(feedbackText, [{ id: 'interview', label: '🔄 Interview lagi' }, { id: '__menu', label: '🏠 Kembali ke menu' }])
+        // Inject ke coachHistory agar Diah Anna tahu hasil interview
+        const interviewSummary = updatedMsgs
+          .map(m => `${m.role === 'user' ? 'Kandidat' : 'Interviewer'}: ${m.content.slice(0, 200)}`)
+          .join('\n')
+        setCoachHistory([
+          { role: 'user', content: `Aku baru selesai mock interview untuk posisi ${interview.position} level ${interview.level}.\n\nRingkasan sesi:\n${interviewSummary.slice(0, 1500)}` },
+          { role: 'assistant', content: `Ini feedback lengkap sesi mock interview kamu:\n\n${feedbackText.slice(0, 1500)}` }
+        ])
+        setMode('coach')
       } else { pushBot(data.reply) }
     } catch (e) { pushBot(`Error: ${e.message}`) }
     setLoading(false)
@@ -382,7 +417,6 @@ export default function Chat({ user, chatMessages = [], setChatMessages }) {
   const doCvMaker = async (format) => {
     setMode('cv-maker-done'); setLoading(true)
     try {
-      // pakai cvText dari hasil upload file
       const data = await apiFetch('/api/cv-maker', { mode: 'optimize', format, cvText })
       logUsage('cv-maker')
       pushBot(data.result, [
@@ -391,6 +425,12 @@ export default function Chat({ user, chatMessages = [], setChatMessages }) {
         { id: '__share_app', label: '👥 Ajak teman coba' },
         { id: '__menu', label: '🏠 Kembali ke menu' },
       ])
+      // Inject ke coachHistory agar Diah Anna tahu CV sudah dibuat
+      setCoachHistory([
+        { role: 'user', content: `Tolong buatkan CV saya dalam format ${format}.\n\nCV asli:\n${cvText.slice(0, 1500)}` },
+        { role: 'assistant', content: `Oke! Berikut CV kamu yang sudah dioptimalkan dalam format ${format}:\n\n${data.result.slice(0, 1500)}` }
+      ])
+      setMode('coach')
     } catch (e) { pushBot(`Error: ${e.message}`); setMode('menu') }
     setLoading(false)
   }
