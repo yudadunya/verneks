@@ -5,13 +5,12 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "node scripts/generate-sitemap.js && vite build",
+    "build": "vite build",
     "preview": "vite preview",
     "sitemap": "node scripts/generate-sitemap.js"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.92.0",
-    "@google/generative-ai": "^0.24.0",
     "@supabase/supabase-js": "^2.45.0",
     "html2pdf.js": "^0.10.1",
     "formidable": "^3.5.2",
