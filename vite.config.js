@@ -25,7 +25,7 @@ export default defineConfig({
 
         // Navigasi SPA selalu fallback ke index.html
         navigateFallback: 'index.html',
-        navigateFallbackDenylist: [/^\/api\//],
+        navigateFallbackDenylist: [/^\/api\//, /\/sitemap\.xml$/, /\/robots\.txt$/],
       },
 
       manifest: {
