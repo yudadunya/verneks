@@ -1,97 +1,338 @@
+// career-memory-engine-v3.js
+
 import { generateText } from './lib/ai.js'
 import { createClient } from '@supabase/supabase-js'
 
 const supabase = createClient(
-  process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL,
-  process.env.SUPABASE_SERVICE_ROLE_KEY
+process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL,
+process.env.SUPABASE_SERVICE_ROLE_KEY
 )
 
 export default async function handler(req, res) {
-  if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' })
 
-  const { userId, messages } = req.body
-  if (!userId || !messages?.length) return res.status(400).json({ error: 'Missing data' })
-
-  // Minimal 3 pesan user sebelum ekstrak
-  const userMsgCount = messages.filter(m => m.role === 'user').length
-  if (userMsgCount < 3) return res.status(200).json({ skipped: true, reason: 'too_short' })
-
-  try {
-    // Ambil profil lama jika ada
-    const { data: existing } = await supabase
-      .from('user_career_profiles')
-      .select('*')
-      .eq('user_id', userId)
-      .maybeSingle()
-
-    const existingContext = existing?.summary
-      ? `\n\nPROFIL LAMA (Gunakan sebagai referensi, jangan hapus info penting):\n${JSON.stringify({
-          summary: existing.summary,
-          career_dna: existing.career_dna,
-          emotional_state: existing.emotional_state
-        }, null, 2)}`
-      : ''
-
-    const convoText = messages
-      .slice(-30)
-      .map(m => `${m.role === 'user' ? 'User' : 'Diah Anna'}: ${m.content}`)
-      .join('\n')
-
-    const systemPrompt = `Kamu adalah sistem ekstraksi data karir tercanggih (V2). Tugasmu: analisis percakapan dan bangun "User Genome" yang mendalam.
-
-Kembalikan HANYA JSON valid. Format:
-{
-  "nama": "...",
-  "posisi_saat_ini": "...",
-  "target_posisi": "...",
-  "career_dna": {
-    "ambisi": "apa goal terbesarnya?",
-    "gaya_komunikasi": "formal/santai/butuh dorongan?",
-    "kekhawatiran_utama": "apa yang paling dia takutkan dalam karir?",
-    "preferensi_industri": ["industri1", "industri2"],
-    "nilai_kerja": "misal: gaji tinggi, WFH, atau impact?"
-  },
-  "emotional_state": "bagaimana perasaan user saat ini? (misal: optimis, burnout, bingung, terdesak)",
-  "summary": "...",
-  "topik_dibahas": ["..."]
+if (req.method !== 'POST') {
+return res.status(405).json({ error: 'Method not allowed' })
 }
 
-ATURAN V2:
-1. Ekstrak 'career_dna' secara tajam. Baca di antara baris (read between the lines).
-2. 'emotional_state' harus akurat untuk menentukan nada bicara Diah Anna nanti.
-3. Update data lama jika ada info baru yang lebih relevan.${existingContext}`
+const { userId, messages } = req.body
 
-    const raw = await generateText({
-      system: systemPrompt,
-      prompt: `Percakapan:\n${convoText}`,
-      maxTokens: 1000,
-      tier: 'smart', // Pakai model pintar untuk V2
+if (!userId || !messages?.length) {
+return res.status(400).json({ error: 'Missing data' })
+}
+
+const userMsgCount = messages.filter(
+m => m.role === 'user'
+).length
+
+if (userMsgCount < 3) {
+return res.status(200).json({
+skipped: true,
+reason: 'too_short'
+})
+}
+
+try {
+
+```
+// ==================================================
+// LOAD EXISTING PROFILE
+// ==================================================
+
+const { data: existingProfile } = await supabase
+  .from('user_career_profiles')
+  .select('*')
+  .eq('user_id', userId)
+  .maybeSingle()
+
+const existingContext = existingProfile?.summary
+  ? `
+```
+
+PROFIL SEBELUMNYA:
+
+${JSON.stringify({
+summary: existingProfile.summary,
+emotional_state: existingProfile.emotional_state,
+career_dna: existingProfile.career_dna
+}, null, 2)}
+`
+: ''
+
+```
+const convoText = messages
+  .slice(-30)
+  .map(m =>
+    `${m.role === 'user' ? 'User' : 'Diah Anna'}: ${m.content}`
+  )
+  .join('\n')
+
+// ==================================================
+// CAREER MEMORY ENGINE V3
+// ==================================================
+
+const systemPrompt = `
+```
+
+Kamu adalah Career Memory Engine V3 milik LamarCerdas.
+
+Tugasmu:
+
+1. Mengenali identitas karier user
+2. Memahami kondisi emosional user
+3. Menghasilkan Career Genome
+4. Menentukan Career Stage
+5. Menghasilkan Next Action
+
+Kembalikan HANYA JSON VALID.
+
+{
+"profile": {
+"nama": "",
+"posisi_saat_ini": "",
+"target_posisi": "",
+"emotional_state": "",
+"summary": "",
+"topik_dibahas": []
+},
+
+"career_dna": {
+"ambisi": "",
+"gaya_komunikasi": "",
+"kekhawatiran_utama": "",
+"preferensi_industri": [],
+"nilai_kerja": ""
+},
+
+"genome_scores": {
+"analytical": 0,
+"leadership": 0,
+"builder": 0,
+"creator": 0,
+"communication": 0,
+"risk_taking": 0
+},
+
+"growth_state": {
+"career_stage": "",
+"progress_percent": 0,
+"current_focus": "",
+"next_milestone": "",
+"streak_estimate": 0
+},
+
+"next_action": {
+"title": "",
+"description": "",
+"estimated_days": 7
+}
+}
+
+Career Stage hanya boleh:
+
+* Career Explorer
+* Career Builder
+* Career Professional
+* Career Expert
+* Career Leader
+
+Gunakan profil lama sebagai referensi.
+
+${existingContext}
+`
+
+````
+const raw = await generateText({
+  system: systemPrompt,
+  prompt: `Percakapan:\n${convoText}`,
+  maxTokens: 1500,
+  tier: 'smart'
+})
+
+let memory
+
+try {
+
+  const clean = raw
+    .trim()
+    .replace(/```json/g, '')
+    .replace(/```/g, '')
+    .trim()
+
+  memory = JSON.parse(clean)
+
+} catch (e) {
+
+  console.error(e)
+
+  return res.status(200).json({
+    skipped: true,
+    reason: 'parse_failed'
+  })
+
+}
+
+// ==================================================
+// PROFILE
+// ==================================================
+
+const profile = memory.profile || {}
+
+await supabase
+  .from('user_career_profiles')
+  .upsert({
+    user_id: userId,
+
+    nama: profile.nama,
+
+    posisi_saat_ini: profile.posisi_saat_ini,
+
+    target_posisi: profile.target_posisi,
+
+    emotional_state: profile.emotional_state,
+
+    summary: profile.summary,
+
+    career_dna: memory.career_dna,
+
+    topik_dibahas: profile.topik_dibahas || [],
+
+    genome_updated_at: new Date().toISOString(),
+
+    last_updated: new Date().toISOString()
+
+  }, {
+    onConflict: 'user_id'
+  })
+
+// ==================================================
+// GENOME SCORE
+// ==================================================
+
+await supabase
+  .from('user_genome_scores')
+  .upsert({
+    user_id: userId,
+
+    analytical:
+      memory.genome_scores?.analytical || 0,
+
+    leadership:
+      memory.genome_scores?.leadership || 0,
+
+    builder:
+      memory.genome_scores?.builder || 0,
+
+    creator:
+      memory.genome_scores?.creator || 0,
+
+    communication:
+      memory.genome_scores?.communication || 0,
+
+    risk_taking:
+      memory.genome_scores?.risk_taking || 0,
+
+    updated_at: new Date().toISOString()
+
+  }, {
+    onConflict: 'user_id'
+  })
+
+// ==================================================
+// GROWTH STATE
+// ==================================================
+
+await supabase
+  .from('user_growth_state')
+  .upsert({
+    user_id: userId,
+
+    career_stage:
+      memory.growth_state?.career_stage,
+
+    progress_percent:
+      memory.growth_state?.progress_percent || 0,
+
+    current_focus:
+      memory.growth_state?.current_focus,
+
+    next_milestone:
+      memory.growth_state?.next_milestone,
+
+    streak_days:
+      memory.growth_state?.streak_estimate || 0,
+
+    last_activity:
+      new Date().toISOString(),
+
+    updated_at:
+      new Date().toISOString()
+
+  }, {
+    onConflict: 'user_id'
+  })
+
+// ==================================================
+// NEXT ACTION
+// ==================================================
+
+if (memory.next_action?.title) {
+
+  await supabase
+    .from('user_next_actions')
+    .insert({
+      user_id: userId,
+
+      title:
+        memory.next_action.title,
+
+      description:
+        memory.next_action.description,
+
+      estimated_days:
+        memory.next_action.estimated_days || 7
     })
 
-    let profile
-    try {
-      const clean = raw.trim().replace(/```json|```/g, '').trim()
-      profile = JSON.parse(clean)
-    } catch {
-      return res.status(200).json({ skipped: true, reason: 'parse_failed' })
+}
+
+// ==================================================
+// CAREER EVENT
+// ==================================================
+
+await supabase
+  .from('career_events')
+  .insert({
+    user_id: userId,
+
+    event_type: 'genome_updated',
+
+    event_payload: {
+      stage:
+        memory.growth_state?.career_stage,
+
+      progress:
+        memory.growth_state?.progress_percent
     }
+  })
 
-    // Merge & Upsert
-    const { error } = await supabase
-      .from('user_career_profiles')
-      .upsert({
-        user_id: userId,
-        ...profile,
-        genome_updated_at: new Date().toISOString(),
-        last_updated: new Date().toISOString(),
-      }, { onConflict: 'user_id' })
+return res.status(200).json({
+  success: true,
+  version: 'v3'
+})
+````
 
-    if (error) throw error
+} catch (error) {
 
-    return res.status(200).json({ success: true, v2: true })
+```
+console.error(
+  '[career-memory-engine-v3]',
+  error
+)
 
-  } catch (error) {
-    console.error('[extract-profile-v2] error:', error)
-    return res.status(500).json({ error: error.message })
-  }
+return res.status(500).json({
+  error: error.message
+})
+```
+
+}
+
 }
