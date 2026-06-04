@@ -172,18 +172,15 @@ export default function Home({ user }) {
         </div>
 
         {/* CTA */}
-        <button onClick={handleGoogle} disabled={loading} style={{
+        <button onClick={() => navigate('/discovery')} style={{
           width: '100%', maxWidth: 400,
           display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10,
-          background: loading ? '#1a2a1f' : 'linear-gradient(135deg, #25D366 0%, #128C7E 100%)',
+          background: 'linear-gradient(135deg, #25D366 0%, #128C7E 100%)',
           color: '#fff', fontWeight: 700, fontSize: '1rem',
-          padding: '15px 20px', borderRadius: 14, border: 'none',
-          cursor: loading ? 'not-allowed' : 'pointer',
-          boxShadow: loading ? 'none' : '0 4px 24px rgba(37,211,102,0.35)',
-          transition: 'all 0.2s',
+          padding: '15px 20px', borderRadius: 14, border: 'none', cursor: 'pointer',
+          boxShadow: '0 4px 24px rgba(37,211,102,0.35)', transition: 'all 0.2s',
         }}>
-          {!loading && <GoogleIcon />}
-          {loading ? 'Mengarahkan...' : 'Ngobrol Gratis dengan Diah Anna'}
+          🚀 Mulai Gratis — Temukan Career DNA Kamu
         </button>
         <p style={{ color: 'rgba(255,255,255,0.25)', fontSize: '0.72rem', marginTop: 8, textAlign: 'center', maxWidth: 400 }}>
           Tidak perlu kartu kredit · Langsung aktif · Gratis selamanya
@@ -260,17 +257,13 @@ export default function Home({ user }) {
           <p style={{ color: 'rgba(255,255,255,0.45)', fontSize: '0.82rem', marginBottom: 20, lineHeight: 1.5 }}>
             Ribuan job seeker sudah curhat karir sama Diah Anna.<br/>Sekarang giliran kamu.
           </p>
-          <button onClick={handleGoogle} disabled={loading} style={{
-            width: '100%',
+          <button onClick={() => navigate('/discovery')} style={{
+            width: '100%', background: '#fff', color: '#0a0f0d',
+            fontWeight: 800, fontSize: '1rem', padding: '15px', borderRadius: 14,
+            border: 'none', cursor: 'pointer', letterSpacing: '-0.2px',
             display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10,
-            background: '#fff', color: '#0a0f0d',
-            fontWeight: 800, fontSize: '1rem',
-            padding: '15px', borderRadius: 14, border: 'none',
-            cursor: loading ? 'not-allowed' : 'pointer',
-            letterSpacing: '-0.2px',
           }}>
-            {!loading && <GoogleIcon />}
-            {loading ? 'Mengarahkan...' : 'Mulai Ngobrol Gratis →'}
+            🚀 Temukan Career DNA Kamu →
           </button>
         </div>
       </div>
