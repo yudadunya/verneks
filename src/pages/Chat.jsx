@@ -358,6 +358,11 @@ export default function Chat({ user, chatMessages = [], setChatMessages }) {
         }
       ])
       setMode('coach')
+      // Ekstrak profil — ada sinyal target posisi & kondisi CV
+      extractAndSaveProfile([
+        { role: 'user', content: `Tolong review CV saya${jobTarget ? ` untuk posisi ${jobTarget}` : ''}.` },
+        { role: 'assistant', content: data.review.slice(0, 600) }
+      ]).catch(() => {})
     } catch (e) { pushBot(`Aduh, ada error: ${e.message}\n\nCoba lagi ya! 🙏`); setMode('menu') }
     setLoading(false)
   }
@@ -380,6 +385,11 @@ export default function Chat({ user, chatMessages = [], setChatMessages }) {
         }
       ])
       setMode('coach')
+      // Ekstrak profil — ada sinyal karir dari ATS check
+      extractAndSaveProfile([
+        { role: 'user', content: `Cek ATS score CV saya.` },
+        { role: 'assistant', content: data.result.slice(0, 600) }
+      ]).catch(() => {})
     } catch (e) { pushBot(`Error: ${e.message}`); setMode('menu') }
     setLoading(false)
   }
@@ -417,6 +427,11 @@ export default function Chat({ user, chatMessages = [], setChatMessages }) {
           { role: 'assistant', content: `Ini feedback lengkap sesi mock interview kamu:\n\n${feedbackText.slice(0, 1500)}` }
         ])
         setMode('coach')
+        // Ekstrak profil — interview memberi sinyal kuat soal target posisi & level
+        extractAndSaveProfile([
+          { role: 'user', content: `Saya baru selesai mock interview untuk posisi ${interview.position} level ${interview.level}.` },
+          { role: 'assistant', content: feedbackText.slice(0, 600) }
+        ]).catch(() => {})
       } else { pushBot(data.reply) }
     } catch (e) { pushBot(`Error: ${e.message}`) }
     setLoading(false)
@@ -439,6 +454,11 @@ export default function Chat({ user, chatMessages = [], setChatMessages }) {
         { role: 'assistant', content: `Oke! Berikut CV kamu yang sudah dioptimalkan dalam format ${format}:\n\n${data.result.slice(0, 1500)}` }
       ])
       setMode('coach')
+      // Ekstrak profil — CV maker memberi banyak konteks karir
+      extractAndSaveProfile([
+        { role: 'user', content: `Saya minta CV dioptimalkan format ${format}.` },
+        { role: 'assistant', content: data.result.slice(0, 600) }
+      ]).catch(() => {})
     } catch (e) { pushBot(`Error: ${e.message}`); setMode('menu') }
     setLoading(false)
   }
@@ -497,28 +517,45 @@ export default function Chat({ user, chatMessages = [], setChatMessages }) {
     return null
   }
 
-  // Hitung pesan user di history untuk trigger ekstraksi profil
-  const countUserMessages = (history) => history.filter(m => m.role === 'user').length
+  // ── Profile Extraction Engine ────────────────────────────────────────────
+
+  // Konversi messages (format chat: {role,text}) → format API ({role,content})
+  const messagesRef = useRef(chatMessages)
+  useEffect(() => { messagesRef.current = chatMessages }, [chatMessages])
+
+  const getChatHistoryForExtract = () => {
+    return messagesRef.current
+      .filter(m => (m.role === 'user' || m.role === 'bot') && (m.text || '').length > 0)
+      .map(m => ({ role: m.role === 'bot' ? 'assistant' : 'user', content: m.text }))
+  }
+
+  // Ekstrak profil — jalan di background, silent fail
+  const extractAndSaveProfile = async (extraMessages = []) => {
+    if (!user?.id) return
+    try {
+      const combined = [...getChatHistoryForExtract(), ...extraMessages]
+      const userCount = combined.filter(m => m.role === 'user').length
+      if (userCount < 3) return
+      await apiFetch('/api/extract-profile', { userId: user.id, messages: combined })
+    } catch (e) {
+      console.warn('[profile] extract error (silent):', e)
+    }
+  }
+
+  // Trigger setiap 3 pesan user — berlaku di semua mode
+  const maybeExtractProfile = (extraMessages = []) => {
+    if (!user?.id) return
+    const combined = [...getChatHistoryForExtract(), ...extraMessages]
+    const userCount = combined.filter(m => m.role === 'user').length
+    if (userCount >= 3 && userCount % 3 === 0) {
+      extractAndSaveProfile(extraMessages).catch(() => {})
+    }
+  }
 
   const doCoach = async (msg) => {
     const newHistory = [...coachHistory, { role: 'user', content: msg }]
     setCoachHistory(newHistory); setLoading(true); await callCoachApi(newHistory); setLoading(false)
-
-    // Ekstrak profil setiap 6 pesan user (background, tidak blokir UI)
-    const userMsgCount = countUserMessages(newHistory)
-    if (user?.id && userMsgCount > 0 && userMsgCount % 6 === 0) {
-      extractAndSaveProfile(newHistory).catch(e => console.warn('[profile] extract failed silently:', e))
-    }
-  }
-
-  // Ekstrak profil karir user dari percakapan — jalan di background
-  const extractAndSaveProfile = async (history) => {
-    try {
-      await apiFetch('/api/extract-profile', { userId: user.id, messages: history })
-    } catch (e) {
-      // Silent fail — jangan ganggu UX
-      console.warn('[profile] extract error:', e)
-    }
+    maybeExtractProfile()
   }
 
   const callCoachApi = async (history) => {
