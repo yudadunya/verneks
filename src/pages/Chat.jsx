@@ -4,6 +4,7 @@ import { useNavigate } from 'react-router-dom'
 import Onboarding from '../components/Onboarding'
 import ShareCard from '../components/ShareCard'
 import ShareAppModal from '../components/ShareAppModal'
+import BottomNav from '../components/BottomNav'
 import { useSubscription, LIMITS, PLAN_LABEL, FEATURE_LABEL } from '../hooks/useSubscription'
 
 function renderMd(text) {
@@ -543,7 +544,7 @@ export default function Chat({ user, chatMessages = [], setChatMessages }) {
     <div ref={containerRef} style={{
       position: 'fixed', top: 0, left: '50%', transform: 'translateX(-50%)',
       width: '100%', maxWidth: 480,
-      height: '100vh',
+      height: 'calc(100vh - 65px)',
       display: 'flex', flexDirection: 'column',
       background: 'var(--wa-chat-bg)',
       overflow: 'hidden',
@@ -665,5 +666,6 @@ export default function Chat({ user, chatMessages = [], setChatMessages }) {
         div::-webkit-scrollbar { display: none; }
       `}</style>
     </div>
+    <BottomNav />
   )
 }
