@@ -666,6 +666,4 @@ export default function Chat({ user, chatMessages = [], setChatMessages }) {
         div::-webkit-scrollbar { display: none; }
       `}</style>
     </div>
-    <BottomNav />
-  )
-}
+    <BottomNav />`n  </>`n  )`n}
