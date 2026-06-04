@@ -1,11 +1,11 @@
 import { Link, useLocation } from 'react-router-dom'
 
 const tabs = [
-  { href: '/dashboard', icon: '🏠', label: 'Home' },
-  { href: '/cv-review', icon: '📄', label: 'CV Review' },
-  { href: '/career-coach', icon: '🧠', label: 'Coach' },
-  { href: '/mock-interview', icon: '🎤', label: 'Interview' },
-  { href: '/pricing', icon: '⭐', label: 'Paket' },
+  { href: '/chat', icon: '💬', label: 'Chat' },
+  { href: '/journey', icon: '🗺️', label: 'Journey' },
+  { href: '/dna', icon: '🧬', label: 'DNA' },
+  { href: '/opportunities', icon: '💼', label: 'Jobs' },
+  { href: '/profile', icon: '👤', label: 'Profile' },
 ]
 
 export default function BottomNav() {
@@ -14,7 +14,8 @@ export default function BottomNav() {
   return (
     <nav className="wa-bottom-nav">
       {tabs.map(tab => {
-        const active = location.pathname === tab.href
+        const active = location.pathname === tab.href || 
+                       (tab.href === '/chat' && location.pathname === '/dashboard')
         return (
           <Link key={tab.href} to={tab.href} className={`wa-tab ${active ? 'active' : ''}`}>
             <span className="wa-tab-icon">{tab.icon}</span>
