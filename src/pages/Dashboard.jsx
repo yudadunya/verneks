@@ -1,128 +1,184 @@
-import { Link, useNavigate } from 'react-router-dom'
 import { useEffect, useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
+import BottomNav from '../components/BottomNav'
 
-const PLAN_LABEL = { free: 'Free', starter: 'Starter', pro: 'Pro', platinum: 'Platinum 👑' }
-
-const menuItems = [
-  { icon: '📄', title: 'CV Review', desc: 'Feedback spesifik dari AI', href: '/cv-review', color: '#E8F5E9' },
-  { icon: '🎯', title: 'ATS Checker', desc: 'Cek ATS score CV kamu', href: '/ats-checker', color: '#E3F2FD', badge: 'Baru' },
-  { icon: '🎤', title: 'Mock Interview', desc: 'Latihan interview kerja', href: '/mock-interview', color: '#FFF3E0' },
-  { icon: '🧠', title: 'Diah Anna', desc: 'AI Career Coach kamu', href: '/career-coach', color: '#F3E5F5' },
-  { icon: '✨', title: 'CV Maker', desc: 'Bikin CV profesional', href: '/cv-maker', color: '#FCE4EC' },
+const GENOME_MAP = [
+  { key: 'analytical',    label: 'Analytical',    emoji: '🧠', color: '#34B7F1' },
+  { key: 'leadership',    label: 'Leadership',    emoji: '👑', color: '#F48FB1' },
+  { key: 'builder',       label: 'Builder',       emoji: '⚙️', color: '#25D366' },
+  { key: 'creator',       label: 'Creator',       emoji: '🎨', color: '#FFB74D' },
+  { key: 'communication', label: 'Communication', emoji: '💬', color: '#CE93D8' },
+  { key: 'risk_taking',   label: 'Risk Taking',   emoji: '🚀', color: '#EF9A9A' },
 ]
+
+const STAGE_COLOR = {
+  'Career Explorer': '#34B7F1', 'Career Builder': '#25D366',
+  'Career Professional': '#FFB74D', 'Career Expert': '#F48FB1', 'Career Leader': '#CE93D8',
+}
 
 export default function Dashboard({ user }) {
   const navigate = useNavigate()
-  const [checking, setChecking] = useState(true)
-  const [userPlan, setUserPlan] = useState('free')
+  const [profile, setProfile]   = useState(null)
+  const [genome, setGenome]     = useState(null)
+  const [growth, setGrowth]     = useState(null)
+  const [loading, setLoading]   = useState(true)
 
   useEffect(() => {
-    if (!user) { setChecking(false); return }
-    async function loadDashboard() {
-      const { data: sub } = await supabase
-        .from('subscriptions').select('plan')
-        .eq('user_id', user.id).eq('status', 'active')
-        .gte('expires_at', new Date().toISOString()).single()
-      setUserPlan(sub?.plan || 'free')
-      setChecking(false)
-    }
-    loadDashboard()
-  }, [user])
+    if (!user) { navigate('/'); return }
+    Promise.all([
+      supabase.from('user_career_profiles').select('*').eq('user_id', user.id).maybeSingle(),
+      supabase.from('user_genome_scores').select('*').eq('user_id', user.id).maybeSingle(),
+      supabase.from('user_growth_state').select('*').eq('user_id', user.id).maybeSingle(),
+    ]).then(([{ data: p }, { data: g }, { data: gw }]) => {
+      setProfile(p); setGenome(g); setGrowth(gw); setLoading(false)
+    })
+  }, [user?.id])
 
-  if (!user) return (
-    <div className="wa-screen">
-      <div className="wa-header">
-        <div className="wa-header-avatar">💼</div>
-        <div><div className="wa-header-title">LamarCerdas</div></div>
-      </div>
-      <div className="wa-empty" style={{ flex: 1 }}>
-        <span className="wa-empty-icon">🔒</span>
-        <p className="wa-empty-title">Login dulu ya</p>
-        <p className="wa-empty-text">Kamu harus masuk dulu untuk akses fitur ini</p>
-        <Link to="/login" style={{ display: 'inline-block', padding: '12px 32px', marginTop: '16px', background: 'var(--wa-green)', color: '#fff', borderRadius: '8px', fontWeight: 600 }}>
-          Masuk Sekarang
-        </Link>
-      </div>
-    </div>
-  )
-
-  if (checking) return (
-    <div className="wa-screen">
-      <div className="wa-header">
-        <div className="wa-header-avatar">💼</div>
-        <div><div className="wa-header-title">LamarCerdas</div><div className="wa-header-subtitle">Memuat...</div></div>
-      </div>
-      <div className="wa-empty" style={{ flex: 1 }}>
-        <span className="wa-empty-icon">⏳</span>
-        <p className="wa-empty-text">Sedang memuat dashboard kamu...</p>
-      </div>
-    </div>
-  )
-
-  const name = user.user_metadata?.full_name?.split(' ')[0] ||
-               user.user_metadata?.name?.split(' ')[0] || 'kamu'
+  const firstName = user?.user_metadata?.full_name?.split(' ')[0]
+               || user?.user_metadata?.name?.split(' ')[0] || 'Kamu'
+  const stageColor = STAGE_COLOR[growth?.career_stage] || '#25D366'
+  const hasGenome  = genome && GENOME_MAP.some(g => (genome[g.key] || 0) > 0)
+  const topGenome  = hasGenome
+    ? GENOME_MAP.reduce((b, g) => (genome[g.key] || 0) > (genome[b.key] || 0) ? g : b, GENOME_MAP[0])
+    : null
 
   return (
-    <div className="wa-screen">
-      {/* Header */}
+    <div style={{ minHeight: '100vh', background: 'var(--wa-bg)', paddingBottom: '80px' }}>
       <div className="wa-header">
-        <div className="wa-header-avatar">
-          {user.user_metadata?.avatar_url
-            ? <img src={user.user_metadata.avatar_url} style={{ width: '100%', height: '100%', borderRadius: '50%', objectFit: 'cover' }} />
-            : '💼'}
-        </div>
-        <div style={{ flex: 1 }}>
-          <div className="wa-header-title">Hei, {name}! 👋</div>
-          <div className="wa-header-subtitle">Mau ngapain hari ini?</div>
-        </div>
-        <span className="wa-plan-chip" style={{ fontSize: '0.7rem', padding: '3px 8px' }}>
-          {PLAN_LABEL[userPlan]}
-        </span>
+        <div className="wa-header-title">Dashboard</div>
+        <div className="wa-header-subtitle">LamarCerdas Career GPS</div>
       </div>
 
-      {userPlan === 'free' && (
-        <div className="wa-alert green" style={{ margin: '8px 12px 0' }}>
-          💬 Chat langsung WA dengan AI Coach —{' '}
-          <Link to="/pricing" style={{ color: 'var(--wa-green-dark)', fontWeight: 700 }}>Upgrade Sekarang →</Link>
-        </div>
-      )}
+      <div style={{ padding: '14px 14px 0' }}>
 
-      <div className="wa-section-header">Fitur Tersedia</div>
-
-      {menuItems.map((item) => (
-        <Link to={item.href} key={item.title} className="wa-list-item">
-          <div className="wa-list-avatar" style={{ background: item.color }}>{item.icon}</div>
-          <div className="wa-list-content">
-            <div className="wa-list-title">{item.title}</div>
-            <div className="wa-list-subtitle">{item.desc}</div>
+        {/* Greeting Card */}
+        <div style={{
+          background: 'linear-gradient(135deg, #075E54, #128C7E)',
+          borderRadius: 16, padding: '18px', marginBottom: 14,
+          boxShadow: '0 4px 16px rgba(7,94,84,0.3)',
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 14 }}>
+            <div style={{ width: 44, height: 44, borderRadius: '50%', background: 'rgba(255,255,255,0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.3rem', overflow: 'hidden', border: '2px solid rgba(255,255,255,0.3)' }}>
+              {user?.user_metadata?.avatar_url
+                ? <img src={user.user_metadata.avatar_url} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                : '👤'}
+            </div>
+            <div>
+              <div style={{ color: '#fff', fontWeight: 700, fontSize: '1rem' }}>Halo, {firstName}! 👋</div>
+              {growth?.career_stage && (
+                <div style={{ display: 'inline-block', background: 'rgba(255,255,255,0.15)', color: '#fff', padding: '2px 10px', borderRadius: 99, fontSize: '0.72rem', fontWeight: 600, marginTop: 3 }}>
+                  {growth.career_stage}
+                </div>
+              )}
+            </div>
           </div>
-          <div className="wa-list-meta">
-            {item.badge && <span className="wa-badge yellow">{item.badge}</span>}
-            <span style={{ color: 'var(--wa-gray)', fontSize: '1rem' }}>›</span>
+
+          {/* Progress */}
+          {growth && (
+            <div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', color: 'rgba(255,255,255,0.75)', fontSize: '0.75rem', marginBottom: 5 }}>
+                <span>Career Readiness</span>
+                <span style={{ color: '#fff', fontWeight: 700 }}>{growth.progress_percent || 0}%</span>
+              </div>
+              <div style={{ background: 'rgba(255,255,255,0.2)', borderRadius: 99, height: 6, overflow: 'hidden' }}>
+                <div style={{ background: '#fff', width: `${growth.progress_percent || 0}%`, height: '100%', borderRadius: 99, transition: 'width 1s ease' }} />
+              </div>
+              {growth.next_milestone && (
+                <div style={{ color: 'rgba(255,255,255,0.6)', fontSize: '0.72rem', marginTop: 5 }}>
+                  Next: {growth.next_milestone}
+                </div>
+              )}
+            </div>
+          )}
+
+          {!loading && !growth && (
+            <div style={{ color: 'rgba(255,255,255,0.6)', fontSize: '0.82rem' }}>
+              Ngobrol dengan Diah Anna untuk mulai tracking progress karir! 🚀
+            </div>
+          )}
+        </div>
+
+        {/* Top Strength + Target */}
+        {!loading && (
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginBottom: 14 }}>
+            <div style={{ background: '#fff', borderRadius: 12, padding: '14px' }}>
+              <div style={{ color: '#999', fontSize: '0.7rem', marginBottom: 4 }}>Kekuatan Utama</div>
+              {topGenome
+                ? <div style={{ fontSize: '1.1rem' }}>{topGenome.emoji} <span style={{ fontWeight: 700, color: topGenome.color }}>{topGenome.label}</span></div>
+                : <div style={{ color: '#ccc', fontSize: '0.82rem' }}>Belum terdeteksi</div>}
+            </div>
+            <div style={{ background: '#fff', borderRadius: 12, padding: '14px' }}>
+              <div style={{ color: '#999', fontSize: '0.7rem', marginBottom: 4 }}>Target Posisi</div>
+              <div style={{ fontWeight: 700, fontSize: '0.85rem', color: '#111', lineHeight: 1.3 }}>
+                {profile?.target_posisi || <span style={{ color: '#ccc' }}>Belum diset</span>}
+              </div>
+            </div>
           </div>
-        </Link>
-      ))}
+        )}
 
-      <div className="wa-section-header">Akun</div>
-      <Link to="/pricing" className="wa-list-item">
-        <div className="wa-list-avatar" style={{ background: '#FFF8E1' }}>⭐</div>
-        <div className="wa-list-content">
-          <div className="wa-list-title">Lihat Paket & Harga</div>
-          <div className="wa-list-subtitle">Paket saat ini: {PLAN_LABEL[userPlan]}</div>
-        </div>
-        <span style={{ color: 'var(--wa-gray)', fontSize: '1rem' }}>›</span>
-      </Link>
+        {/* Genome Scores */}
+        {!loading && hasGenome && (
+          <div style={{ background: '#fff', borderRadius: 12, padding: '14px', marginBottom: 14 }}>
+            <div style={{ fontWeight: 700, fontSize: '0.85rem', marginBottom: 12 }}>🧬 Career Genome</div>
+            {GENOME_MAP.map(g => {
+              const val = genome[g.key] || 0
+              if (val === 0) return null
+              return (
+                <div key={g.key} style={{ marginBottom: 8 }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.78rem', marginBottom: 3 }}>
+                    <span>{g.emoji} {g.label}</span>
+                    <span style={{ color: g.color, fontWeight: 700 }}>{val}</span>
+                  </div>
+                  <div style={{ background: '#f0f0f0', borderRadius: 99, height: 5, overflow: 'hidden' }}>
+                    <div style={{ background: g.color, width: `${val}%`, height: '100%', borderRadius: 99, transition: 'width 0.8s ease' }} />
+                  </div>
+                </div>
+              )
+            })}
+          </div>
+        )}
 
-      <div className="wa-list-item" onClick={async () => { await supabase.auth.signOut(); navigate('/') }} style={{ cursor: 'pointer' }}>
-        <div className="wa-list-avatar" style={{ background: '#FFEBEE' }}>🚪</div>
-        <div className="wa-list-content">
-          <div className="wa-list-title" style={{ color: 'var(--wa-red)' }}>Keluar</div>
-          <div className="wa-list-subtitle">Logout dari akun kamu</div>
-        </div>
+        {/* Current Focus */}
+        {!loading && growth?.current_focus && (
+          <div style={{ background: '#fff', borderRadius: 12, padding: '14px', marginBottom: 14 }}>
+            <div style={{ color: '#999', fontSize: '0.72rem', marginBottom: 4 }}>🎯 Fokus Saat Ini</div>
+            <div style={{ fontWeight: 600, fontSize: '0.88rem', color: '#111' }}>{growth.current_focus}</div>
+          </div>
+        )}
+
+        {/* No data CTA */}
+        {!loading && !hasGenome && (
+          <div style={{ background: '#fff', borderRadius: 12, padding: '18px', marginBottom: 14, textAlign: 'center' }}>
+            <div style={{ fontSize: '2rem', marginBottom: 8 }}>🧬</div>
+            <div style={{ fontWeight: 700, marginBottom: 6 }}>Career Genome belum terbentuk</div>
+            <div style={{ color: '#888', fontSize: '0.82rem', marginBottom: 14, lineHeight: 1.5 }}>
+              Ngobrol minimal 3 pesan dengan Diah Anna agar AI bisa memetakan DNA karir kamu.
+            </div>
+            <button onClick={() => navigate('/chat')}
+              style={{ background: 'var(--wa-green)', color: '#fff', padding: '10px 24px', borderRadius: 8, border: 'none', fontWeight: 600, cursor: 'pointer' }}>
+              💬 Chat dengan Diah Anna
+            </button>
+          </div>
+        )}
+
+        {/* Chat CTA */}
+        <button onClick={() => navigate('/chat')}
+          style={{
+            width: '100%', padding: '14px',
+            background: 'linear-gradient(135deg, #25D366, #128C7E)',
+            color: '#fff', fontWeight: 700, fontSize: '0.95rem',
+            borderRadius: 12, border: 'none', cursor: 'pointer',
+            display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
+            boxShadow: '0 4px 14px rgba(37,211,102,0.3)',
+            marginBottom: 10,
+          }}>
+          <img src="/diah-anna.png" alt="" style={{ width: 26, height: 26, borderRadius: '50%', objectFit: 'cover' }} />
+          Chat dengan Diah Anna
+        </button>
+
       </div>
-
-      <div style={{ height: '80px' }} />
+      <BottomNav />
     </div>
   )
 }
