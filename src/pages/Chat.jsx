@@ -578,6 +578,24 @@ export default function Chat({ user, chatMessages = [], setChatMessages }) {
     }
   }
 
+  // Registrasi Notifikasi Proaktif V2
+  useEffect(() => {
+    if (!user?.id || !('Notification' in window)) return
+
+    const setupNotifications = async () => {
+      if (Notification.permission === 'default') {
+        const permission = await Notification.requestPermission()
+        if (permission === 'granted') {
+          console.log('Notification permission granted.')
+          // Di sini Anda biasanya akan memanggil serviceWorkerRegistration.pushManager.subscribe()
+          // Untuk demo, kita asumsikan kita dapat token dummy atau integrasi PWA
+          // await apiFetch('/api/save-push-token', { userId: user.id, pushToken: 'dummy_token_v2' })
+        }
+      }
+    }
+    setupNotifications()
+  }, [user?.id])
+
   const callCoachApi = async (history) => {
     try {
       const data = await apiFetch('/api/career-coach', { messages: history, userId: user?.id || null })
