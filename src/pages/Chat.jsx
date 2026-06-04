@@ -223,9 +223,8 @@ export default function Chat({ user, chatMessages = [], setChatMessages }) {
       : (PAYWALL_EXHAUSTED[feature] || fallback)
     pushBot(msg, [
       { id: '__pricing', label: '⭐ Lihat Paket & Harga' },
-      { id: '__menu',    label: '🏠 Menu utama' },
-    ])
-    setMode('menu')
+      ])
+    setMode('coach')
   }
 
   // ── File upload ────────────────────────────────────────────────────────
@@ -263,7 +262,7 @@ export default function Chat({ user, chatMessages = [], setChatMessages }) {
 
   // ── Router ─────────────────────────────────────────────────────────────
   const route = async (id, label) => {
-    if (id === '__menu' || id === 'menu') { setMode('menu'); pushBot('Oke! Mau ngapain lagi?', MAIN_MENU); return }
+    if (id === '__menu' || id === 'menu') { setMode('coach'); return }
     if (id === '__download_docx') {
       const lastBot = [...messages].reverse().find(m => m.role === 'bot' && (m.text?.length || 0) > 200)
       if (lastBot?.text) await downloadDocx(lastBot.text)
@@ -381,7 +380,7 @@ export default function Chat({ user, chatMessages = [], setChatMessages }) {
     try {
       const data = await apiFetch('/api/cv-review', { cvText, jobTarget })
       logUsage('cv-review')
-      pushBot(data.review, [{ id: 'ats', label: '🎯 Cek ATS Score juga' }, { id: '__share_cv', label: '📤 Bagikan hasil' }, { id: '__share_app', label: '👥 Ajak teman coba' }, { id: '__menu', label: '🏠 Kembali ke menu' }])
+      pushBot(data.review, [{ id: 'ats', label: '🎯 Cek ATS Score juga' }, { id: '__share_cv', label: '📤 Bagikan hasil' }, { id: '__share_app', label: '👥 Ajak teman coba' }])
       // Inject hasil review ke coachHistory agar Diah Anna ingat konteksnya
       // saat user lanjut ngobrol setelah review selesai
       setCoachHistory([
@@ -409,7 +408,7 @@ export default function Chat({ user, chatMessages = [], setChatMessages }) {
     try {
       const data = await apiFetch('/api/ats-checker', { cvText, jobDescription })
       logUsage('ats')
-      pushBot(data.result, [{ id: 'cv-review', label: '📄 Review CV juga' }, { id: '__share_ats', label: '📤 Bagikan hasil' }, { id: '__share_app', label: '👥 Ajak teman coba' }, { id: '__menu', label: '🏠 Kembali ke menu' }])
+      pushBot(data.result, [{ id: 'cv-review', label: '📄 Review CV juga' }, { id: '__share_ats', label: '📤 Bagikan hasil' }, { id: '__share_app', label: '👥 Ajak teman coba' }])
       // Inject hasil ATS ke coachHistory agar Diah Anna ingat konteksnya
       setCoachHistory([
         {
@@ -454,7 +453,7 @@ export default function Chat({ user, chatMessages = [], setChatMessages }) {
         const fbData = await apiFetch('/api/mock-interview', { action: 'feedback', position: interview.position, level: interview.level, messages: updatedMsgs })
         setMode('interview-done')
         const feedbackText = fbData.feedback || 'Sesi selesai! Kamu hebat! 🎉'
-        pushBot(feedbackText, [{ id: 'interview', label: '🔄 Interview lagi' }, { id: '__menu', label: '🏠 Kembali ke menu' }])
+        pushBot(feedbackText, [{ id: 'interview', label: '🔄 Interview lagi' }, { id: '__share_app', label: '👥 Ajak teman coba' }])
         // Inject ke coachHistory agar Diah Anna tahu hasil interview
         const interviewSummary = updatedMsgs
           .map(m => `${m.role === 'user' ? 'Kandidat' : 'Interviewer'}: ${m.content.slice(0, 200)}`)
@@ -483,8 +482,7 @@ export default function Chat({ user, chatMessages = [], setChatMessages }) {
         { id: '__download_docx', label: '📥 Download Word (.docx)' },
         { id: '__share_cv', label: '📤 Bagikan CV' },
         { id: '__share_app', label: '👥 Ajak teman coba' },
-        { id: '__menu', label: '🏠 Kembali ke menu' },
-      ])
+              ])
       // Inject ke coachHistory agar Diah Anna tahu CV sudah dibuat
       setCoachHistory([
         { role: 'user', content: `Tolong buatkan CV saya dalam format ${format}.\n\nCV asli:\n${cvText.slice(0, 1500)}` },
@@ -595,7 +593,7 @@ export default function Chat({ user, chatMessages = [], setChatMessages }) {
     try {
       const data = await apiFetch('/api/career-coach', { messages: history, userId: user?.id || null })
       setCoachHistory(prev => [...prev, { role: 'assistant', content: data.reply }])
-      pushBot(data.reply, history.length <= 1 ? [{ id: '__menu', label: '🏠 Menu utama' }] : null)
+      pushBot(data.reply, null)
     } catch { pushBot('Diah Anna lagi sibuk sebentar, coba lagi ya! 🙏') }
   }
 
@@ -648,15 +646,7 @@ export default function Chat({ user, chatMessages = [], setChatMessages }) {
         </button>
       </div>
 
-      {/* ── Menu shortcut tabs ── */}
-      <div style={{ background: 'var(--wa-header)', padding: '0 10px 10px', display: 'flex', gap: 6, overflowX: 'auto', flexShrink: 0, scrollbarWidth: 'none' }}>
-        {MAIN_MENU.map(item => (
-          <button key={item.id} onClick={() => handleQuickReply(item.id, item.label)} disabled={loading}
-            style={{ background: 'rgba(255,255,255,0.15)', border: '1px solid rgba(255,255,255,0.3)', color: '#fff', borderRadius: 20, padding: '5px 12px', fontSize: '0.78rem', fontWeight: 600, whiteSpace: 'nowrap', cursor: loading ? 'not-allowed' : 'pointer', opacity: loading ? 0.6 : 1, flexShrink: 0 }}>
-            {item.label}
-          </button>
-        ))}
-      </div>
+
 
       {/* ── Messages — satu-satunya yang scroll ── */}
       <div style={{ flex: 1, overflowY: 'auto', padding: '10px 10px 4px', display: 'flex', flexDirection: 'column', gap: '2px', WebkitOverflowScrolling: 'touch' }}>
