@@ -540,7 +540,8 @@ export default function Chat({ user, chatMessages = [], setChatMessages }) {
   const canUpload = ['cv-review-upload', 'ats-upload', 'cv-maker-upload'].includes(mode)
 
   return (
-    // ── FIX UTAMA: position fixed + inset 0 → header tidak pernah hilang ──
+    <>
+    {/* ── FIX UTAMA: position fixed + inset 0 → header tidak pernah hilang ── */}
     <div ref={containerRef} style={{
       position: 'fixed', top: 0, left: '50%', transform: 'translateX(-50%)',
       width: '100%', maxWidth: 480,
@@ -666,4 +667,7 @@ export default function Chat({ user, chatMessages = [], setChatMessages }) {
         div::-webkit-scrollbar { display: none; }
       `}</style>
     </div>
-    <BottomNav />`n  </>`n  )`n}
+    <BottomNav />
+    </>
+  )
+}
