@@ -93,7 +93,7 @@ export default function Chat({ user, chatMessages = [], setChatMessages }) {
     if (!vv) return
     const update = () => {
       if (containerRef.current) {
-        containerRef.current.style.height = vv.height + 'px'
+        containerRef.current.style.height = (vv.height - 65) + 'px'
         containerRef.current.style.top    = vv.offsetTop + 'px'
       }
     }
