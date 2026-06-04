@@ -70,9 +70,16 @@ export default function Chat({ user, chatMessages = [], setChatMessages }) {
     if (!ONBOARDING_KEY) return false
     return !localStorage.getItem(ONBOARDING_KEY)
   })
-  const handleOnboardingDone = () => {
+  const handleOnboardingDone = (data) => {
     if (ONBOARDING_KEY) localStorage.setItem(ONBOARDING_KEY, '1')
     setShowOnboarding(false)
+    // Sapa user pakai nama dari onboarding
+    if (data?.nama) {
+      const firstName = data.nama.split(' ')[0]
+      const targetText = data.target ? ` Goal kamu: ${data.target.toLowerCase()}.` : ''
+      const cvText = data.cvText ? ' CV kamu sudah aku baca ya!' : ''
+      pushBot(`Halo ${firstName}! 👋 Senang kenalan sama kamu.${targetText}${cvText}\n\nAda yang mau kamu ceritakan atau tanyakan soal karir sekarang?`)
+    }
   }
 
   const bottomRef = useRef()
@@ -132,67 +139,50 @@ export default function Chat({ user, chatMessages = [], setChatMessages }) {
 
 
 
-  // ── PAYWALL: Sistem persuasi personal berbasis AI ─────────────────────
-  // Fallback statis (dipakai kalau API persuasi gagal / lambat)
-  const PAYWALL_FALLBACK = {
-    locked: {
-      'cv-review': `Aku tau kamu serius soal karir ini 💙\n\nSayang banget kalau CV kamu gak sampai ke tangan HRD cuma karena format yang kurang tepat. **CV Review** bisa tunjukkan persis di mana yang perlu diperbaiki — rata-rata ATS score user aku naik dari 48 ke 78+ setelah direvisi.\n\nTersedia di paket Starter, lebih murah dari satu kali makan siang. Mau lanjut?`,
-      'ats':       `**75% lamaran langsung dibuang algoritma** sebelum HRD sempat baca — bukan karena kamu kurang qualified, tapi karena format CV-nya.\n\nATS Checker bisa kasih tahu persis kata kunci apa yang hilang dan di mana masalahnya. Tersedia di paket Starter 💪`,
-      'cv-maker':  `Daripada buang 3-4 jam di Canva dan hasilnya mungkin ditolak ATS — mending aku yang buatkan dalam hitungan menit, dengan format yang sudah terbukti lolos 😊\n\nCV Maker AI ada di paket Starter. Worth it banget untuk investasi karir kamu.`,
-      'interview': `User aku yang akhirnya berhasil dapat kerja impian — hampir semuanya bilang: latihan mock interview sama aku yang bikin mereka jauh lebih siap 🎤\n\nMock Interview ada di paket Pro. Kalau kamu lagi aktif cari kerja sekarang, ini momen yang tepat.`,
-    },
-    exhausted: {
-      'cv-review': `Kamu udah pakai CV Review — artinya kamu serius! 💪 Kuota bulan ini sudah habis, tapi perjalanan kamu belum selesai.\n\nUpgrade sekarang biar aku bisa terus bantu kamu poles CV sampai beneran siap kirim ke semua perusahaan impian kamu.`,
-      'ats':       `Kamu udah cek ATS — langkah yang tepat! Kuota habis, tapi kamu sudah buktikan kamu tidak menyerah di langkah pertama 🎯\n\nUpgrade biar aku bisa terus bantu optimalkan CV kamu sampai skornya beneran oke.`,
-      'cv-maker':  `CV Maker kamu sudah penuh dipakai — bagus banget! ✨ Kuota bulan ini habis, tapi masih banyak yang bisa kita poles bareng.\n\nUpgrade dan kita lanjutkan sampai CV kamu sempurna.`,
-      'interview': `Kamu udah latihan mock interview — serius banget! 🏆 Kuota habis, tapi justru sekarang kamu sedang dalam momentum terbaik.\n\nUpgrade dan teruskan latihan — konsistensi itu yang bikin berhasil.`,
-    }
+  // ── Paywall (Diah Anna persuasive messages) ───────────────────────────
+  const PAYWALL_LOCKED = {
+    'cv-review': `Hei, aku Diah Anna — career coach AI kamu 😊\n\nKamu udah sampai di sini, artinya kamu serius soal karir. Sayang banget kalau berhenti di sini.\n\n**CV Review** adalah fitur yang paling banyak bantu user aku lolos ke tahap interview. Rata-rata ATS score naik dari 48 ke 78+ setelah direvisi.\n\nFitur ini tersedia mulai paket Starter (Rp 49rb/bulan). Mau lanjut?`,
+    'ats': `Aku tau kamu udah usaha keras nulis CV itu 💙\n\nTapi tanpa cek ATS score, kamu gak tau apakah CV kamu bahkan dibaca manusia — atau langsung dibuang algoritma.\n\n**75% lamaran ditolak ATS** sebelum HRD lihat. Fitur ATS Checker ini bisa kasih tahu persis di mana masalahnya.\n\nTersedia di paket Starter. Investasinya lebih murah dari satu kali ngopi bareng teman 😄`,
+    'cv-maker': `Wah, kamu mau bikin CV baru! Bagus banget 🎉\n\nAku bisa bantu kamu bikin CV yang langsung ATS-friendly dan menarik HRD — tapi fitur **CV Maker AI** ini ada di paket berbayar.\n\nDaripada kamu buang waktu berjam-jam di Canva tapi hasilnya mungkin ditolak ATS, mending aku yang buatkan dengan format yang terbukti lolos 😊\n\nMau coba?`,
+    'interview': `Mock Interview adalah fitur favorit user aku yang akhirnya berhasil dapat kerja 🎤\n\nBanyak yang bilang: setelah latihan sama aku, interview benerannya jauh lebih gampang.\n\nFitur ini ada di paket **Pro** — karena aku mau mastiin kamu beneran siap, bukan cuma latihan asal-asalan.\n\nKalau kamu lagi aktif cari kerja, ini investasi paling worth it yang bisa kamu lakukan sekarang.`,
+  }
+  const PAYWALL_EXHAUSTED = {
+    'cv-review': `Wah, kamu udah pakai semua kuota CV Review bulan ini — artinya kamu serius banget soal karir ini! 💪\n\nAku senang bisa bantu sejauh ini. Kalau kamu mau terus improve dan makin dekat ke pekerjaan impian, upgrade ke paket yang lebih tinggi biar aku bisa review lebih banyak lagi.\n\nYuk lanjut — kamu udah di jalur yang benar!`,
+    'ats': `Kuota ATS Checker kamu udah habis untuk periode ini 🎯\n\nKamu udah cek beberapa versi CV — itu langkah yang tepat! Banyak yang nyerah di langkah pertama, kamu tidak.\n\nUpgrade sekarang biar aku bisa terus bantu kamu optimalkan CV sampai beneran siap kirim ke perusahaan impian kamu.`,
+    'cv-maker': `Kamu udah aktif banget pakai CV Maker — keren! ✨\n\nKuota bulan ini udah habis, tapi perjalanan kamu belum selesai. Upgrade biar aku bisa terus bantu kamu poles CV sampai sempurna.\n\nInget: CV yang tepat bisa mengubah segalanya.`,
+    'interview': `Kamu udah latihan mock interview sebanyak itu? Luar biasa serius! 🏆\n\nKuota kamu udah habis bulan ini. Tapi justru ini saat yang tepat untuk upgrade — karena semakin banyak latihan, semakin percaya diri kamu saat interview beneran.\n\nUpgrade sekarang dan teruskan latihan!`,
   }
 
-  // Ambil pesan persuasi personal dari API (dengan fallback)
-  const getPersuasionMessage = async (feature, trigger) => {
-    try {
-      const data = await apiFetch('/api/persuade', {
-        userId: user?.id || null,
-        feature,
-        trigger,
-        coachHistory: coachHistory.slice(-8),
-      })
-      if (data?.message && data.message.length > 30) return data.message
-    } catch (e) {
-      console.warn('[persuasion] API failed, using fallback:', e.message)
-    }
-    // Fallback ke pesan statis
-    return PAYWALL_FALLBACK[trigger]?.[feature]
-      || `Fitur ini tersedia di paket berbayar. Mau aku tunjukkan pilihan paketnya? 😊`
-  }
-
-  // showPaywallInCoach: di dalam sesi coach — context tetap nyambung
-  const showPaywallInCoach = async (feature) => {
-    const limit  = LIMITS[plan]?.[feature] ?? 0
-    const trigger = limit === 0 ? 'locked' : 'exhausted'
-
-    // Tampilkan loading sebentar agar tidak langsung keluar pesan generik
-    setLoading(true)
-    const msg = await getPersuasionMessage(feature, trigger)
-    setLoading(false)
-
+  // showPaywallInCoach: khusus saat di dalam coach — tidak setMode, context tetap nyambung
+  const showPaywallInCoach = (feature) => {
+    const limit = LIMITS[plan]?.[feature] ?? 0
+    const isLocked = limit === 0
+    const label = FEATURE_LABEL[feature] || feature
+    const fallback = isLocked
+      ? `Fitur **${label}** ada di paket berbayar. Mau aku tunjukkan pilihan paketnya? 😊`
+      : `Kuota **${label}** kamu udah habis bulan ini. Upgrade untuk lanjut! 💪`
+    const msg = isLocked
+      ? (PAYWALL_LOCKED[feature] || fallback)
+      : (PAYWALL_EXHAUSTED[feature] || fallback)
+    // Tambah ke coachHistory agar context tetap nyambung
     setCoachHistory(prev => [...prev, { role: 'assistant', content: msg }])
     pushBot(msg, [
-      { id: '__pricing',        label: '⭐ Lihat Paket & Harga' },
-      { id: '__continue_coach', label: '💬 Lanjut ngobrol dulu' },
+      { id: '__pricing', label: '⭐ Lihat Paket & Harga' },
+      { id: '__continue_coach', label: '💬 Lanjut ngobrol' },
     ])
     // Tidak setMode — tetap di coach!
   }
 
-  const showPaywall = async (feature) => {
-    const limit   = LIMITS[plan]?.[feature] ?? 0
-    const trigger = limit === 0 ? 'locked' : 'exhausted'
-
-    setLoading(true)
-    const msg = await getPersuasionMessage(feature, trigger)
-    setLoading(false)
-
+  const showPaywall = (feature) => {
+    const limit = LIMITS[plan]?.[feature] ?? 0
+    const isLocked = limit === 0
+    const label = FEATURE_LABEL[feature] || feature
+    const fallback = isLocked
+      ? `Hai! Fitur **${label}** belum tersedia di paket kamu sekarang.\n\nUpgrade untuk akses fitur ini dan bantu aku bantu kamu lebih maksimal ya 😊`
+      : `Kuota **${label}** kamu udah habis bulan ini.\n\nUpgrade untuk lanjut — kamu udah di jalur yang benar! 💪`
+    const msg = isLocked
+      ? (PAYWALL_LOCKED[feature] || fallback)
+      : (PAYWALL_EXHAUSTED[feature] || fallback)
     pushBot(msg, [
       { id: '__pricing', label: '⭐ Lihat Paket & Harga' },
       { id: '__menu',    label: '🏠 Menu utama' },
@@ -286,10 +276,10 @@ export default function Chat({ user, chatMessages = [], setChatMessages }) {
         const isAtsTopic       = /ats|applicant tracking|ats score|lolos ats/.test(msg)
         const isCvMakerTopic   = /bikin cv|buat cv|template cv|contoh cv|cv maker|tulis cv/.test(msg)
 
-        if (isInterviewTopic && !await checkUsage('interview')) { await showPaywallInCoach('interview'); return }
-        if (isCvReviewTopic  && !await checkUsage('cv-review')) { await showPaywallInCoach('cv-review'); return }
-        if (isAtsTopic       && !await checkUsage('ats'))        { await showPaywallInCoach('ats');       return }
-        if (isCvMakerTopic   && !await checkUsage('cv-maker'))   { await showPaywallInCoach('cv-maker');  return }
+        if (isInterviewTopic && !await checkUsage('interview')) { showPaywall('interview'); return }
+        if (isCvReviewTopic  && !await checkUsage('cv-review')) { showPaywall('cv-review'); return }
+        if (isAtsTopic       && !await checkUsage('ats'))        { showPaywall('ats');       return }
+        if (isCvMakerTopic   && !await checkUsage('cv-maker'))   { showPaywall('cv-maker');  return }
 
         await doCoach(id); return
       }
@@ -304,10 +294,10 @@ export default function Chat({ user, chatMessages = [], setChatMessages }) {
         const isAtsTopic       = /ats|applicant tracking|ats score|lolos ats/.test(msg)
         const isCvMakerTopic   = /bikin cv|buat cv|template cv|contoh cv|cv maker|tulis cv/.test(msg)
 
-        if (isInterviewTopic && !await checkUsage('interview')) { await showPaywall('interview'); return }
-        if (isCvReviewTopic  && !await checkUsage('cv-review')) { await showPaywall('cv-review'); return }
-        if (isAtsTopic       && !await checkUsage('ats'))        { await showPaywall('ats');       return }
-        if (isCvMakerTopic   && !await checkUsage('cv-maker'))   { await showPaywall('cv-maker');  return }
+        if (isInterviewTopic && !await checkUsage('interview')) { showPaywall('interview'); return }
+        if (isCvReviewTopic  && !await checkUsage('cv-review')) { showPaywall('cv-review'); return }
+        if (isAtsTopic       && !await checkUsage('ats'))        { showPaywall('ats');       return }
+        if (isCvMakerTopic   && !await checkUsage('cv-maker'))   { showPaywall('cv-maker');  return }
 
         setMode('coach'); setCoachHistory([{ role: 'user', content: id }])
         setLoading(true); await callCoachApi([{ role: 'user', content: id }]); setLoading(false)
@@ -317,25 +307,25 @@ export default function Chat({ user, chatMessages = [], setChatMessages }) {
 
   // ── Feature starters ────────────────────────────────────────────────────
   const startCvReview = async () => {
-    if (!await checkUsage('cv-review')) { await showPaywall('cv-review'); return }
+    if (!await checkUsage('cv-review')) { showPaywall('cv-review'); return }
     setMode('cv-review-upload'); setCvText('')
     pushBot('Kirimkan file CV kamu (📎 PDF/Word), atau langsung paste teks CV-nya di sini.')
   }
 
   const startAts = async () => {
-    if (!await checkUsage('ats')) { await showPaywall('ats'); return }
+    if (!await checkUsage('ats')) { showPaywall('ats'); return }
     setMode('ats-upload'); setCvText('')
     pushBot('Kirimkan file CV kamu (📎 PDF/Word), atau paste teks CV-nya di sini.')
   }
 
   const startInterview = async () => {
-    if (!await checkUsage('interview')) { await showPaywall('interview'); return }
+    if (!await checkUsage('interview')) { showPaywall('interview'); return }
     setMode('interview-position'); setInterview({ position: '', level: '', messages: [], qNum: 0 })
     pushBot('Siap latihan interview! 🎤\n\nMau melamar posisi apa?\n(contoh: Data Analyst, Software Engineer, Marketing Manager)')
   }
 
   const startCvMaker = async () => {
-    if (!await checkUsage('cv-maker')) { await showPaywall('cv-maker'); return }
+    if (!await checkUsage('cv-maker')) { showPaywall('cv-maker'); return }
     setMode('cv-maker-upload')
     setCvMakerInfo({ text: '', format: '' })
     pushBot('Oke, kita optimalkan CV kamu! ✨\n\nUpload CV lama kamu (PDF atau Word) — nanti AI tulis ulang jadi CV baru yang lolos ATS, JobStreet, atau LinkedIn.')
@@ -356,7 +346,7 @@ export default function Chat({ user, chatMessages = [], setChatMessages }) {
       pushBot(data.review, [{ id: 'ats', label: '🎯 Cek ATS Score juga' }, { id: '__share_cv', label: '📤 Bagikan hasil' }, { id: '__share_app', label: '👥 Ajak teman coba' }, { id: '__menu', label: '🏠 Kembali ke menu' }])
       // Inject hasil review ke coachHistory agar Diah Anna ingat konteksnya
       // saat user lanjut ngobrol setelah review selesai
-      const cvReviewHistory = [
+      setCoachHistory([
         {
           role: 'user',
           content: `Tolong review CV saya${jobTarget ? ` untuk posisi ${jobTarget}` : ''}.\n\nIsi CV:\n${cvText.slice(0, 2000)}`
@@ -365,12 +355,7 @@ export default function Chat({ user, chatMessages = [], setChatMessages }) {
           role: 'assistant',
           content: data.review
         }
-      ]
-      setCoachHistory(cvReviewHistory)
-      // Ekstrak profil dari CV — goldmine data karir user!
-      if (user?.id) {
-        extractAndSaveProfile(cvReviewHistory).catch(e => console.warn('[profile] cv-review extract:', e))
-      }
+      ])
       setMode('coach')
     } catch (e) { pushBot(`Aduh, ada error: ${e.message}\n\nCoba lagi ya! 🙏`); setMode('menu') }
     setLoading(false)
@@ -383,7 +368,7 @@ export default function Chat({ user, chatMessages = [], setChatMessages }) {
       logUsage('ats')
       pushBot(data.result, [{ id: 'cv-review', label: '📄 Review CV juga' }, { id: '__share_ats', label: '📤 Bagikan hasil' }, { id: '__share_app', label: '👥 Ajak teman coba' }, { id: '__menu', label: '🏠 Kembali ke menu' }])
       // Inject hasil ATS ke coachHistory agar Diah Anna ingat konteksnya
-      const atsHistory = [
+      setCoachHistory([
         {
           role: 'user',
           content: `Tolong cek ATS score CV saya${jobDescription ? ` untuk job description: ${jobDescription.slice(0, 500)}` : ''}.`
@@ -392,12 +377,7 @@ export default function Chat({ user, chatMessages = [], setChatMessages }) {
           role: 'assistant',
           content: data.result
         }
-      ]
-      setCoachHistory(atsHistory)
-      // Ekstrak profil — CV + job description = insight karir yang berharga
-      if (user?.id) {
-        extractAndSaveProfile(atsHistory).catch(e => console.warn('[profile] ats extract:', e))
-      }
+      ])
       setMode('coach')
     } catch (e) { pushBot(`Error: ${e.message}`); setMode('menu') }
     setLoading(false)
@@ -519,51 +499,13 @@ export default function Chat({ user, chatMessages = [], setChatMessages }) {
   // Hitung pesan user di history untuk trigger ekstraksi profil
   const countUserMessages = (history) => history.filter(m => m.role === 'user').length
 
-  // Deteksi apakah pesan mengandung info profil yang berharga
-  const containsProfileInfo = (msg) => {
-    const lower = msg.toLowerCase()
-    // Keywords yang menandakan user share info personal/karir
-    const profileSignals = [
-      // identitas
-      /nama (saya|aku|gue)/,/saya (bernama|namanya)/,/panggil (saya|aku)/,
-      // lokasi
-      /tinggal di /,/domisili /,/dari (jakarta|bandung|surabaya|medan|bali|yogya|semarang|bekasi|depok|tangerang)/,
-      // pekerjaan
-      /kerja (di|sebagai|jadi)/,/posisi (saya|aku)/,/jabatan/,/fresh grad/,/baru lulus/,/masih kuliah/,
-      /perusahaan (saya|aku|tempat)/,/kantor (saya|aku)/,
-      // pengalaman
-      /tahun pengalaman/,/pengalaman \d/,/baru \d (bulan|tahun) kerja/,
-      // gaji
-      /gaji (saya|aku|sekarang)/,/digaji/,/salary/,/penghasilan/,
-      // target & goals
-      /pengen|pingin|mau (jadi|pindah|naik|apply)/,/target (saya|aku)/,/impian/,/cita-cita karir/,
-      // masalah
-      /masalah (saya|aku)/,/kesulitan/,/stuck/,/bingung/,/galau/,
-      // lamaran
-      /lagi apply/,/sudah interview/,/dapat panggilan/,/dapat offer/,
-    ]
-    return profileSignals.some(pattern => pattern.test(lower))
-  }
-
   const doCoach = async (msg) => {
     const newHistory = [...coachHistory, { role: 'user', content: msg }]
     setCoachHistory(newHistory); setLoading(true); await callCoachApi(newHistory); setLoading(false)
 
-    if (!user?.id) return
-
+    // Ekstrak profil setiap 6 pesan user (background, tidak blokir UI)
     const userMsgCount = countUserMessages(newHistory)
-    const hasProfileInfo = containsProfileInfo(msg)
-
-    // Trigger ekstraksi jika:
-    // 1. Setiap 4 pesan user (lebih sering dari sebelumnya), atau
-    // 2. Pesan mengandung info profil yang berharga, atau
-    // 3. Minimal ada 3 pesan user dan ini pesan ke-3
-    const shouldExtract =
-      (userMsgCount >= 3 && userMsgCount % 4 === 0) ||
-      (hasProfileInfo && userMsgCount >= 2) ||
-      (userMsgCount === 3)
-
-    if (shouldExtract) {
+    if (user?.id && userMsgCount > 0 && userMsgCount % 6 === 0) {
       extractAndSaveProfile(newHistory).catch(e => console.warn('[profile] extract failed silently:', e))
     }
   }
@@ -578,52 +520,11 @@ export default function Chat({ user, chatMessages = [], setChatMessages }) {
     }
   }
 
-  // Registrasi Notifikasi Proaktif V2
-  useEffect(() => {
-    if (!user?.id || !('Notification' in window)) return
-
-    const setupNotifications = async () => {
-      if (Notification.permission === 'default') {
-        const permission = await Notification.requestPermission()
-        if (permission === 'granted') {
-          console.log('Notification permission granted.')
-          // Di sini Anda biasanya akan memanggil serviceWorkerRegistration.pushManager.subscribe()
-          // Untuk demo, kita asumsikan kita dapat token dummy atau integrasi PWA
-          // await apiFetch('/api/save-push-token', { userId: user.id, pushToken: 'dummy_token_v2' })
-        }
-      }
-    }
-    setupNotifications()
-  }, [user?.id])
-
   const callCoachApi = async (history) => {
     try {
       const data = await apiFetch('/api/career-coach', { messages: history, userId: user?.id || null })
       setCoachHistory(prev => [...prev, { role: 'assistant', content: data.reply }])
-
-      const userMsgCount = history.filter(m => m.role === 'user').length
-      const lastUserMsg  = history.filter(m => m.role === 'user').at(-1)?.content?.toLowerCase() || ''
-
-      // Proactive nudge: free user, setiap 8 pesan, pada momen high-intent
-      const shouldNudge  = plan === 'free' && userMsgCount > 0 && userMsgCount % 8 === 0
-      const isHighIntent = /interview|dapat panggilan|dapat offer|lagi apply|deadline|besok|minggu depan|bulan depan|mau daftar|mau kirim cv/.test(lastUserMsg)
-
-      const quickReplies = history.length <= 1 ? [{ id: '__menu', label: '🏠 Menu utama' }] : null
-      pushBot(data.reply, quickReplies)
-
-      // Soft nudge menyusul setelah reply — delay agar tidak tumpang tindih
-      if (shouldNudge && isHighIntent) {
-        setTimeout(() => {
-          pushBot(
-            `Btw, kalau mau lebih siap lagi — **Mock Interview** atau **CV Review** bareng aku bisa bantu banget sebelum hari H 💡\n\nAvailable di paket berbayar, worth it banget kalau kamu lagi aktif cari kerja sekarang.`,
-            [
-              { id: '__pricing',        label: '⭐ Lihat paket' },
-              { id: '__continue_coach', label: '💬 Lanjut ngobrol' },
-            ]
-          )
-        }, 1800)
-      }
-
+      pushBot(data.reply, history.length <= 1 ? [{ id: '__menu', label: '🏠 Menu utama' }] : null)
     } catch { pushBot('Diah Anna lagi sibuk sebentar, coba lagi ya! 🙏') }
   }
 
@@ -647,7 +548,7 @@ export default function Chat({ user, chatMessages = [], setChatMessages }) {
       background: 'var(--wa-chat-bg)',
       overflow: 'hidden',
     }}>
-      {showOnboarding && <Onboarding onDone={handleOnboardingDone} />}
+      {showOnboarding && <Onboarding onDone={handleOnboardingDone} user={user} />}
       {shareCard && <ShareCard resultText={shareCard.text} type={shareCard.type} onClose={() => setShareCard(null)} />}
       {showShareApp && <ShareAppModal onClose={() => setShowShareApp(false)} />}
 
