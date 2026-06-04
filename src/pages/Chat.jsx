@@ -120,14 +120,51 @@ export default function Chat({ user, chatMessages = [], setChatMessages }) {
     if (!user) { navigate('/'); return }
   }, [user?.id])
 
-  // Greeting — jalan setelah messages & chatMessages keduanya siap
+  // ── Dynamic Greeting dari user_growth_state ──────────────────────────────
   useEffect(() => {
     if (!user) return
-    // Skip kalau sudah ada pesan (dari localStorage atau sudah greeting)
     if (messages.length > 0) return
     if (chatMessages && chatMessages.length > 0) return
+
     const firstName = (user.user_metadata?.name || user.user_metadata?.full_name || '').split(' ')[0]
-    pushBot(`Halo${firstName ? ` ${firstName}` : ''}! 👋 Aku Diah Anna, AI Career Coach kamu.\n\nPilih fitur di atas atau langsung ketik pertanyaanmu ya!`)
+
+    // Fetch growth_state untuk personalisasi greeting
+    supabase
+      .from('user_growth_state')
+      .select('career_stage, progress_percent, current_focus, next_milestone, streak_days')
+      .eq('user_id', user.id)
+      .maybeSingle()
+      .then(({ data: g }) => {
+        let greeting
+        if (!g || !g.career_stage) {
+          // User baru — belum ada profil
+          greeting = `Halo${firstName ? ` ${firstName}` : ''}! 👋 Aku Diah Anna, AI Career Coach kamu.\n\nCeritain dong sekarang kamu di posisi apa dan mau ke mana? Kita mulai petualangan karir kamu! 🚀`
+        } else {
+          const stage = g.career_stage
+          const progress = g.progress_percent || 0
+          const focus = g.current_focus
+          const milestone = g.next_milestone
+          const streak = g.streak_days || 0
+
+          const greetingByStage = {
+            'Career Explorer':    `Halo${firstName ? ` ${firstName}` : ''}! 🌱 Kamu masih di tahap eksplorasi karir (${progress}% progress).${focus ? ` Sekarang fokus: **${focus}**.` : ''} Yuk kita telusuri lebih dalam potensimu!`,
+            'Career Builder':     `Halo${firstName ? ` ${firstName}` : ''}! 🔰 Kamu udah di tahap Career Builder — bagus banget! Progress ${progress}%.${milestone ? ` Next target: **${milestone}**.` : ''} Kita gas bareng ya!`,
+            'Career Professional':`Halo${firstName ? ` ${firstName}` : ''}! ⭐ Kamu udah jadi Career Professional (${progress}% progress).${focus ? ` Fokus saat ini: **${focus}**.` : ''} Mau ningkatin ke level berikutnya?`,
+            'Career Expert':      `Halo${firstName ? ` ${firstName}` : ''}! 🏆 Impressive! Kamu sudah di level Career Expert (${progress}%).${milestone ? ` Target selanjutnya: **${milestone}**.` : ''} Apa yang mau kita capai hari ini?`,
+            'Career Leader':      `Halo${firstName ? ` ${firstName}` : ''}! 👑 Career Leader — kamu udah di puncak! Progress ${progress}%.${focus ? ` Sekarang fokusmu: **${focus}**.` : ''} Bagaimana aku bisa bantu lebih jauh?`,
+          }
+
+          greeting = greetingByStage[stage] || `Halo${firstName ? ` ${firstName}` : ''}! 👋 Selamat datang kembali. Progress karirmu: ${progress}%. Ada yang bisa aku bantu?`
+
+          if (streak >= 3) greeting += `\n\n🔥 Streak ${streak} hari — konsistensimu keren banget!`
+        }
+        pushBot(greeting)
+      })
+      .catch(() => {
+        // Fallback kalau fetch gagal
+        const firstName2 = (user.user_metadata?.name || user.user_metadata?.full_name || '').split(' ')[0]
+        pushBot(`Halo${firstName2 ? ` ${firstName2}` : ''}! 👋 Aku Diah Anna, AI Career Coach kamu.\n\nAda yang bisa aku bantu hari ini?`)
+      })
   }, [user?.id, chatMessages])
 
   // ── Simpan ke localStorage setiap messages berubah ───────────────────
@@ -542,14 +579,10 @@ export default function Chat({ user, chatMessages = [], setChatMessages }) {
     }
   }
 
-  // Trigger setiap 3 pesan user — berlaku di semua mode
+  // Trigger setelah setiap pesan user — API punya guard sendiri (min 3 msg)
   const maybeExtractProfile = (extraMessages = []) => {
     if (!user?.id) return
-    const combined = [...getChatHistoryForExtract(), ...extraMessages]
-    const userCount = combined.filter(m => m.role === 'user').length
-    if (userCount >= 3 && userCount % 3 === 0) {
-      extractAndSaveProfile(extraMessages).catch(() => {})
-    }
+    extractAndSaveProfile(extraMessages).catch(() => {})
   }
 
   const doCoach = async (msg) => {
