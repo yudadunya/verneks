@@ -129,7 +129,7 @@ export default function Home({ user }) {
   const [barAnim, setBarAnim] = useState(false)
 
   useEffect(() => {
-    if (user) { window.location.href = '/chat'; return }
+    if (user) { window.location.href = '/discovery'; return }
     setTimeout(() => setVisible(true), 100)
     setTimeout(() => setBarAnim(true), 800)
   }, [user])
@@ -144,7 +144,7 @@ export default function Home({ user }) {
 
   const handleGoogle = async () => {
     setAuthLoading(true)
-    await supabase.auth.signInWithOAuth({ provider: 'google', options: { redirectTo: `${window.location.origin}/chat` } })
+    await supabase.auth.signInWithOAuth({ provider: 'google', options: { redirectTo: `${window.location.origin}/discovery` } })
     setAuthLoading(false)
   }
 
