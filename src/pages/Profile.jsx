@@ -37,6 +37,9 @@ export default function Profile({ user }) {
 
   const handleLogout = async () => {
     setLogoutLoading(true)
+    // Bersihkan discovery data supaya fresh saat login berikutnya
+    localStorage.removeItem('lc_discovery_messages')
+    localStorage.removeItem('lc_discovery_result')
     await supabase.auth.signOut()
     navigate('/')
   }
