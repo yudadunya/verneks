@@ -17,9 +17,9 @@ export default function Discovery() {
   const bottomRef = useRef(null)
   const inputRef = useRef(null)
 
-  // Restore dari sessionStorage kalau ada
+  // Restore dari localStorage kalau ada
   useEffect(() => {
-    const saved = sessionStorage.getItem('lc_discovery_messages')
+    const saved = localStorage.getItem('lc_discovery_messages')
     if (saved) {
       try {
         const parsed = JSON.parse(saved)
@@ -43,7 +43,7 @@ export default function Discovery() {
 
     const newMessages = [...messages, { role: 'user', text, id: Date.now() }]
     setMessages(newMessages)
-    sessionStorage.setItem('lc_discovery_messages', JSON.stringify(newMessages))
+    localStorage.setItem('lc_discovery_messages', JSON.stringify(newMessages))
     setLoading(true)
 
     try {
@@ -55,7 +55,7 @@ export default function Discovery() {
       const data = await res.json()
       const withReply = [...newMessages, { role: 'bot', text: data.reply, id: Date.now() + 1 }]
       setMessages(withReply)
-      sessionStorage.setItem('lc_discovery_messages', JSON.stringify(withReply))
+      localStorage.setItem('lc_discovery_messages', JSON.stringify(withReply))
       if (data.showResultButton) setShowResult(true)
       if (data.discoveryComplete) {
         setTimeout(() => inputRef.current?.blur(), 100)
@@ -68,7 +68,7 @@ export default function Discovery() {
 
   const handleSeeResult = async () => {
     setComputing(true)
-    const msgs = JSON.parse(sessionStorage.getItem('lc_discovery_messages') || '[]')
+    const msgs = JSON.parse(localStorage.getItem('lc_discovery_messages') || '[]')
     try {
       const res = await fetch('/api/compute-genome', {
         method: 'POST',
@@ -77,7 +77,7 @@ export default function Discovery() {
       })
       const data = await res.json()
       if (data.success) {
-        sessionStorage.setItem('lc_discovery_result', JSON.stringify(data.result))
+        localStorage.setItem('lc_discovery_result', JSON.stringify(data.result))
         navigate('/genome-result')
       }
     } catch {

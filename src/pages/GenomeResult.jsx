@@ -28,7 +28,7 @@ export default function GenomeResult() {
   const ctaTriggerRef = useRef(null)
 
   useEffect(() => {
-    const saved = sessionStorage.getItem('lc_discovery_result')
+    const saved = localStorage.getItem('lc_discovery_result')
     if (!saved) { navigate('/discovery'); return }
     try { setResult(JSON.parse(saved)); setTimeout(() => setRevealed(true), 100) }
     catch { navigate('/discovery') }

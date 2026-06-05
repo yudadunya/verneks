@@ -37,7 +37,7 @@ export default function Paywall() {
   const secs = String(timeLeft % 60).padStart(2,'0')
 
   useEffect(() => {
-    const saved = sessionStorage.getItem('lc_discovery_result')
+    const saved = localStorage.getItem('lc_discovery_result')
     if (!saved) { navigate('/discovery'); return }
     try { setResult(JSON.parse(saved)); setTimeout(() => setRevealed(true), 80) }
     catch { navigate('/discovery') }
@@ -63,7 +63,7 @@ export default function Paywall() {
   const handleLogin = async (selectedPlan) => {
     setPlan(selectedPlan)
     setLoginLoading(true)
-    sessionStorage.setItem('lc_plan_intent', selectedPlan)
+    localStorage.setItem('lc_plan_intent', selectedPlan)
     await supabase.auth.signInWithOAuth({
       provider: 'google',
       options: { redirectTo: `${window.location.origin}/dashboard` }
