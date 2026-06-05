@@ -54,7 +54,7 @@ export default function Paywall() {
           setTimeout(() => setPriceRevealed(true), 600)
         }
       },
-      { threshold: 0.5 }
+      { threshold: 1.0, rootMargin: '0px 0px -20px 0px' }
     )
     obs.observe(ctaTriggerRef.current)
     return () => obs.disconnect()
@@ -108,7 +108,7 @@ export default function Paywall() {
         <div style={{ width:60 }} />
       </div>
 
-      <div style={{ padding:'22px 18px', maxWidth:480, margin:'0 auto', paddingBottom: ctaVisible ? '260px' : '40px', transition:'padding-bottom 0.4s ease' }}>
+      <div style={{ padding:'22px 18px', maxWidth:480, margin:'0 auto', paddingBottom: '160px', minHeight:'110vh' }}>
 
         {/* ── RESULT BADGES ── */}
         <div style={{ display:'flex', gap:8, flexWrap:'wrap', marginBottom:20, ...fade(0.05) }}>
@@ -187,7 +187,7 @@ export default function Paywall() {
         </div>
 
         {/* ── TRIGGER REF untuk IntersectionObserver ── */}
-        <div ref={ctaTriggerRef} style={{ height:1 }} />
+        <div ref={ctaTriggerRef} style={{ height:2, marginTop: 8 }} />
       </div>
 
       {/* ── FIXED BOTTOM: muncul bertahap setelah scroll habis ── */}
