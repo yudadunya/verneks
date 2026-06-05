@@ -252,7 +252,7 @@ export default function Home({ user }) {
           <div style={{ background: '#0d1f12', borderRadius: 18, overflow: 'hidden', border: '1px solid rgba(37,211,102,0.15)', boxShadow: '0 20px 60px rgba(0,0,0,0.4)' }}>
             {/* Chat header */}
             <div style={{ background: '#075E54', padding: '12px 16px', display: 'flex', alignItems: 'center', gap: 12 }}>
-              <img src="/diah-anna.jpg" alt="Diah Anna" style={{ width: 40, height: 40, borderRadius: '50%', objectFit: 'cover', objectPosition: 'top', flexShrink: 0 }} />
+              <img src="/diah-anna.png" alt="Diah Anna" style={{ width: 40, height: 40, borderRadius: '50%', objectFit: 'cover', objectPosition: 'top', flexShrink: 0 }} />
               <div>
                 <div style={{ color: '#fff', fontWeight: 700, fontSize: '0.9rem' }}>Diah Anna</div>
                 <div style={{ color: '#25D366', fontSize: '0.68rem', fontWeight: 600 }}>● AI Career Mentor • online</div>
@@ -470,7 +470,7 @@ export default function Home({ user }) {
 
           <div style={{ background: 'linear-gradient(135deg, #0d1f12, #0a1a20)', border: '1px solid rgba(37,211,102,0.2)', borderRadius: 18, padding: '20px', marginBottom: 16 }}>
             <div style={{ display: 'flex', gap: 14, marginBottom: 18 }}>
-              <img src="/diah-anna.jpg" alt="Diah Anna" style={{ width: 56, height: 56, borderRadius: '50%', objectFit: 'cover', objectPosition: 'top', flexShrink: 0 }} />
+              <img src="/diah-anna.png" alt="Diah Anna" style={{ width: 56, height: 56, borderRadius: '50%', objectFit: 'cover', objectPosition: 'top', flexShrink: 0 }} />
               <div>
                 <div style={{ color: '#fff', fontWeight: 800, fontSize: '1rem' }}>Diah Anna</div>
                 <div style={{ color: '#25D366', fontSize: '0.75rem', fontWeight: 600 }}>AI Career Mentor • LamarCerdas</div>
