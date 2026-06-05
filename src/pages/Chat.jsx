@@ -316,6 +316,8 @@ export default function Chat({ user, chatMessages = [], setChatMessages }) {
     if (id === '__share_cv')  { const m = [...messages].reverse().find(m => m.role === 'bot' && (m.text?.length || 0) > 100); setShareCard({ text: m?.text || '', type: 'cv-review' }); return }
     if (id === '__share_ats') { const m = [...messages].reverse().find(m => m.role === 'bot' && (m.text?.length || 0) > 100); setShareCard({ text: m?.text || '', type: 'ats' }); return }
     if (id === '__pricing') { navigate('/pricing'); return }
+    if (id === '__genome_reveal') { await doGenomeReveal(); return }
+    if (id === '__upgrade_gps')   { navigate('/paywall'); return }
     if (id === '__continue_coach') {
       // User mau lanjut ngobrol setelah lihat paywall — tetap di coach, context aman
       pushBot('Oke, lanjut ya! Ada yang mau kamu ceritakan atau tanyakan soal karir? 😊')
@@ -630,10 +632,151 @@ export default function Chat({ user, chatMessages = [], setChatMessages }) {
     extractAndSaveProfile(extraMessages).catch(() => {})
   }
 
+  // ── Genome Teaser Engine ──────────────────────────────────────────────────
+  // Key localStorage: lc_teaser_done_{userId} — supaya hanya muncul sekali
+  const triggerGenomeTeaser = async () => {
+    if (!user?.id) return
+    const teaserKey = `lc_teaser_done_${user.id}`
+    if (localStorage.getItem(teaserKey)) return   // sudah pernah ditampilkan
+
+    // Hitung berapa pesan user dalam sesi ini
+    const userMsgCount = messagesRef.current.filter(m => m.role === 'user').length
+    if (userMsgCount < 5) return   // belum cukup data
+
+    // Cek apakah genome sudah ada di DB
+    try {
+      const { data: gs } = await supabase
+        .from('user_genome_scores')
+        .select('analytical,leadership,builder,creator,communication,risk_taking')
+        .eq('user_id', user.id)
+        .maybeSingle()
+
+      if (!gs || !Object.values(gs).some(v => (v || 0) > 0)) return  // belum ada genome
+
+      // Semua kondisi terpenuhi — tampilkan teaser
+      localStorage.setItem(teaserKey, '1')
+
+      // Beri jarak agar tidak langsung muncul setelah reply AI
+      await new Promise(r => setTimeout(r, 1200))
+      pushBot(
+        'Aku menemukan sesuatu yang menarik. 🔍
+
+' +
+        'Berdasarkan pola percakapan kita, aku sudah bisa memetakan **Career DNA** kamu — ' +
+        'termasuk kekuatan terbesar dan gap yang paling menghambat targetmu.
+
+' +
+        'Mau lihat hasil analisisnya?',
+        [{ id: '__genome_reveal', label: '✅ Ya, mau lihat!' },
+         { id: '__menu',         label: 'Nanti saja' }]
+      )
+    } catch (e) {
+      console.warn('[teaser] error:', e)
+    }
+  }
+
+  const doGenomeReveal = async () => {
+    if (!user?.id) return
+    setLoading(true)
+    try {
+      const [{ data: gs }, { data: cp }] = await Promise.all([
+        supabase.from('user_genome_scores').select('*').eq('user_id', user.id).maybeSingle(),
+        supabase.from('user_career_profiles').select('target_posisi,career_readiness,skill_gaps,gap_skills').eq('user_id', user.id).maybeSingle(),
+      ])
+
+      const GMAP = [
+        { key:'analytical',    label:'Analytical',    emoji:'🧠', color:'#34B7F1' },
+        { key:'leadership',    label:'Leadership',    emoji:'👑', color:'#F48FB1' },
+        { key:'builder',       label:'Builder',       emoji:'⚙️', color:'#25D366' },
+        { key:'creator',       label:'Creator',       emoji:'🎨', color:'#FFB74D' },
+        { key:'communication', label:'Communication', emoji:'💬', color:'#CE93D8' },
+        { key:'risk_taking',   label:'Risk Taking',   emoji:'🚀', color:'#EF9A9A' },
+      ]
+
+      const scores = gs || {}
+      const sorted = [...GMAP]
+        .filter(g => (scores[g.key] || 0) > 0)
+        .sort((a,b) => (scores[b.key]||0) - (scores[a.key]||0))
+
+      const readiness = cp?.career_readiness || 0
+      const target    = cp?.target_posisi || null
+      const gaps      = cp?.skill_gaps || cp?.gap_skills || []
+
+      // Bangun teks genome sebagai chat message
+      let msg = '🧬 **Career Genome Kamu**
+
+'
+      sorted.forEach(g => {
+        const val  = scores[g.key] || 0
+        const bars = Math.round(val / 10)
+        const fill = '█'.repeat(bars) + '░'.repeat(10 - bars)
+        msg += `${g.emoji} **${g.label}** · ${val}
+${fill}
+
+`
+      })
+
+      if (readiness > 0) {
+        msg += `---
+
+📊 **Career Readiness: ${readiness}%**
+`
+        if (target) msg += `🎯 Target: ${target}
+`
+      }
+
+      if (gaps.length > 0) {
+        msg += `
+📍 **Gap Utama:**
+`
+        gaps.slice(0, 4).forEach(g => { msg += `✕ ${g}
+` })
+      }
+
+      pushBot(msg)
+
+      // Jeda dramatis sebelum GPS upsell
+      await new Promise(r => setTimeout(r, 1800))
+
+      pushBot(
+        'Oke, kamu sudah lihat DNA karier kamu. 📊
+
+' +
+        'Sekarang aku mau jujur...
+
+' +
+        'Aku sebenarnya sudah menyiapkan **roadmap 6 bulan** yang sangat spesifik untuk targetmu.
+
+' +
+        'Roadmap ini berisi:
+' +
+        '✓ Skill yang harus dipelajari
+' +
+        '✓ Urutan belajar yang optimal
+' +
+        '✓ Target mingguan yang realistis
+' +
+        '✓ Progress tracking step by step
+
+' +
+        '_Career GPS tersedia di Premium._',
+        [{ id: '__upgrade_gps',      label: '🚀 Buka Career GPS — Premium' },
+         { id: '__continue_coach',   label: 'Lanjut ngobrol dulu' }]
+      )
+
+    } catch (e) {
+      pushBot('Gagal memuat data, coba lagi ya! 🙏')
+      console.warn('[genome-reveal]', e)
+    }
+    setLoading(false)
+  }
+
   const doCoach = async (msg) => {
     const newHistory = [...coachHistory, { role: 'user', content: msg }]
     setCoachHistory(newHistory); setLoading(true); await callCoachApi(newHistory); setLoading(false)
     maybeExtractProfile()
+    // Cek apakah sudah waktunya teaser genome — setelah extract selesai
+    setTimeout(() => triggerGenomeTeaser(), 2000)
   }
 
   const callCoachApi = async (history) => {
