@@ -126,7 +126,9 @@ export default function App() {
             localStorage.removeItem('lc_discovery_messages')
           }
           if (window.location.pathname === '/' ||
+              window.location.pathname === '/discovery' ||
               window.location.pathname === '/genome-result' ||
+              window.location.pathname === '/paywall' ||
               window.location.hash.includes('access_token')) {
             window.location.replace('/dashboard')
           }
