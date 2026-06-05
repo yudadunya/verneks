@@ -88,8 +88,8 @@ export default function Discovery() {
 
   return (
     <div style={{
-      position: 'fixed', top: 0, left: '50%', transform: 'translateX(-50%)',
-      width: '100%', maxWidth: 480, height: '100vh',
+      position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
+      width: '100%', maxWidth: 480, margin: '0 auto',
       display: 'flex', flexDirection: 'column',
       background: 'var(--wa-chat-bg)', overflow: 'hidden',
     }}>
@@ -160,7 +160,7 @@ export default function Discovery() {
       </div>
 
       {/* Input */}
-      <div style={{ background: '#f0f2f5', padding: '8px 10px', display: 'flex', gap: 8, alignItems: 'center', flexShrink: 0, borderTop: '1px solid #e0e0e0' }}>
+      <div style={{ background: '#f0f2f5', padding: '8px 10px', paddingBottom: 'calc(8px + env(safe-area-inset-bottom))', display: 'flex', gap: 8, alignItems: 'center', flexShrink: 0, borderTop: '1px solid #e0e0e0' }}>
         <input
           ref={inputRef}
           value={input}
