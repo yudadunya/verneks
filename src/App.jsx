@@ -55,8 +55,8 @@ export default function App() {
         setChatMessages(loadMessages(u.id))
         if (_event === 'SIGNED_IN') {
           // Cek apakah ada discovery result yang perlu disimpan
-          const discoveryResult = sessionStorage.getItem('lc_discovery_result')
-          const discoveryMessages = sessionStorage.getItem('lc_discovery_messages')
+          const discoveryResult = localStorage.getItem('lc_discovery_result')
+          const discoveryMessages = localStorage.getItem('lc_discovery_messages')
           if (discoveryResult && discoveryMessages) {
             try {
               const msgs = JSON.parse(discoveryMessages)
@@ -71,8 +71,8 @@ export default function App() {
                 body: JSON.stringify({ userId: u.id, messages: apiMsgs })
               }).catch(e => console.warn('[discovery-save]', e))
             } catch {}
-            sessionStorage.removeItem('lc_discovery_result')
-            sessionStorage.removeItem('lc_discovery_messages')
+            localStorage.removeItem('lc_discovery_result')
+            localStorage.removeItem('lc_discovery_messages')
           }
           if (window.location.pathname === '/' ||
               window.location.pathname === '/genome-result' ||
