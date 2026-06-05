@@ -98,7 +98,10 @@ export default function Discovery() {
         <img src="/diah-anna.png" alt="Diah Anna"
           style={{ width: 38, height: 38, borderRadius: '50%', objectFit: 'cover', border: '2px solid rgba(255,255,255,0.3)' }} />
         <div style={{ flex: 1 }}>
-          <div style={{ color: '#fff', fontWeight: 700, fontSize: '0.95rem' }}>Diah Anna</div>
+          <div style={{ color: '#fff', fontWeight: 700, fontSize: '0.95rem', display: 'flex', alignItems: 'center', gap: 5 }}>
+            Diah Anna
+            <img src="/icons/verified.png" width="16" height="16" alt="verified" style={{ flexShrink: 0 }} />
+          </div>
           <div style={{ color: 'rgba(255,255,255,0.75)', fontSize: '0.72rem' }}>Career Discovery Coach</div>
         </div>
         <button onClick={() => navigate('/')}
