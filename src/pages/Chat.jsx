@@ -696,34 +696,22 @@ export default function Chat({ user, chatMessages = [], setChatMessages }) {
       const gaps      = cp?.skill_gaps || cp?.gap_skills || []
 
       // Bangun teks genome sebagai chat message
-      let msg = '🧬 **Career Genome Kamu**
-
-'
+      let msg = '🧬 **Career Genome Kamu**\n\n'
       sorted.forEach(g => {
         const val  = scores[g.key] || 0
         const bars = Math.round(val / 10)
         const fill = '█'.repeat(bars) + '░'.repeat(10 - bars)
-        msg += `${g.emoji} **${g.label}** · ${val}
-${fill}
-
-`
+        msg += g.emoji + ' **' + g.label + '** · ' + val + '\n' + fill + '\n\n'
       })
 
       if (readiness > 0) {
-        msg += `---
-
-📊 **Career Readiness: ${readiness}%**
-`
-        if (target) msg += `🎯 Target: ${target}
-`
+        msg += '---\n\n📊 **Career Readiness: ' + readiness + '%**\n'
+        if (target) msg += '🎯 Target: ' + target + '\n'
       }
 
       if (gaps.length > 0) {
-        msg += `
-📍 **Gap Utama:**
-`
-        gaps.slice(0, 4).forEach(g => { msg += `✕ ${g}
-` })
+        msg += '\n📍 **Gap Utama:**\n'
+        gaps.slice(0, 4).forEach(g => { msg += '✕ ' + g + '\n' })
       }
 
       pushBot(msg)
