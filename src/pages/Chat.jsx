@@ -822,18 +822,7 @@ ${fill}
           </div>
           <div style={{ color: 'rgba(255,255,255,0.65)', fontSize: '0.73rem' }}>AI Career Coach • online</div>
         </div>
-        <button
-          onClick={() => navigate('/pricing')}
-          style={{ color: '#fff', fontSize: '0.72rem', padding: '3px 8px', background: plan === 'free' ? 'rgba(255,200,0,0.25)' : 'rgba(255,255,255,0.15)', border: '1px solid rgba(255,255,255,0.3)', borderRadius: 12, fontWeight: 600, cursor: 'pointer', whiteSpace: 'nowrap' }}
-        >
-          {PLAN_LABEL[plan] || 'Free'}
-        </button>
-        <button onClick={() => setShowShareApp(true)} style={{ color: 'rgba(255,255,255,0.6)', fontSize: '0.78rem', fontWeight: 600, padding: '4px 8px', background: 'rgba(255,255,255,0.1)', borderRadius: 6, border: 'none', cursor: 'pointer' }}>
-          Bagikan
-        </button>
-        <button onClick={handleSignOut} style={{ color: 'rgba(255,255,255,0.6)', fontSize: '0.78rem', padding: '4px 8px', background: 'rgba(255,255,255,0.1)', borderRadius: 6, border: 'none', cursor: 'pointer' }}>
-          Keluar
-        </button>
+
       </div>
 
 
