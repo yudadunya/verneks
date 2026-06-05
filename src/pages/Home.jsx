@@ -34,6 +34,21 @@ const DIAH_CHAT = [
   { role: 'diah', text: 'Justru itu yang kita temukan bareng. Aku bantu kamu explore Career DNA kamu — strength tersembunyi, passion, dan arah karier yang paling cocok buat kamu. Mulai yuk? 🧬' },
 ]
 
+const MEMORY_CHAT = [
+  { role: 'diah', text: 'Kamu masih ingin menjadi Product Manager?' },
+  { role: 'user', text: 'Iya, masih.' },
+  {
+    role: 'diah',
+    text: '2 bulan lalu kamu mengatakan ingin pindah dari Admin ke Product. Sejak itu:',
+    checklist: [
+      { done: true, text: 'CV selesai diperbarui' },
+      { done: true, text: 'Google Analytics Certificate selesai' },
+      { done: false, text: 'Belum punya portfolio project' },
+    ],
+    followup: 'Menurutku minggu ini fokus kita adalah membuat portfolio pertama. Aku sudah siapkan template-nya untukmu. 💡',
+  },
+]
+
 const PROBLEMS = [
   { emoji: '🔍', text: '"Karier saya cocoknya ke mana?"' },
   { emoji: '📚', text: '"Skill apa yang harus saya pelajari?"' },
@@ -61,6 +76,34 @@ const GPS_STEPS = [
   { month: 'Bulan 3–4', title: 'Eksekusi', desc: 'Kontribusi di 1 perusahaan startup, bangun network LinkedIn', icon: '⚡' },
   { month: 'Bulan 5–6', title: 'Akselerasi', desc: 'Apply ke 10 posisi Product Analyst yang dikurasi Diah Anna', icon: '🚀' },
   { month: 'Bulan 7+', title: 'Growth', desc: 'Weekly coaching & progress tracking menuju promosi pertama', icon: '📈' },
+]
+
+const JOURNEY_ITEMS = [
+  { year: '2025', label: 'Marketing Staff', type: 'start', color: 'rgba(255,255,255,0.25)' },
+  { label: 'Career Discovery', type: 'milestone', color: '#25D366', icon: '💬' },
+  { label: 'Career Genome', type: 'milestone', color: '#34B7F1', icon: '🧬' },
+  { label: 'Skill Gap Analysis', type: 'milestone', color: '#FFB74D', icon: '⚡' },
+  { label: 'Google Analytics Course', type: 'action', color: '#25D366', icon: '✅' },
+  { label: 'Portfolio Pertama', type: 'action', color: '#25D366', icon: '✅' },
+  { label: 'Interview Ready', type: 'action', color: '#FFB74D', icon: '🔄' },
+  { year: '2026', label: 'Product Manager', type: 'goal', color: '#25D366', icon: '🚀' },
+]
+
+const FREE_FEATURES = [
+  'Career Discovery Chat',
+  'Career Genome Report',
+  'Career Gap Analysis',
+  'GPS Preview',
+]
+
+const PREMIUM_FEATURES = [
+  { icon: '🗺️', text: 'Full Career GPS (roadmap bulan per bulan)' },
+  { icon: '🤖', text: 'Unlimited AI Mentor — Diah Anna 24/7' },
+  { icon: '📅', text: 'Weekly Career Check-in & Coaching' },
+  { icon: '📊', text: 'Progress Tracking & Journey Dashboard' },
+  { icon: '🔔', text: 'Career Reminder & Accountability' },
+  { icon: '🎓', text: 'Personalized Learning Path' },
+  { icon: '💼', text: 'Career Opportunity Alert yang dikurasi' },
 ]
 
 const FAQS = [
@@ -127,6 +170,7 @@ export default function Home({ user }) {
   const [chatIdx, setChatIdx] = useState(0)
   const [openFaq, setOpenFaq] = useState(null)
   const [barAnim, setBarAnim] = useState(false)
+  const [memoryStep, setMemoryStep] = useState(0)
 
   useEffect(() => {
     if (user) { window.location.href = '/chat'; return }
@@ -185,9 +229,6 @@ export default function Home({ user }) {
             <div style={{ color: '#25D366', fontSize: '0.62rem', fontWeight: 700, letterSpacing: '1px', textTransform: 'uppercase' }}>Career GPS</div>
           </div>
         </div>
-        <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-
-        </div>
       </nav>
 
       {/* ══════════════════════════════════════════════════════════════════════
@@ -223,17 +264,31 @@ export default function Home({ user }) {
         }}>
           <div style={{ display: 'inline-flex', alignItems: 'center', gap: 6, background: 'rgba(37,211,102,0.1)', border: '1px solid rgba(37,211,102,0.25)', borderRadius: 20, padding: '5px 14px', marginBottom: 20 }}>
             <span style={{ width: 6, height: 6, borderRadius: '50%', background: '#25D366', display: 'inline-block', animation: 'pulse 2s ease infinite' }} />
-            <span style={{ color: '#25D366', fontSize: '0.72rem', fontWeight: 700, letterSpacing: '0.5px' }}>AI CAREER GPS UNTUK PROFESIONAL INDONESIA</span>
+            <span style={{ color: '#25D366', fontSize: '0.72rem', fontWeight: 700, letterSpacing: '0.5px' }}>AI CAREER COMPANION UNTUK PROFESIONAL INDONESIA</span>
           </div>
 
-          <h1 style={{ color: '#fff', fontSize: '2.2rem', fontWeight: 900, lineHeight: 1.15, letterSpacing: '-0.6px', marginBottom: 10 }}>
+          <h1 style={{ color: '#fff', fontSize: '2.2rem', fontWeight: 900, lineHeight: 1.15, letterSpacing: '-0.6px', marginBottom: 12 }}>
             Temukan <span style={{ background: 'linear-gradient(90deg, #25D366, #34B7F1)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>DNA Karier</span> Kamu.<br />
             Dapatkan <span style={{ background: 'linear-gradient(90deg, #34B7F1, #25D366)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>GPS</span> untuk Mencapainya.
           </h1>
 
+          {/* ★ NEW: Emotional differentiator line */}
+          <div style={{
+            display: 'inline-block',
+            background: 'rgba(37,211,102,0.07)',
+            border: '1px solid rgba(37,211,102,0.2)',
+            borderRadius: 10,
+            padding: '8px 16px',
+            marginBottom: 20,
+          }}>
+            <p style={{ color: 'rgba(255,255,255,0.8)', fontSize: '0.88rem', fontWeight: 600, margin: 0, lineHeight: 1.5 }}>
+              ✨ Diah Anna mengenal kariermu lebih baik setiap kali kalian berbicara.
+            </p>
+          </div>
+
           <p style={{ color: 'rgba(255,255,255,0.5)', fontSize: '0.92rem', lineHeight: 1.7, marginBottom: 28, maxWidth: 380, margin: '0 auto 28px' }}>
             Bukan CV Builder. Bukan ATS Checker.<br />
-            <strong style={{ color: 'rgba(255,255,255,0.8)' }}>LamarCerdas adalah peta arah karier personal kamu</strong> — dari siapa kamu sekarang, ke mana kamu mau pergi.
+            <strong style={{ color: 'rgba(255,255,255,0.8)' }}>LamarCerdas adalah AI Career Companion</strong> yang tumbuh bersama perjalanan karier kamu.
           </p>
 
           <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 10 }}>
@@ -255,7 +310,7 @@ export default function Home({ user }) {
               <img src="/diah-anna.png" alt="Diah Anna" style={{ width: 40, height: 40, borderRadius: '50%', objectFit: 'cover', objectPosition: 'top', flexShrink: 0 }} />
               <div>
                 <div style={{ color: '#fff', fontWeight: 700, fontSize: '0.9rem' }}>Diah Anna</div>
-                <div style={{ color: '#25D366', fontSize: '0.68rem', fontWeight: 600 }}>● AI Career Mentor • online</div>
+                <div style={{ color: '#25D366', fontSize: '0.68rem', fontWeight: 600 }}>● AI Career Companion • online</div>
               </div>
               <div style={{ marginLeft: 'auto', background: 'rgba(37,211,102,0.15)', border: '1px solid rgba(37,211,102,0.3)', borderRadius: 12, padding: '3px 10px' }}>
                 <span style={{ color: '#25D366', fontSize: '0.65rem', fontWeight: 700 }}>Career GPS</span>
@@ -345,7 +400,7 @@ export default function Home({ user }) {
           <Section delay={0.3}>
             <div style={{ marginTop: 14, background: 'rgba(37,211,102,0.08)', border: '1px solid rgba(37,211,102,0.25)', borderRadius: 14, padding: '16px', textAlign: 'center' }}>
               <div style={{ color: '#25D366', fontWeight: 800, fontSize: '1rem', marginBottom: 4 }}>✅ LamarCerdas Career GPS</div>
-              <p style={{ color: 'rgba(255,255,255,0.6)', fontSize: '0.82rem', lineHeight: 1.6, margin: 0 }}>Mulai dari siapa kamu → tahu ke mana → dapat roadmap → execute bareng AI mentor</p>
+              <p style={{ color: 'rgba(255,255,255,0.6)', fontSize: '0.82rem', lineHeight: 1.6, margin: 0 }}>Mulai dari siapa kamu → tahu ke mana → dapat roadmap → execute bareng AI companion</p>
             </div>
           </Section>
         </Section>
@@ -466,14 +521,14 @@ export default function Home({ user }) {
       ══════════════════════════════════════════════════════════════════════ */}
       <section style={{ position: 'relative', zIndex: 5, padding: '40px 20px' }}>
         <Section>
-          <SectionTitle badge="AI Career Mentor" title="Kenali Diah Anna" sub="Bukan chatbot biasa. Diah Anna dilatih khusus untuk memahami lanskap karier Indonesia." light />
+          <SectionTitle badge="AI Career Companion" title="Kenali Diah Anna" sub="Bukan chatbot biasa. Diah Anna dilatih khusus untuk memahami lanskap karier Indonesia — dan tumbuh bersamamu setiap sesi." light />
 
           <div style={{ background: 'linear-gradient(135deg, #0d1f12, #0a1a20)', border: '1px solid rgba(37,211,102,0.2)', borderRadius: 18, padding: '20px', marginBottom: 16 }}>
             <div style={{ display: 'flex', gap: 14, marginBottom: 18 }}>
               <img src="/diah-anna.png" alt="Diah Anna" style={{ width: 56, height: 56, borderRadius: '50%', objectFit: 'cover', objectPosition: 'top', flexShrink: 0 }} />
               <div>
                 <div style={{ color: '#fff', fontWeight: 800, fontSize: '1rem' }}>Diah Anna</div>
-                <div style={{ color: '#25D366', fontSize: '0.75rem', fontWeight: 600 }}>AI Career Mentor • LamarCerdas</div>
+                <div style={{ color: '#25D366', fontSize: '0.75rem', fontWeight: 600 }}>AI Career Companion • LamarCerdas</div>
                 <div style={{ color: 'rgba(255,255,255,0.4)', fontSize: '0.72rem', marginTop: 2 }}>Dilatih dari 10.000+ data karier profesional Indonesia</div>
               </div>
             </div>
@@ -481,7 +536,7 @@ export default function Home({ user }) {
               {[
                 { icon: '🇮🇩', title: 'Konteks Indonesia', desc: 'Paham kultur kerja & pasar lokal' },
                 { icon: '🎯', title: 'Goal-Oriented', desc: 'Setiap saran arah ke hasil konkret' },
-                { icon: '🔄', title: 'Makin Cerdas', desc: 'Semakin sering ngobrol, makin personal' },
+                { icon: '🧠', title: 'Career Memory™', desc: 'Ingat setiap percakapan & progressmu' },
                 { icon: '💙', title: 'Empathetic', desc: 'Tanpa judgment, selalu supportif' },
               ].map(f => (
                 <div key={f.title} style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.07)', borderRadius: 12, padding: '12px' }}>
@@ -493,7 +548,7 @@ export default function Home({ user }) {
             </div>
           </div>
 
-          {/* Testimonial style */}
+          {/* Testimonial */}
           <div style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 14, padding: '16px' }}>
             <div style={{ color: '#25D366', fontSize: '1.2rem', marginBottom: 8 }}>"</div>
             <p style={{ color: 'rgba(255,255,255,0.65)', fontSize: '0.85rem', lineHeight: 1.65, margin: '0 0 10px', fontStyle: 'italic' }}>
@@ -507,6 +562,106 @@ export default function Home({ user }) {
               </div>
             </div>
           </div>
+        </Section>
+      </section>
+
+      {/* ══════════════════════════════════════════════════════════════════════
+          ★ NEW: CAREER MEMORY™ SECTION
+      ══════════════════════════════════════════════════════════════════════ */}
+      <section style={{ position: 'relative', zIndex: 5, padding: '40px 20px', background: 'rgba(52,183,241,0.02)', borderTop: '1px solid rgba(52,183,241,0.1)', borderBottom: '1px solid rgba(52,183,241,0.1)' }}>
+        <Section>
+          {/* Badge with trademark feel */}
+          <div style={{ textAlign: 'center', marginBottom: 28 }}>
+            <div style={{ display: 'inline-flex', alignItems: 'center', gap: 6, background: 'rgba(52,183,241,0.12)', border: '1px solid rgba(52,183,241,0.35)', borderRadius: 20, padding: '4px 14px', marginBottom: 14 }}>
+              <span style={{ width: 6, height: 6, borderRadius: '50%', background: '#34B7F1', display: 'inline-block', boxShadow: '0 0 6px #34B7F1', animation: 'pulse 2s ease infinite' }} />
+              <span style={{ color: '#34B7F1', fontSize: '0.72rem', fontWeight: 700, letterSpacing: '0.5px', textTransform: 'uppercase' }}>Career Memory™</span>
+            </div>
+            <h2 style={{ color: '#fff', fontSize: '1.55rem', fontWeight: 800, lineHeight: 1.25, letterSpacing: '-0.4px', margin: '0 0 8px' }}>
+              Diah Anna Tidak Pernah Melupakan<br />Perjalanan Kariermu
+            </h2>
+            <p style={{ color: 'rgba(255,255,255,0.45)', fontSize: '0.88rem', lineHeight: 1.65, margin: 0 }}>
+              Setiap percakapan membangun Career Genome yang semakin akurat.
+            </p>
+          </div>
+
+          {/* Memory Chat Mockup */}
+          <div style={{ background: '#0d1f12', borderRadius: 18, overflow: 'hidden', border: '1px solid rgba(52,183,241,0.2)', boxShadow: '0 20px 60px rgba(0,0,0,0.4)', marginBottom: 20 }}>
+            {/* Chat header */}
+            <div style={{ background: '#075E54', padding: '12px 16px', display: 'flex', alignItems: 'center', gap: 12 }}>
+              <img src="/diah-anna.png" alt="Diah Anna" style={{ width: 36, height: 36, borderRadius: '50%', objectFit: 'cover', objectPosition: 'top', flexShrink: 0 }} />
+              <div>
+                <div style={{ color: '#fff', fontWeight: 700, fontSize: '0.85rem' }}>Diah Anna</div>
+                <div style={{ color: '#34B7F1', fontSize: '0.65rem', fontWeight: 600 }}>● Career Memory™ aktif • 2 bulan bersama</div>
+              </div>
+            </div>
+            {/* Memory Chat Messages */}
+            <div style={{ padding: '14px 12px 16px', display: 'flex', flexDirection: 'column', gap: 8 }}>
+              {/* Diah opens */}
+              <div style={{ display: 'flex', justifyContent: 'flex-start' }}>
+                <div style={{ maxWidth: '85%', borderRadius: '3px 14px 14px 14px', background: '#1a2e1a', padding: '10px 13px', color: 'rgba(255,255,255,0.85)', fontSize: '0.82rem', lineHeight: 1.55 }}>
+                  Kamu masih ingin menjadi Product Manager? 🎯
+                </div>
+              </div>
+              {/* User replies */}
+              <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
+                <div style={{ maxWidth: '70%', borderRadius: '14px 3px 14px 14px', background: '#005c4b', padding: '9px 12px', color: 'rgba(255,255,255,0.85)', fontSize: '0.82rem', lineHeight: 1.55 }}>
+                  Iya, masih. 😊
+                </div>
+              </div>
+              {/* Diah with memory + checklist */}
+              <div style={{ display: 'flex', justifyContent: 'flex-start' }}>
+                <div style={{ maxWidth: '90%', borderRadius: '3px 14px 14px 14px', background: '#1a2e1a', padding: '12px 13px', color: 'rgba(255,255,255,0.85)', fontSize: '0.82rem', lineHeight: 1.6 }}>
+                  <div style={{ marginBottom: 8 }}>
+                    2 bulan lalu kamu mengatakan ingin pindah dari <strong style={{ color: '#34B7F1' }}>Admin → Product</strong>. Sejak itu:
+                  </div>
+                  {/* Checklist */}
+                  <div style={{ background: 'rgba(37,211,102,0.07)', border: '1px solid rgba(37,211,102,0.15)', borderRadius: 10, padding: '10px 12px', marginBottom: 10, display: 'flex', flexDirection: 'column', gap: 6 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, color: '#25D366', fontSize: '0.79rem', fontWeight: 600 }}>
+                      <span>✅</span><span>CV selesai diperbarui</span>
+                    </div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, color: '#25D366', fontSize: '0.79rem', fontWeight: 600 }}>
+                      <span>✅</span><span>Google Analytics Certificate selesai</span>
+                    </div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, color: '#FFB74D', fontSize: '0.79rem', fontWeight: 600 }}>
+                      <span>⚠️</span><span>Belum punya portfolio project</span>
+                    </div>
+                  </div>
+                  <div style={{ color: 'rgba(255,255,255,0.7)', fontSize: '0.82rem', lineHeight: 1.55 }}>
+                    Menurutku minggu ini fokus kita adalah <strong style={{ color: '#25D366' }}>membuat portfolio pertama</strong>. Aku sudah siapkan template-nya untukmu. 💡
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Memory Features */}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+            {[
+              { icon: '🧠', title: 'Ingat Semua Percakapan', desc: 'Tidak perlu cerita dari awal setiap sesi. Diah Anna sudah tahu di mana kamu terakhir berhenti.' },
+              { icon: '📈', title: 'Progress Awareness', desc: 'Diah Anna tahu apa yang sudah kamu selesaikan dan apa yang perlu difokuskan minggu ini.' },
+              { icon: '🔄', title: 'Semakin Akurat Seiring Waktu', desc: 'Career Genome kamu terus diperbarui — makin lama bareng Diah Anna, makin personal rekomendasinya.' },
+            ].map((item, i) => (
+              <Section key={item.title} delay={i * 0.09}>
+                <div style={{ display: 'flex', gap: 14, background: 'rgba(52,183,241,0.04)', border: '1px solid rgba(52,183,241,0.12)', borderRadius: 14, padding: '14px 16px' }}>
+                  <div style={{ width: 40, height: 40, borderRadius: 10, background: 'rgba(52,183,241,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.2rem', flexShrink: 0 }}>{item.icon}</div>
+                  <div>
+                    <div style={{ color: '#fff', fontWeight: 700, fontSize: '0.85rem', marginBottom: 3 }}>{item.title}</div>
+                    <div style={{ color: 'rgba(255,255,255,0.42)', fontSize: '0.78rem', lineHeight: 1.55 }}>{item.desc}</div>
+                  </div>
+                </div>
+              </Section>
+            ))}
+          </div>
+
+          {/* Differentiator callout */}
+          <Section delay={0.3}>
+            <div style={{ marginTop: 14, background: 'rgba(52,183,241,0.07)', border: '1px solid rgba(52,183,241,0.22)', borderRadius: 14, padding: '16px', textAlign: 'center' }}>
+              <p style={{ color: 'rgba(255,255,255,0.65)', fontSize: '0.83rem', lineHeight: 1.65, margin: 0 }}>
+                🧠 <strong style={{ color: '#34B7F1' }}>Career Memory™</strong> adalah teknologi eksklusif LamarCerdas.<br />
+                Bukan sekadar AI chatbot — ini <strong style={{ color: '#fff' }}>AI Companion yang tumbuh bersamamu.</strong>
+              </p>
+            </div>
+          </Section>
         </Section>
       </section>
 
@@ -545,6 +700,181 @@ export default function Home({ user }) {
             <p style={{ color: 'rgba(255,255,255,0.6)', fontSize: '0.82rem', lineHeight: 1.6, margin: 0 }}>
               🔒 GPS Preview <strong style={{ color: '#25D366' }}>gratis</strong> · Full GPS dengan weekly coaching di <strong style={{ color: '#25D366' }}>Premium</strong>
             </p>
+          </div>
+        </Section>
+      </section>
+
+      {/* ══════════════════════════════════════════════════════════════════════
+          ★ NEW: CAREER JOURNEY DASHBOARD
+      ══════════════════════════════════════════════════════════════════════ */}
+      <section style={{ position: 'relative', zIndex: 5, padding: '40px 20px' }}>
+        <Section>
+          <SectionTitle
+            badge="Journey Dashboard"
+            badgeColor="#CE93D8"
+            title="Lihat Perjalanan Kariermu Bertumbuh 📈"
+            sub="Semua progress tersimpan otomatis — dari titik awal hingga karier impianmu."
+            light
+          />
+
+          {/* Timeline Visual */}
+          <div style={{ background: '#0d1a0d', border: '1px solid rgba(206,147,216,0.18)', borderRadius: 18, padding: '20px 16px', marginBottom: 16 }}>
+            <div style={{ color: 'rgba(255,255,255,0.4)', fontSize: '0.7rem', fontWeight: 700, letterSpacing: '0.5px', marginBottom: 18, textAlign: 'center' }}>JOURNEY TIMELINE — Rina S.</div>
+
+            <div style={{ position: 'relative', paddingLeft: 36 }}>
+              {/* Vertical connector */}
+              <div style={{ position: 'absolute', left: 14, top: 8, bottom: 8, width: 2, background: 'linear-gradient(180deg, rgba(255,255,255,0.12) 0%, #25D366 100%)' }} />
+
+              {JOURNEY_ITEMS.map((item, i) => {
+                const isGoal = item.type === 'goal'
+                const isStart = item.type === 'start'
+                const dotColor = isGoal ? '#25D366' : isStart ? 'rgba(255,255,255,0.3)' : item.color
+                return (
+                  <Section key={i} delay={i * 0.07}>
+                    <div style={{ position: 'relative', marginBottom: i < JOURNEY_ITEMS.length - 1 ? 14 : 0 }}>
+                      {/* Dot */}
+                      <div style={{
+                        position: 'absolute', left: -36 + 9, top: '50%', transform: 'translateY(-50%)',
+                        width: isGoal ? 16 : 12, height: isGoal ? 16 : 12,
+                        borderRadius: '50%', background: dotColor,
+                        boxShadow: isGoal ? `0 0 12px ${dotColor}, 0 0 24px ${dotColor}44` : `0 0 6px ${dotColor}88`,
+                        border: isGoal ? `2px solid #0d1a0d` : 'none',
+                        zIndex: 2,
+                      }} />
+
+                      <div style={{
+                        display: 'flex', alignItems: 'center', gap: 10,
+                        background: isGoal ? 'rgba(37,211,102,0.08)' : isStart ? 'rgba(255,255,255,0.03)' : 'rgba(255,255,255,0.02)',
+                        border: `1px solid ${isGoal ? 'rgba(37,211,102,0.25)' : isStart ? 'rgba(255,255,255,0.08)' : 'rgba(255,255,255,0.06)'}`,
+                        borderRadius: 12, padding: '10px 12px',
+                      }}>
+                        {item.icon && <span style={{ fontSize: '1rem', flexShrink: 0 }}>{item.icon}</span>}
+                        <div style={{ flex: 1 }}>
+                          {item.year && <div style={{ color: 'rgba(255,255,255,0.3)', fontSize: '0.65rem', fontWeight: 700, letterSpacing: '0.5px', marginBottom: 1 }}>{item.year}</div>}
+                          <div style={{ color: isGoal ? '#25D366' : isStart ? 'rgba(255,255,255,0.5)' : '#fff', fontWeight: isGoal || isStart ? 700 : 600, fontSize: isGoal ? '0.9rem' : '0.82rem' }}>
+                            {item.label}
+                          </div>
+                        </div>
+                        {isGoal && <div style={{ background: 'rgba(37,211,102,0.15)', border: '1px solid rgba(37,211,102,0.3)', borderRadius: 8, padding: '2px 8px' }}>
+                          <span style={{ color: '#25D366', fontSize: '0.65rem', fontWeight: 700 }}>GOAL</span>
+                        </div>}
+                      </div>
+                    </div>
+                  </Section>
+                )
+              })}
+            </div>
+          </div>
+
+          <div style={{ background: 'rgba(206,147,216,0.07)', border: '1px solid rgba(206,147,216,0.2)', borderRadius: 14, padding: '14px', textAlign: 'center' }}>
+            <p style={{ color: 'rgba(255,255,255,0.6)', fontSize: '0.82rem', lineHeight: 1.6, margin: 0 }}>
+              📊 Semua progress tersimpan otomatis dalam <strong style={{ color: '#CE93D8' }}>Journey Dashboard</strong>.<br />
+              Kamu bisa lihat seberapa jauh kamu sudah berkembang kapan saja.
+            </p>
+          </div>
+        </Section>
+      </section>
+
+      {/* ══════════════════════════════════════════════════════════════════════
+          ★ NEW: PREMIUM POSITIONING (UPDATED)
+      ══════════════════════════════════════════════════════════════════════ */}
+      <section style={{ position: 'relative', zIndex: 5, padding: '40px 20px', background: 'rgba(37,211,102,0.02)', borderTop: '1px solid rgba(37,211,102,0.08)', borderBottom: '1px solid rgba(37,211,102,0.08)' }}>
+        <Section>
+          <div style={{ textAlign: 'center', marginBottom: 28 }}>
+            <Badge text="Pilih Paketmu" color="#25D366" />
+            <h2 style={{ color: '#fff', fontSize: '1.55rem', fontWeight: 800, lineHeight: 1.25, letterSpacing: '-0.4px', margin: '0 0 8px' }}>
+              Jangan Biarkan Kariermu<br />Jalan Tanpa Arah
+            </h2>
+            <p style={{ color: 'rgba(255,255,255,0.45)', fontSize: '0.88rem', lineHeight: 1.65, margin: 0 }}>
+              Diah Anna akan menemani perjalananmu setiap minggu.
+            </p>
+          </div>
+
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+            {/* FREE CARD */}
+            <div style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 18, padding: '20px' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+                <div>
+                  <div style={{ color: '#fff', fontWeight: 800, fontSize: '1.1rem' }}>Gratis</div>
+                  <div style={{ color: 'rgba(255,255,255,0.35)', fontSize: '0.75rem' }}>Mulai tanpa kartu kredit</div>
+                </div>
+                <div style={{ background: 'rgba(255,255,255,0.06)', borderRadius: 10, padding: '6px 14px' }}>
+                  <span style={{ color: 'rgba(255,255,255,0.5)', fontWeight: 800, fontSize: '1rem' }}>Rp 0</span>
+                </div>
+              </div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                {FREE_FEATURES.map(f => (
+                  <div key={f} style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                    <span style={{ color: '#25D366', fontSize: '0.85rem', flexShrink: 0 }}>✓</span>
+                    <span style={{ color: 'rgba(255,255,255,0.6)', fontSize: '0.82rem' }}>{f}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* PREMIUM CARD */}
+            <div style={{ background: 'linear-gradient(135deg, rgba(37,211,102,0.08) 0%, rgba(52,183,241,0.06) 100%)', border: '1px solid rgba(37,211,102,0.3)', borderRadius: 18, padding: '20px', position: 'relative', overflow: 'hidden' }}>
+              {/* Popular badge */}
+              <div style={{ position: 'absolute', top: 16, right: 16, background: 'linear-gradient(135deg, #25D366, #128C7E)', borderRadius: 8, padding: '3px 10px' }}>
+                <span style={{ color: '#fff', fontSize: '0.65rem', fontWeight: 800, letterSpacing: '0.5px' }}>TERPOPULER</span>
+              </div>
+              <div style={{ marginBottom: 16 }}>
+                <div style={{ color: '#fff', fontWeight: 800, fontSize: '1.1rem' }}>Premium</div>
+                <div style={{ color: 'rgba(255,255,255,0.35)', fontSize: '0.75rem' }}>AI Companion yang menemani setiap minggu</div>
+              </div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginBottom: 18 }}>
+                {PREMIUM_FEATURES.map(f => (
+                  <div key={f.text} style={{ display: 'flex', alignItems: 'flex-start', gap: 10 }}>
+                    <span style={{ fontSize: '0.95rem', flexShrink: 0, marginTop: 1 }}>{f.icon}</span>
+                    <span style={{ color: 'rgba(255,255,255,0.75)', fontSize: '0.82rem', lineHeight: 1.45 }}>{f.text}</span>
+                  </div>
+                ))}
+              </div>
+              <CTAButton label="Mulai dengan Gratis — Upgrade Kapan Saja" style={{ maxWidth: '100%' }} />
+            </div>
+          </div>
+        </Section>
+      </section>
+
+      {/* ══════════════════════════════════════════════════════════════════════
+          ★ NEW: EMOTIONAL HOOK SECTION
+      ══════════════════════════════════════════════════════════════════════ */}
+      <section style={{ position: 'relative', zIndex: 5, padding: '48px 20px' }}>
+        <Section>
+          <div style={{ textAlign: 'center' }}>
+            {/* Big emotional statement */}
+            <div style={{ marginBottom: 24 }}>
+              <h2 style={{ color: '#fff', fontSize: '1.8rem', fontWeight: 900, lineHeight: 1.2, letterSpacing: '-0.5px', marginBottom: 6 }}>
+                Banyak Orang Tidak Gagal
+              </h2>
+              <h2 style={{ background: 'linear-gradient(90deg, #FFB74D, #FF7043)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', fontSize: '1.8rem', fontWeight: 900, lineHeight: 1.2, letterSpacing: '-0.5px', marginBottom: 0 }}>
+                Karena Kurang Pintar.
+              </h2>
+            </div>
+
+            <div style={{ width: 48, height: 2, background: 'linear-gradient(90deg, #FFB74D, #FF7043)', borderRadius: 2, margin: '0 auto 20px' }} />
+
+            <h3 style={{ color: 'rgba(255,255,255,0.7)', fontSize: '1.15rem', fontWeight: 700, lineHeight: 1.3, letterSpacing: '-0.2px', marginBottom: 20 }}>
+              Tapi Karena Tidak Tahu<br />Langkah Berikutnya.
+            </h3>
+
+            <p style={{ color: 'rgba(255,255,255,0.45)', fontSize: '0.92rem', lineHeight: 1.8, maxWidth: 340, margin: '0 auto 28px' }}>
+              LamarCerdas membantu kamu memahami <strong style={{ color: 'rgba(255,255,255,0.75)' }}>siapa dirimu</strong>, ke mana kamu ingin pergi, dan <strong style={{ color: 'rgba(255,255,255,0.75)' }}>langkah apa yang harus dilakukan berikutnya</strong>.
+            </p>
+
+            {/* Stats row */}
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 10, marginBottom: 28 }}>
+              {[
+                { num: '12K+', label: 'Profesional Indonesia' },
+                { num: '94%', label: 'Merasa lebih terarah' },
+                { num: '10 mnt', label: 'Cukup untuk mulai' },
+              ].map(s => (
+                <div key={s.label} style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.07)', borderRadius: 12, padding: '14px 8px' }}>
+                  <div style={{ color: '#25D366', fontWeight: 900, fontSize: '1.1rem', lineHeight: 1 }}>{s.num}</div>
+                  <div style={{ color: 'rgba(255,255,255,0.35)', fontSize: '0.68rem', marginTop: 4, lineHeight: 1.3 }}>{s.label}</div>
+                </div>
+              ))}
+            </div>
           </div>
         </Section>
       </section>
