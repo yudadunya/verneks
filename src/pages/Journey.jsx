@@ -34,9 +34,13 @@ export default function Journey({ user }) {
   const [actions, setActions]   = useState([])
   const [events, setEvents]     = useState([])
   const [loading, setLoading]   = useState(true)
+  const [isPremium, setIsPremium] = useState(null) // null = belum dicek
 
   useEffect(() => {
     if (!user) { navigate('/'); return }
+    // Cek subscription
+    supabase.from('subscriptions').select('plan').eq('user_id', user.id).eq('status', 'active').gte('expires_at', new Date().toISOString()).limit(1).maybeSingle()
+      .then(({ data }) => setIsPremium(!!data?.plan && data.plan !== 'free'))
     Promise.all([
       supabase.from('user_career_profiles').select('nama,target_posisi,posisi_saat_ini,sesi_count,topik_dibahas').eq('user_id', user.id).maybeSingle(),
       supabase.from('user_growth_state').select('*').eq('user_id', user.id).maybeSingle(),
@@ -60,6 +64,22 @@ export default function Journey({ user }) {
     await supabase.from('user_next_actions').update({ is_done: !isDone }).eq('id', id)
     setActions(prev => prev.map(a => a.id === id ? { ...a, is_done: !isDone } : a))
   }
+
+  // Lock screen untuk free user
+  if (isPremium === false) return (
+    <div style={{ minHeight: '100vh', background: '#0a0f0d', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '0 24px', textAlign: 'center', paddingBottom: 90 }}>
+      <div style={{ fontSize: '3rem', marginBottom: 16 }}>🗺️</div>
+      <div style={{ color: '#fff', fontWeight: 800, fontSize: '1.1rem', marginBottom: 10 }}>Career Journey</div>
+      <div style={{ color: 'rgba(255,255,255,0.4)', fontSize: '0.85rem', lineHeight: 1.7, marginBottom: 28 }}>
+        Lacak perjalanan karier kamu hari demi hari.<br />Fitur ini tersedia untuk pengguna Premium.
+      </div>
+      <button onClick={() => window.location.href = '/pricing'} style={{ padding: '13px 32px', background: 'linear-gradient(135deg,#25D366,#128C7E)', color: '#fff', fontWeight: 700, borderRadius: 12, border: 'none', cursor: 'pointer', fontSize: '0.9rem', boxShadow: '0 4px 16px rgba(37,211,102,0.3)' }}>
+        🚀 Upgrade Premium
+      </button>
+      <button onClick={() => window.history.back()} style={{ marginTop: 12, background: 'none', border: 'none', color: 'rgba(255,255,255,0.3)', fontSize: '0.8rem', cursor: 'pointer' }}>← Kembali</button>
+      <BottomNav isPremium={false} />
+    </div>
+  )
 
   return (
     <div style={{ minHeight: '100vh', background: 'var(--wa-bg)', paddingBottom: '80px' }}>
@@ -267,7 +287,7 @@ export default function Journey({ user }) {
           </>
         )}
       </div>
-      <BottomNav />
+      <BottomNav isPremium={isPremium} />
     </div>
   )
 }
