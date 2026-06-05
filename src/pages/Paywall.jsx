@@ -1,44 +1,68 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 
-const FREE_FEATURES = [
-  'Career DNA Test',
-  'Career Genome',
-  'Career Gap Analysis',
-  'Career Readiness %',
-  '3 Langkah Pertama GPS',
-]
+const FREE_FEATURES = ['Career DNA Test','Career Genome','Career Gap Analysis','Career Readiness %','3 Langkah Pertama GPS']
 
 const PREMIUM_FEATURES = [
-  { icon: '🗺️', text: 'Career GPS Lengkap — roadmap personal step by step' },
-  { icon: '💬', text: 'Diah Anna AI Mentor tanpa batas' },
-  { icon: '📈', text: 'Progress Tracking & streak harian' },
-  { icon: '📋', text: 'Weekly Coaching Report' },
-  { icon: '💼', text: 'Opportunity Matching — lowongan yang cocok' },
-  { icon: '✅', text: 'Personal Action Plan' },
+  { icon:'🗺️', text:'Career GPS Lengkap — roadmap personal step by step, tidak ada yang ketinggalan' },
+  { icon:'💬', text:'Diah Anna AI Mentor unlimited — tanya apapun, kapanpun, tanpa batas pesan' },
+  { icon:'📈', text:'Progress Tracking harian — pantau seberapa dekat kamu ke target' },
+  { icon:'📋', text:'Weekly Coaching Report — ringkasan kemajuan & rekomendasi minggu ini' },
+  { icon:'💼', text:'Opportunity Matching — notifikasi lowongan yang benar-benar cocok DNA-mu' },
+  { icon:'✅', text:'Personal Action Plan — to-do spesifik yang bisa langsung dijalankan hari ini' },
 ]
+
+// Scarcity: kuota tersisa (bisa dibuat dinamis dari backend nanti)
+const SLOTS_LEFT = 7
 
 export default function Paywall() {
   const navigate = useNavigate()
-  const [result, setResult]       = useState(null)
+  const [result, setResult]             = useState(null)
+  const [revealed, setRevealed]         = useState(false)
+  const [ctaVisible, setCtaVisible]     = useState(false)
   const [loginLoading, setLoginLoading] = useState(false)
-  const [revealed, setRevealed]   = useState(false)
-  const [plan, setPlan]           = useState('premium') // 'premium' | 'free'
+  const [plan, setPlan]                 = useState('premium')
+  const [priceRevealed, setPriceRevealed] = useState(false)
+  const ctaTriggerRef = useRef(null)
+  const timerRef      = useRef(null)
+
+  // Countdown 10 menit scarcity timer
+  const [timeLeft, setTimeLeft] = useState(10 * 60)
+  useEffect(() => {
+    timerRef.current = setInterval(() => setTimeLeft(t => Math.max(0, t - 1)), 1000)
+    return () => clearInterval(timerRef.current)
+  }, [])
+  const mins = String(Math.floor(timeLeft / 60)).padStart(2,'0')
+  const secs = String(timeLeft % 60).padStart(2,'0')
 
   useEffect(() => {
     const saved = sessionStorage.getItem('lc_discovery_result')
     if (!saved) { navigate('/discovery'); return }
-    try {
-      setResult(JSON.parse(saved))
-      setTimeout(() => setRevealed(true), 80)
-    } catch { navigate('/discovery') }
+    try { setResult(JSON.parse(saved)); setTimeout(() => setRevealed(true), 80) }
+    catch { navigate('/discovery') }
   }, [])
+
+  // Reveal pricing hanya setelah feature list terlihat penuh
+  useEffect(() => {
+    if (!ctaTriggerRef.current) return
+    const obs = new IntersectionObserver(
+      ([entry]) => {
+        if (entry.isIntersecting) {
+          setCtaVisible(true)
+          // Pricing muncul dengan dramatic delay setelah CTA area masuk viewport
+          setTimeout(() => setPriceRevealed(true), 600)
+        }
+      },
+      { threshold: 0.5 }
+    )
+    obs.observe(ctaTriggerRef.current)
+    return () => obs.disconnect()
+  }, [result])
 
   const handleLogin = async (selectedPlan) => {
     setPlan(selectedPlan)
     setLoginLoading(true)
-    // Simpan plan intent ke sessionStorage supaya App.jsx bisa baca setelah login
     sessionStorage.setItem('lc_plan_intent', selectedPlan)
     await supabase.auth.signInWithOAuth({
       provider: 'google',
@@ -47,148 +71,191 @@ export default function Paywall() {
   }
 
   if (!result) return (
-    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100vh', background: '#0a0f0d' }}>
-      <div style={{ fontSize: '2rem' }}>⏳</div>
+    <div style={{ display:'flex', alignItems:'center', justifyContent:'center', height:'100vh', background:'#0a0f0d' }}>
+      <div style={{ fontSize:'2rem' }}>⏳</div>
     </div>
   )
 
-  const p = result.profile_preview || {}
-  const readiness = result.career_readiness || 0
-  const gpsSteps = result.gps_steps || []
-  const lockedSteps = gpsSteps.filter((_, i) => i >= 3)
-  const mentorMessage = result.mentor_message || null
+  const p           = result.profile_preview || {}
+  const readiness   = result.career_readiness || 0
+  const gpsSteps    = result.gps_steps || []
+  const lockedSteps = gpsSteps.filter((_,i) => i >= 3)
+  const mentorMsg   = result.mentor_message
+  const gs          = result.genome_scores || {}
+  const GMAP        = [
+    {key:'analytical',label:'Analytical',emoji:'🧠',color:'#34B7F1'},
+    {key:'leadership',label:'Leadership',emoji:'👑',color:'#F48FB1'},
+    {key:'builder',   label:'Builder',   emoji:'⚙️',color:'#25D366'},
+    {key:'creator',   label:'Creator',   emoji:'🎨',color:'#FFB74D'},
+    {key:'communication',label:'Communication',emoji:'💬',color:'#CE93D8'},
+    {key:'risk_taking',  label:'Risk Taking',  emoji:'🚀',color:'#EF9A9A'},
+  ]
+  const topGenome = GMAP.reduce((b,g) => (gs[g.key]||0) > (gs[b.key]||0) ? g : b, GMAP[0])
 
-  const fade = (delay = 0) => ({
+  const fade = (delay=0) => ({
     opacity: revealed ? 1 : 0,
     transform: revealed ? 'none' : 'translateY(14px)',
     transition: `all 0.5s ease ${delay}s`,
   })
 
   return (
-    <div style={{ minHeight: '100vh', background: '#0a0f0d', fontFamily: "'Plus Jakarta Sans', sans-serif", overflowX: 'hidden' }}>
+    <div style={{ minHeight:'100vh', background:'#0a0f0d', fontFamily:"'Plus Jakarta Sans', sans-serif", overflowX:'hidden' }}>
 
       {/* Header */}
-      <div style={{ background: 'rgba(255,255,255,0.03)', borderBottom: '1px solid rgba(255,255,255,0.07)', padding: '14px 18px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-        <button onClick={() => navigate('/genome-result')}
-          style={{ background: 'none', border: 'none', color: 'rgba(255,255,255,0.5)', cursor: 'pointer', fontSize: '0.83rem' }}>
-          ← Kembali
-        </button>
-        <span style={{ color: '#fff', fontWeight: 700, fontSize: '0.9rem' }}>Career GPS</span>
-        <div style={{ width: 60 }} />
+      <div style={{ background:'rgba(255,255,255,0.03)', borderBottom:'1px solid rgba(255,255,255,0.07)', padding:'14px 18px', display:'flex', alignItems:'center', justifyContent:'space-between' }}>
+        <button onClick={() => navigate('/genome-result')} style={{ background:'none', border:'none', color:'rgba(255,255,255,0.4)', cursor:'pointer', fontSize:'0.82rem' }}>← Kembali</button>
+        <span style={{ color:'#fff', fontWeight:700, fontSize:'0.9rem' }}>Career GPS</span>
+        <div style={{ width:60 }} />
       </div>
 
-      <div style={{ padding: '22px 18px 160px', maxWidth: 480, margin: '0 auto' }}>
+      <div style={{ padding:'22px 18px', maxWidth:480, margin:'0 auto', paddingBottom: ctaVisible ? '260px' : '40px', transition:'padding-bottom 0.4s ease' }}>
 
-        {/* Result Summary Badges */}
-        <div style={{ display: 'flex', gap: 8, marginBottom: 22, flexWrap: 'wrap', ...fade(0) }}>
+        {/* ── SCARCITY BANNER ── */}
+        <div style={{ background:'rgba(239,83,80,0.12)', border:'1px solid rgba(239,83,80,0.3)', borderRadius:12, padding:'10px 14px', marginBottom:20, display:'flex', justifyContent:'space-between', alignItems:'center', ...fade(0) }}>
+          <div>
+            <div style={{ color:'#EF5350', fontWeight:700, fontSize:'0.82rem' }}>🔥 Penawaran Terbatas</div>
+            <div style={{ color:'rgba(255,255,255,0.45)', fontSize:'0.72rem' }}>Hanya {SLOTS_LEFT} slot tersisa hari ini</div>
+          </div>
+          <div style={{ textAlign:'right' }}>
+            <div style={{ color:'rgba(255,255,255,0.35)', fontSize:'0.65rem' }}>Berakhir dalam</div>
+            <div style={{ color:'#EF5350', fontWeight:800, fontSize:'1.1rem', fontVariantNumeric:'tabular-nums' }}>{mins}:{secs}</div>
+          </div>
+        </div>
+
+        {/* ── RESULT BADGES ── */}
+        <div style={{ display:'flex', gap:8, flexWrap:'wrap', marginBottom:20, ...fade(0.05) }}>
           {p.target_posisi && (
-            <div style={{ background: 'rgba(37,211,102,0.1)', border: '1px solid rgba(37,211,102,0.2)', borderRadius: 99, padding: '4px 12px', fontSize: '0.78rem', color: '#25D366', fontWeight: 600 }}>
-              🎯 {p.target_posisi}
-            </div>
+            <div style={{ background:'rgba(37,211,102,0.1)', border:'1px solid rgba(37,211,102,0.2)', borderRadius:99, padding:'4px 12px', fontSize:'0.78rem', color:'#25D366', fontWeight:600 }}>🎯 {p.target_posisi}</div>
           )}
-          <div style={{ background: 'rgba(52,183,241,0.1)', border: '1px solid rgba(52,183,241,0.2)', borderRadius: 99, padding: '4px 12px', fontSize: '0.78rem', color: '#34B7F1', fontWeight: 600 }}>
-            📊 Kesiapan {readiness}%
+          <div style={{ background:'rgba(52,183,241,0.1)', border:'1px solid rgba(52,183,241,0.2)', borderRadius:99, padding:'4px 12px', fontSize:'0.78rem', color:'#34B7F1', fontWeight:600 }}>
+            {topGenome.emoji} {topGenome.label} {gs[topGenome.key]}
           </div>
+          <div style={{ background:'rgba(255,183,77,0.1)', border:'1px solid rgba(255,183,77,0.2)', borderRadius:99, padding:'4px 12px', fontSize:'0.78rem', color:'#FFB74D', fontWeight:600 }}>📊 Kesiapan {readiness}%</div>
         </div>
 
-        {/* Diah Anna Personalized Message */}
-        <div style={{ background: 'rgba(37,211,102,0.08)', border: '1px solid rgba(37,211,102,0.2)', borderRadius: 16, padding: '16px', marginBottom: 20, ...fade(0.05) }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 12 }}>
-            <img src="/diah-anna.png" alt="Diah Anna" style={{ width: 40, height: 40, borderRadius: '50%', objectFit: 'cover', border: '2px solid rgba(37,211,102,0.3)' }} />
+        {/* ── DIAH ANNA PESAN PERSONAL ── */}
+        <div style={{ background:'rgba(37,211,102,0.08)', border:'1px solid rgba(37,211,102,0.22)', borderRadius:16, padding:'18px', marginBottom:18, ...fade(0.08) }}>
+          <div style={{ display:'flex', alignItems:'center', gap:10, marginBottom:14 }}>
+            <img src="/diah-anna.png" alt="Diah Anna" style={{ width:44, height:44, borderRadius:'50%', objectFit:'cover', border:'2px solid rgba(37,211,102,0.35)', flexShrink:0 }} />
             <div>
-              <div style={{ color: '#25D366', fontWeight: 700, fontSize: '0.82rem' }}>Diah Anna</div>
-              <div style={{ color: 'rgba(255,255,255,0.35)', fontSize: '0.68rem' }}>AI Career Mentor</div>
+              <div style={{ color:'#25D366', fontWeight:700, fontSize:'0.85rem' }}>Diah Anna</div>
+              <div style={{ color:'rgba(255,255,255,0.3)', fontSize:'0.68rem' }}>AI Career Mentor · LamarCerdas</div>
             </div>
           </div>
 
-          {/* Pesan personal */}
-          <div style={{ color: 'rgba(255,255,255,0.78)', fontSize: '0.88rem', lineHeight: 1.65, marginBottom: 16 }}>
-            {mentorMessage || `${p.nama ? `${p.nama}, b` : 'B'}erdasarkan hasil analisis saya, kamu punya potensi nyata untuk mencapai target karirmu.${p.hambatan_utama ? ` Hambatan terbesar saat ini adalah ${p.hambatan_utama}.` : ''} Saya sudah menyusun langkah-langkah spesifik yang perlu kamu lakukan.`}
+          <div style={{ color:'rgba(255,255,255,0.82)', fontSize:'0.9rem', lineHeight:1.75, marginBottom:16 }}>
+            {mentorMsg || `${p.nama ? `${p.nama}, ` : ''}saya sudah menganalisis percakapan kita dengan seksama.${p.target_posisi ? ` Tujuanmu menjadi ${p.target_posisi} itu realistis dan bisa dicapai.` : ''} ${p.hambatan_utama ? `Hambatan terbesar saat ini bukan kemampuanmu — melainkan ${p.hambatan_utama}.` : 'Kamu punya potensi nyata yang belum teroptimalkan.'}`}
           </div>
 
-          {/* GPS Roadmap dengan blur */}
-          <div style={{ borderTop: '1px solid rgba(37,211,102,0.15)', paddingTop: 14 }}>
-            <div style={{ color: 'rgba(255,255,255,0.4)', fontSize: '0.72rem', marginBottom: 8, letterSpacing: '0.5px' }}>
-              ROADMAP PERSONAL:
-            </div>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-              {gpsSteps.slice(0, 3).map((step, i) => (
-                <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: '0.83rem' }}>
-                  <span style={{ color: step.done ? '#25D366' : '#34B7F1', fontWeight: 700, fontSize: '0.8rem', flexShrink: 0 }}>
-                    {step.done ? '✓' : `${i + 1}.`}
+          {/* Roadmap setengah terbuka */}
+          <div style={{ borderTop:'1px solid rgba(37,211,102,0.15)', paddingTop:14 }}>
+            <div style={{ color:'rgba(255,255,255,0.35)', fontSize:'0.7rem', letterSpacing:'1px', marginBottom:10 }}>ROADMAP YANG SUDAH SAYA SIAPKAN:</div>
+            <div style={{ display:'flex', flexDirection:'column', gap:7 }}>
+              {gpsSteps.slice(0,3).map((step,i) => (
+                <div key={i} style={{ display:'flex', alignItems:'center', gap:8, fontSize:'0.85rem' }}>
+                  <span style={{ color: step.done ? '#25D366' : '#34B7F1', fontWeight:700, fontSize:'0.8rem', flexShrink:0 }}>
+                    {step.done ? '✓' : `${i+1}.`}
                   </span>
-                  <span style={{ color: step.done ? '#25D366' : 'rgba(255,255,255,0.7)' }}>{step.title}</span>
+                  <span style={{ color: step.done ? '#25D366' : 'rgba(255,255,255,0.75)' }}>{step.title}</span>
                 </div>
               ))}
-              {lockedSteps.map((step, i) => (
-                <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: '0.83rem', position: 'relative' }}>
-                  <span style={{ color: 'rgba(255,255,255,0.15)', fontWeight: 700, fontSize: '0.8rem', flexShrink: 0 }}>🔒</span>
-                  <span style={{ color: 'rgba(255,255,255,0.15)', filter: 'blur(4px)', userSelect: 'none' }}>{step.title}</span>
+              {lockedSteps.map((step,i) => (
+                <div key={i} style={{ display:'flex', alignItems:'center', gap:8, fontSize:'0.85rem' }}>
+                  <span style={{ color:'rgba(255,255,255,0.15)', flexShrink:0 }}>🔒</span>
+                  <span style={{ color:'rgba(255,255,255,0.12)', filter:'blur(4.5px)', userSelect:'none', flex:1 }}>{step.title}</span>
                 </div>
               ))}
             </div>
-            <div style={{ marginTop: 10, fontSize: '0.75rem', color: 'rgba(255,255,255,0.3)', fontStyle: 'italic' }}>
-              {lockedSteps.length} langkah berikutnya tersedia setelah upgrade
+            <div style={{ marginTop:12, fontSize:'0.78rem', color:'rgba(255,255,255,0.38)', lineHeight:1.55 }}>
+              Saya tahu persis langkah mana yang harus kamu ambil sekarang. Tapi untuk membukanya, kamu perlu satu keputusan kecil.
             </div>
           </div>
         </div>
 
-        {/* Premium Features */}
-        <div style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.07)', borderRadius: 16, padding: '18px', marginBottom: 16, ...fade(0.1) }}>
-          <div style={{ color: '#fff', fontWeight: 800, fontSize: '0.95rem', marginBottom: 4 }}>
-            🎯 Career GPS Kamu Sudah Siap
+        {/* ── APA YANG KAMU DAPATKAN ── */}
+        <div style={{ background:'rgba(255,255,255,0.03)', border:'1px solid rgba(255,255,255,0.07)', borderRadius:16, padding:'18px', marginBottom:14, ...fade(0.14) }}>
+          <div style={{ color:'#fff', fontWeight:800, fontSize:'1rem', marginBottom:4 }}>🎯 Career GPS Kamu Sudah Siap</div>
+          <div style={{ color:'rgba(255,255,255,0.38)', fontSize:'0.8rem', marginBottom:16, lineHeight:1.5 }}>
+            Satu paket lengkap untuk memperpendek jarak antara kamu hari ini dan karir yang kamu inginkan.
           </div>
-          <div style={{ color: 'rgba(255,255,255,0.4)', fontSize: '0.8rem', marginBottom: 16, lineHeight: 1.5 }}>
-            Buka roadmap lengkap, AI mentor tanpa batas, dan progress tracking personal.
-          </div>
-
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 9 }}>
-            {PREMIUM_FEATURES.map((f, i) => (
-              <div key={i} style={{ display: 'flex', alignItems: 'flex-start', gap: 10 }}>
-                <span style={{ fontSize: '1rem', flexShrink: 0 }}>{f.icon}</span>
-                <span style={{ color: 'rgba(255,255,255,0.7)', fontSize: '0.83rem', lineHeight: 1.4 }}>{f.text}</span>
+          <div style={{ display:'flex', flexDirection:'column', gap:11 }}>
+            {PREMIUM_FEATURES.map((f,i) => (
+              <div key={i} style={{ display:'flex', alignItems:'flex-start', gap:10 }}>
+                <span style={{ fontSize:'1.05rem', flexShrink:0, marginTop:1 }}>{f.icon}</span>
+                <span style={{ color:'rgba(255,255,255,0.72)', fontSize:'0.84rem', lineHeight:1.5 }}>{f.text}</span>
               </div>
             ))}
           </div>
         </div>
 
-        {/* Yang Tetap Gratis */}
-        <div style={{ background: 'rgba(37,211,102,0.04)', border: '1px solid rgba(37,211,102,0.1)', borderRadius: 12, padding: '14px', ...fade(0.15) }}>
-          <div style={{ color: 'rgba(255,255,255,0.4)', fontSize: '0.72rem', marginBottom: 8, letterSpacing: '0.5px' }}>SELALU GRATIS:</div>
-          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '5px 8px' }}>
+        {/* ── FREE TIER ── */}
+        <div style={{ background:'rgba(37,211,102,0.04)', border:'1px solid rgba(37,211,102,0.1)', borderRadius:12, padding:'14px', marginBottom:8, ...fade(0.18) }}>
+          <div style={{ color:'rgba(255,255,255,0.3)', fontSize:'0.68rem', letterSpacing:'1px', marginBottom:8 }}>SELALU GRATIS:</div>
+          <div style={{ display:'flex', flexWrap:'wrap', gap:'5px 12px' }}>
             {FREE_FEATURES.map(f => (
-              <span key={f} style={{ color: '#25D366', fontSize: '0.75rem' }}>✓ {f}</span>
+              <span key={f} style={{ color:'rgba(37,211,102,0.7)', fontSize:'0.75rem' }}>✓ {f}</span>
             ))}
           </div>
         </div>
 
+        {/* ── TRIGGER REF untuk IntersectionObserver ── */}
+        <div ref={ctaTriggerRef} style={{ height:1 }} />
       </div>
 
-      {/* ── Fixed Bottom CTAs ── */}
+      {/* ── FIXED BOTTOM: muncul bertahap setelah scroll habis ── */}
       <div style={{
-        position: 'fixed', bottom: 0, left: '50%', transform: 'translateX(-50%)',
-        width: '100%', maxWidth: 480, padding: '14px 18px 32px',
-        background: 'linear-gradient(to top, #0a0f0d 80%, transparent)',
+        position:'fixed', bottom:0, left:'50%', transform:'translateX(-50%)',
+        width:'100%', maxWidth:480, padding:'16px 18px 34px',
+        background:'linear-gradient(to top, #0a0f0d 82%, transparent)',
+        opacity: ctaVisible ? 1 : 0,
+        transition:'opacity 0.5s ease',
+        pointerEvents: ctaVisible ? 'auto' : 'none',
       }}>
-        {/* Pricing hint */}
-        <div style={{ textAlign: 'center', marginBottom: 10 }}>
-          <span style={{ color: '#FFB74D', fontWeight: 800, fontSize: '1.1rem' }}>Rp29.000</span>
-          <span style={{ color: 'rgba(255,255,255,0.35)', fontSize: '0.78rem' }}> / bulan · batalkan kapan saja</span>
+
+        {/* Pricing — muncul 600ms setelah CTA area */}
+        <div style={{
+          opacity: priceRevealed ? 1 : 0,
+          transform: priceRevealed ? 'none' : 'translateY(8px)',
+          transition:'all 0.4s ease',
+          textAlign:'center', marginBottom:10,
+        }}>
+          {/* Harga coret */}
+          <div style={{ display:'flex', alignItems:'center', justifyContent:'center', gap:10, marginBottom:2 }}>
+            <span style={{ color:'rgba(255,255,255,0.25)', fontSize:'0.85rem', textDecoration:'line-through' }}>Rp599.000/bln</span>
+            <span style={{ background:'#EF5350', color:'#fff', fontSize:'0.65rem', fontWeight:800, padding:'2px 7px', borderRadius:99 }}>HEMAT 67%</span>
+          </div>
+          <div style={{ display:'flex', alignItems:'baseline', justifyContent:'center', gap:4 }}>
+            <span style={{ color:'#FFB74D', fontWeight:900, fontSize:'1.5rem' }}>Rp199.000</span>
+            <span style={{ color:'rgba(255,255,255,0.35)', fontSize:'0.8rem' }}>/bulan</span>
+          </div>
+          <div style={{ color:'rgba(255,255,255,0.25)', fontSize:'0.7rem', marginTop:1 }}>
+            Semua fitur premium · Unlimited · Batalkan kapan saja
+          </div>
         </div>
+
+        {/* Scarcity repeat kecil */}
+        {priceRevealed && (
+          <div style={{ display:'flex', justifyContent:'center', alignItems:'center', gap:6, marginBottom:10 }}>
+            <span style={{ width:6, height:6, borderRadius:'50%', background:'#EF5350', display:'inline-block', animation:'pulse 1.5s infinite' }} />
+            <span style={{ color:'rgba(239,83,80,0.8)', fontSize:'0.72rem', fontWeight:600 }}>
+              {SLOTS_LEFT} slot tersisa · Harga naik setelah {mins}:{secs}
+            </span>
+          </div>
+        )}
 
         {/* Premium CTA */}
         <button
           onClick={() => handleLogin('premium')}
           disabled={loginLoading}
           style={{
-            width: '100%', padding: '15px', marginBottom: 10,
-            background: loginLoading ? '#333' : 'linear-gradient(135deg, #25D366, #128C7E)',
-            color: '#fff', fontWeight: 800, fontSize: '1rem',
-            borderRadius: 14, border: 'none', cursor: loginLoading ? 'not-allowed' : 'pointer',
-            boxShadow: loginLoading ? 'none' : '0 4px 20px rgba(37,211,102,0.45)',
-            display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
+            width:'100%', padding:'15px', marginBottom:9,
+            background: loginLoading ? '#333' : 'linear-gradient(135deg,#25D366,#128C7E)',
+            color:'#fff', fontWeight:800, fontSize:'1rem',
+            borderRadius:14, border:'none', cursor: loginLoading ? 'not-allowed' : 'pointer',
+            boxShadow: loginLoading ? 'none' : '0 4px 22px rgba(37,211,102,0.45)',
+            display:'flex', alignItems:'center', justifyContent:'center', gap:8,
           }}>
-          {loginLoading && plan === 'premium' ? '⏳ Mengarahkan...' : '🚀 Upgrade Premium — Buka Career GPS'}
+          {loginLoading && plan==='premium' ? '⏳ Mengarahkan...' : '🚀 Upgrade Premium — Buka Career GPS'}
         </button>
 
         {/* Free CTA */}
@@ -196,14 +263,18 @@ export default function Paywall() {
           onClick={() => handleLogin('free')}
           disabled={loginLoading}
           style={{
-            width: '100%', padding: '12px',
-            background: 'transparent', border: '1px solid rgba(255,255,255,0.15)',
-            color: 'rgba(255,255,255,0.55)', fontWeight: 600, fontSize: '0.85rem',
-            borderRadius: 12, cursor: loginLoading ? 'not-allowed' : 'pointer',
+            width:'100%', padding:'11px',
+            background:'transparent', border:'1px solid rgba(255,255,255,0.12)',
+            color:'rgba(255,255,255,0.45)', fontWeight:600, fontSize:'0.83rem',
+            borderRadius:11, cursor: loginLoading ? 'not-allowed' : 'pointer',
           }}>
-          {loginLoading && plan === 'free' ? '⏳ Mengarahkan...' : 'Simpan Hasil Gratis — Tanpa Premium'}
+          {loginLoading && plan==='free' ? '⏳ Mengarahkan...' : 'Simpan Hasil Gratis — Akses Terbatas'}
         </button>
       </div>
+
+      <style>{`
+        @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.4} }
+      `}</style>
     </div>
   )
 }
