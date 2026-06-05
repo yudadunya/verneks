@@ -742,7 +742,7 @@ export default function Chat({ user, chatMessages = [], setChatMessages }) {
 
   const callCoachApi = async (history) => {
     try {
-      const data = await apiFetch('/api/career-coach', { messages: history, userId: user?.id || null })
+      const data = await apiFetch('/api/career-coach', { messages: history, userId: user?.id || null, plan: plan || 'free' })
       setCoachHistory(prev => [...prev, { role: 'assistant', content: data.reply }])
       pushBot(data.reply, null)
     } catch { pushBot('Diah Anna lagi sibuk sebentar, coba lagi ya! 🙏') }
