@@ -13,8 +13,8 @@ const PROVIDER = process.env.AI_PROVIDER || 'cerebras'
 
 const MODELS = {
   cerebras: {
-    fast:  'llama-4-scout-17b-16e-instruct', // sangat cepat, gratis tier tersedia
-    smart: 'llama-4-maverick-17b-128e-instruct',  // lebih kuat untuk ekstraksi & analisis
+    fast:  'gpt-oss-120b',
+    smart: 'gpt-oss-120b',
   },
   claude: {
     fast:  'claude-haiku-4-5-20251001',
