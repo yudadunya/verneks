@@ -65,7 +65,30 @@ export default function Chat({ user, chatMessages = [], setChatMessages }) {
   const [mode, setMode]                 = useState('menu')
   const [cvText, setCvText]             = useState('')
   const [interview, setInterview]       = useState({ position: '', level: '', messages: [], qNum: 0 })
-  const [coachHistory, setCoachHistory] = useState([])
+  // coachHistory persistent — baca dari localStorage agar Diah Anna ingat konteks lintas sesi
+  const coachKey = user?.id ? `lc_coach_${user.id}` : null
+  const [coachHistory, setCoachHistoryRaw] = useState(() => {
+    if (!coachKey) return []
+    try {
+      const saved = localStorage.getItem(coachKey)
+      if (saved) {
+        const parsed = JSON.parse(saved)
+        if (Array.isArray(parsed) && parsed.length > 0) return parsed
+      }
+    } catch {}
+    return []
+  })
+
+  // Wrapper setCoachHistory yang auto-save ke localStorage
+  const setCoachHistory = (updater) => {
+    setCoachHistoryRaw(prev => {
+      const next = typeof updater === 'function' ? updater(prev) : updater
+      if (coachKey) {
+        try { localStorage.setItem(coachKey, JSON.stringify(next.slice(-30))) } catch {}
+      }
+      return next
+    })
+  }
   const [cvMakerInfo, setCvMakerInfo]   = useState({ text: '', format: '' })
   const [showOnboarding, setShowOnboarding] = useState(false)
 
@@ -390,9 +413,12 @@ export default function Chat({ user, chatMessages = [], setChatMessages }) {
   }
 
   const startCoach = async () => {
-    // coach unlimited — langsung masuk
-    setMode('coach'); setCoachHistory([])
-    pushBot('Halo! Aku Diah Anna 💙\n\nMau ngobrolin apa soal karir kamu?')
+    setMode('coach')
+    // Jangan reset coachHistory — Diah Anna harus ingat konteks sebelumnya
+    if (coachHistory.length === 0) {
+      pushBot('Halo! Aku Diah Anna 💙\n\nMau ngobrolin apa soal karir kamu?')
+    }
+    // Kalau sudah ada history, langsung aktif tanpa greeting
   }
 
   // ── API calls ────────────────────────────────────────────────────────────
