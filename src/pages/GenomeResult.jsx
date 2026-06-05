@@ -94,16 +94,16 @@ export default function GenomeResult() {
 
         {/* 2. CAREER READINESS */}
         <div style={{ background:'rgba(255,255,255,0.04)', border:'1px solid rgba(255,255,255,0.08)', borderRadius:16, padding:'18px', marginBottom:16, ...fade(0.07) }}>
-          <div style={{ display:'flex', justifyContent:'space-between', alignItems:'flex-start', marginBottom:12 }}>
-            <div>
-              <div style={{ color:'#fff', fontWeight:700, fontSize:'0.92rem', marginBottom:2 }}>📊 Career Readiness</div>
-              <button onClick={() => setShowReadiness(!showReadiness)} style={{ background:'none', border:'none', color:'rgba(255,255,255,0.3)', fontSize:'0.7rem', cursor:'pointer', padding:0 }}>
+          <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:10 }}>
+            <div style={{ color:'#fff', fontWeight:700, fontSize:'0.92rem' }}>📊 Career Readiness</div>
+            <div style={{ textAlign:'right' }}>
+              <div style={{ color:'#25D366', fontWeight:900, fontSize:'1.5rem', lineHeight:1 }}>{readiness}%</div>
+              <button onClick={() => setShowReadiness(!showReadiness)} style={{ background:'none', border:'none', color:'rgba(52,183,241,0.7)', fontSize:'0.68rem', cursor:'pointer', padding:0, textDecoration:'underline', textUnderlineOffset:'2px' }}>
                 {showReadiness ? '▲ sembunyikan' : '▾ dihitung dari apa?'}
               </button>
             </div>
-            <div style={{ color:'#25D366', fontWeight:900, fontSize:'1.5rem', lineHeight:1 }}>{readiness}%</div>
           </div>
-          <div style={{ background:'rgba(255,255,255,0.07)', borderRadius:99, height:8, overflow:'hidden', marginBottom: showReadiness ? 14 : 0 }}>
+          <div style={{ background:'rgba(255,255,255,0.07)', borderRadius:99, height:8, overflow:'hidden', marginBottom: showReadiness ? 14 : 6 }}>
             <div style={{ background:'linear-gradient(90deg,#25D366,#34B7F1)', width: revealed ? `${readiness}%` : '0%', height:'100%', borderRadius:99, transition:'width 1.3s ease 0.3s' }} />
           </div>
           {showReadiness && (
