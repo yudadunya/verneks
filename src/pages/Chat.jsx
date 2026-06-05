@@ -67,10 +67,31 @@ export default function Chat({ user, chatMessages = [], setChatMessages }) {
   const [interview, setInterview]       = useState({ position: '', level: '', messages: [], qNum: 0 })
   const [coachHistory, setCoachHistory] = useState([])
   const [cvMakerInfo, setCvMakerInfo]   = useState({ text: '', format: '' })
-  const [showOnboarding, setShowOnboarding] = useState(() => {
-    if (!ONBOARDING_KEY) return false
-    return !localStorage.getItem(ONBOARDING_KEY)
-  })
+  const [showOnboarding, setShowOnboarding] = useState(false)
+
+  // Skip onboarding kalau user sudah punya profil dari Discovery
+  useEffect(() => {
+    if (!user?.id) return
+    const key = `onboarded_${user.id}`
+    // Sudah pernah onboarding sebelumnya
+    if (localStorage.getItem(key)) { setShowOnboarding(false); return }
+    // Cek apakah sudah punya career profile dari Discovery
+    supabase
+      .from('user_career_profiles')
+      .select('user_id')
+      .eq('user_id', user.id)
+      .maybeSingle()
+      .then(({ data }) => {
+        if (data) {
+          // Sudah punya profil — skip onboarding, tandai sudah selesai
+          localStorage.setItem(key, '1')
+          setShowOnboarding(false)
+        } else {
+          // Belum ada profil — tampilkan onboarding
+          setShowOnboarding(true)
+        }
+      })
+  }, [user?.id])
   const handleOnboardingDone = (data) => {
     if (ONBOARDING_KEY) localStorage.setItem(ONBOARDING_KEY, '1')
     setShowOnboarding(false)
