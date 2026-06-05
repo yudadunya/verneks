@@ -110,18 +110,6 @@ export default function Paywall() {
 
       <div style={{ padding:'22px 18px', maxWidth:480, margin:'0 auto', paddingBottom: ctaVisible ? '260px' : '40px', transition:'padding-bottom 0.4s ease' }}>
 
-        {/* ── SCARCITY BANNER ── */}
-        <div style={{ background:'rgba(239,83,80,0.12)', border:'1px solid rgba(239,83,80,0.3)', borderRadius:12, padding:'10px 14px', marginBottom:20, display:'flex', justifyContent:'space-between', alignItems:'center', ...fade(0) }}>
-          <div>
-            <div style={{ color:'#EF5350', fontWeight:700, fontSize:'0.82rem' }}>🔥 Penawaran Terbatas</div>
-            <div style={{ color:'rgba(255,255,255,0.45)', fontSize:'0.72rem' }}>Hanya {SLOTS_LEFT} slot tersisa hari ini</div>
-          </div>
-          <div style={{ textAlign:'right' }}>
-            <div style={{ color:'rgba(255,255,255,0.35)', fontSize:'0.65rem' }}>Berakhir dalam</div>
-            <div style={{ color:'#EF5350', fontWeight:800, fontSize:'1.1rem', fontVariantNumeric:'tabular-nums' }}>{mins}:{secs}</div>
-          </div>
-        </div>
-
         {/* ── RESULT BADGES ── */}
         <div style={{ display:'flex', gap:8, flexWrap:'wrap', marginBottom:20, ...fade(0.05) }}>
           {p.target_posisi && (
@@ -233,13 +221,20 @@ export default function Paywall() {
           </div>
         </div>
 
-        {/* Scarcity repeat kecil */}
+        {/* Scarcity — lebih tegas di dekat harga */}
         {priceRevealed && (
-          <div style={{ display:'flex', justifyContent:'center', alignItems:'center', gap:6, marginBottom:10 }}>
-            <span style={{ width:6, height:6, borderRadius:'50%', background:'#EF5350', display:'inline-block', animation:'pulse 1.5s infinite' }} />
-            <span style={{ color:'rgba(239,83,80,0.8)', fontSize:'0.72rem', fontWeight:600 }}>
-              {SLOTS_LEFT} slot tersisa · Harga naik setelah {mins}:{secs}
-            </span>
+          <div style={{ background:'rgba(239,83,80,0.1)', border:'1px solid rgba(239,83,80,0.25)', borderRadius:10, padding:'9px 14px', marginBottom:12, display:'flex', justifyContent:'space-between', alignItems:'center' }}>
+            <div style={{ display:'flex', alignItems:'center', gap:7 }}>
+              <span style={{ width:7, height:7, borderRadius:'50%', background:'#EF5350', display:'inline-block', animation:'pulse 1.5s infinite', flexShrink:0 }} />
+              <div>
+                <div style={{ color:'#EF5350', fontWeight:700, fontSize:'0.78rem' }}>🔥 Penawaran Terbatas</div>
+                <div style={{ color:'rgba(255,255,255,0.4)', fontSize:'0.68rem' }}>Hanya {SLOTS_LEFT} slot tersisa hari ini</div>
+              </div>
+            </div>
+            <div style={{ textAlign:'right', flexShrink:0, marginLeft:10 }}>
+              <div style={{ color:'rgba(255,255,255,0.3)', fontSize:'0.62rem' }}>Harga naik dalam</div>
+              <div style={{ color:'#EF5350', fontWeight:800, fontSize:'1rem', fontVariantNumeric:'tabular-nums' }}>{mins}:{secs}</div>
+            </div>
           </div>
         )}
 
