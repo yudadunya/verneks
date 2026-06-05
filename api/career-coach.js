@@ -6,98 +6,117 @@ const supabase = createClient(
   process.env.SUPABASE_SERVICE_ROLE_KEY
 )
 
-// ── Stage detection: Diah Anna tahu sedang di fase apa ──
 function detectStage(profile, growthState) {
   const sesi     = profile?.sesi_count || 0
   const complete = profile?.profile_completeness || 0
   const stage    = growthState?.career_stage || ''
-
-  // DISCOVERY: sesi awal, profil belum lengkap
   if (sesi <= 3 || complete < 40) return 'discovery'
-
-  // CONVERSION: profil cukup, tapi belum ada action nyata
   if (complete >= 40 && complete < 70 && !profile?.progress_lamaran) return 'conversion'
-
-  // ACTIVATION: user sudah aktif melamar / dalam proses
   if (profile?.progress_lamaran || stage === 'Career Professional' || stage === 'Career Expert') return 'activation'
-
-  // INSIGHT: default — sudah kenal, kasih nilai lebih
   return 'insight'
 }
 
-// ── Instruksi per stage ──
 function buildStageInstructions(stage, profile, growthState) {
-  const nama = profile?.nama ? `, ${profile.nama}` : ''
-
   const stageMap = {
     discovery: `
-KAMU SEDANG DI FASE: DISCOVERY
-User baru atau belum banyak kamu kenal. Prioritas: bangun koneksi + gali data profil secara natural.
-
-Tujuan sesi ini:
-- Buat user merasa nyaman dan dipahami
-- Gali 1-2 informasi penting per sesi (posisi, target, tantangan) — JANGAN interogasi
-- Setiap info yang mereka kasih, acknowledge dulu baru tanya lanjutan
-
-Yang perlu digali (natural, satu per satu sesuai flow):
-${!profile?.posisi_saat_ini ? '- [ ] Posisi/pekerjaan saat ini' : ''}
-${!profile?.target_posisi   ? '- [ ] Goal atau target karir'     : ''}
-${!profile?.tantangan_karir ? '- [ ] Tantangan yang sedang dihadapi' : ''}
-${!profile?.industri        ? '- [ ] Industri atau bidang kerja'  : ''}
-
-Cara menggali: selipkan pertanyaan dalam konteks advice, bukan langsung nanya.
-Contoh: "Supaya saran aku lebih tepat sasaran — kamu sekarang masih di [industri] atau udah switch?"`,
+FASE: DISCOVERY — Bangun koneksi, gali data natural.
+- Buat user merasa dipahami dulu sebelum kasih advice
+- Gali 1-2 info per sesi (posisi, target, tantangan) — jangan interogasi
+- Selipkan pertanyaan dalam konteks advice, bukan langsung nanya
+${!profile?.posisi_saat_ini ? '- Belum tahu posisi saat ini — gali natural' : ''}
+${!profile?.target_posisi   ? '- Belum tahu target karir — gali natural'    : ''}
+${!profile?.tantangan_karir ? '- Belum tahu tantangan utama — gali natural'  : ''}`,
 
     insight: `
-KAMU SEDANG DI FASE: INSIGHT
-Kamu sudah cukup kenal user ini. Berikan nilai lebih — insight mendalam, bukan sekedar info generik.
-
-Yang harus dilakukan:
-- Referensikan detail spesifik dari profil mereka secara natural
-- Berikan advice yang sangat spesifik dan actionable berdasarkan situasi NYATA mereka
-- Tunjukkan pattern atau insight yang mungkin belum mereka sadari sendiri
-- Sesekali mirror balik growth mereka ("kamu udah jauh banget dari waktu pertama kita ngobrol")
-
-${growthState?.current_focus ? `Focus saat ini: ${growthState.current_focus}` : ''}
-${growthState?.next_milestone ? `Next milestone: ${growthState.next_milestone}` : ''}`,
+FASE: INSIGHT — Berikan nilai lebih, insight mendalam dan personal.
+- Referensikan detail spesifik profil mereka
+- Tunjukkan pattern yang belum mereka sadari
+- Sesekali mirror pertumbuhan mereka
+${growthState?.current_focus    ? `Focus: ${growthState.current_focus}`   : ''}
+${growthState?.next_milestone   ? `Milestone: ${growthState.next_milestone}` : ''}`,
 
     conversion: `
-KAMU SEDANG DI FASE: CONVERSION
-Kamu sudah kenal user ini dengan baik. Saatnya dorong mereka ke aksi nyata.
-
-Yang harus dilakukan:
-- Berikan advice yang sangat konkret dan spesifik
-- Highlight gap antara posisi sekarang dan target mereka — dengan empathy
-- Tunjukkan bahwa tools premium (Mock Interview, CV Review mendalam) bisa mempercepat perjalanan mereka
-- Kalau konteks relevan, sebutkan secara natural fitur yang bisa bantu mereka (tanpa jualan keras)
-
-Jangan pushy. Buat mereka merasa bahwa upgrade adalah keputusan MEREKA karena masuk akal.`,
+FASE: CONVERSION — Dorong ke aksi nyata.
+- Advice sangat konkret dan spesifik
+- Highlight gap antara posisi sekarang dan target — dengan empati
+- Buat mereka lihat bahwa ada jalan yang jelas`,
 
     activation: `
-KAMU SEDANG DI FASE: ACTIVATION
-User sudah aktif dalam proses lamaran. Mereka butuh support taktis dan motivasi.
+FASE: ACTIVATION — Support taktis, user sedang aktif melamar.
+- Fokus kebutuhan praktis dan mendesak
+- Acknowledge progress dengan tulus
+- Mode "coach di tepi lapangan" — cepat, akurat, encouraging
+${profile?.progress_lamaran ? `Update: ${profile.progress_lamaran}` : ''}`,
+  }
+  return stageMap[stage] || stageMap.insight
+}
 
-Yang harus dilakukan:
-- Fokus pada kebutuhan PRAKTIS dan MENDESAK (persiapan interview, negotiasi, dll)
-- Acknowledge setiap progress dengan tulus dan spesifik
-- Kasih boost percaya diri berdasarkan kekuatan nyata mereka
-- Siap untuk mode "coach di tepi lapangan" — cepat, akurat, encouraging
+// ── Sistem persuasi untuk user free ──────────────────────────────────────────
+function buildFreePersuasion(profile, growthState, msgCount) {
+  const target  = profile?.target_posisi || 'target karirmu'
+  const gaps    = profile?.skill_gaps || profile?.gap_skills || []
+  const topGap  = gaps[0] || null
+  const readiness = growthState?.progress_percent || profile?.career_readiness || 0
 
-${profile?.progress_lamaran ? `Update terbaru: ${profile.progress_lamaran}` : ''}`,
+  // Intensitas persuasi naik seiring jumlah pesan
+  const intensity = msgCount <= 3 ? 'soft' : msgCount <= 7 ? 'medium' : 'strong'
+
+  const persuasionByIntensity = {
+    soft: `
+KONTEKS PLAN: User ini adalah free user. Kamu genuinely ingin membantu mereka lebih jauh.
+Sesekali (tidak setiap pesan), hint secara natural bahwa ada lebih banyak yang bisa kamu berikan.
+Cara halus: setelah kasih advice bagus, tambahkan 1 kalimat seperti:
+- "Sebenernya ada langkah yang lebih spesifik untuk situasimu, tapi butuh data lebih lengkap dari Career GPS."
+- "Kalau kamu mau roadmap yang lebih detail, aku udah siapkan — tinggal dibuka."
+JANGAN sebut harga. JANGAN jualan keras. Maksimal 1 hint per 3 pesan.`,
+
+    medium: `
+KONTEKS PLAN: Free user, sudah cukup sesi. Waktunya dorong lebih kuat — tapi tetap halus.
+Teknik yang boleh dipakai (pilih 1 per respons, tidak setiap respons):
+
+1. CURIOSITY GAP: "Aku lihat ada pola menarik di situasimu... ${topGap ? `soal ${topGap} ini` : 'soal hambatan utamamu'} bukan yang kamu kira. Mau aku kasih tau?"
+   → Lalu beri insight nyata (gratis), kemudian: "Detail roadmapnya ada di Career GPS kamu."
+
+2. FUTURE PACING: "Bayangkan 6 bulan dari sekarang — kalau kamu eksekusi langkah yang tepat, ${target} itu realistis banget.${readiness > 0 ? ` Kamu udah ${readiness}% siap,` : ''} tinggal arahnya yang perlu diperjelas."
+   → Lalu hint: "Aku udah susun langkah-langkahnya di roadmap kamu."
+
+3. PERSONAL MIRROR: Sebutkan 1 kekuatan spesifik yang kamu lihat dari percakapan, lalu: "Sayangnya tanpa roadmap yang jelas, kekuatan ini sering terbuang sia-sia."
+
+PENTING: Setelah hint, selalu lanjut bantu dengan genuine advice. Jangan berhenti di jualan.`,
+
+    strong: `
+KONTEKS PLAN: Free user yang sudah banyak ngobrol. Ini momen untuk nudge yang lebih jelas.
+Di 1-2 respons dalam sesi ini, gunakan teknik ini:
+
+TEKNIK UTAMA — "Tunjuk Lalu Gate":
+1. Berikan insight/advice yang benar-benar bagus dan spesifik (gratis)
+2. Di akhir, tambahkan dengan natural:
+   "Jujur — untuk situasimu yang spesifik ini, ada 1 langkah yang jauh lebih efektif. Itu yang aku tulis di Career GPS-mu. Mau dibuka?"
+   ATAU:
+   "Aku sebenernya sudah siapkan roadmap 6 bulan khusus untuk ${target}. Skill yang harus dipelajari, urutan belajar, target per minggu — semua ada. Tinggal unlock."
+
+TEKNIK SEKUNDER — "Batas Natural":
+Kalau user tanya sesuatu yang butuh depth lebih: "Untuk jawab ini dengan tepat, aku butuh lihat roadmap lengkap kamu dulu. Kalau Career GPS kamu sudah terbuka, bisa aku kasih jawaban yang jauh lebih akurat."
+
+ATURAN KERAS:
+- Setiap hint HARUS didahului nilai nyata — jangan hint kosong
+- Jangan sebut "Premium" atau harga — cukup "Career GPS kamu"
+- Maksimal 1 teknik kuat per respons
+- Tetap genuinely helpful, bukan sales robot`,
   }
 
-  return stageMap[stage] || stageMap.insight
+  return persuasionByIntensity[intensity]
 }
 
 export default async function handler(req, res) {
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' })
 
-  const { messages: rawMessages, userId } = req.body
-  const messages = rawMessages.slice(-16)
+  const { messages: rawMessages, userId, plan = 'free' } = req.body
+  const messages  = rawMessages.slice(-16)
+  const msgCount  = messages.filter(m => m.role === 'user').length
 
   if (!messages?.length) return res.status(400).json({ error: 'Pesan tidak boleh kosong.' })
 
-  // ── Load profil + growth state ──
   let careerProfile = null
   let growthState   = null
 
@@ -110,72 +129,62 @@ export default async function handler(req, res) {
       ])
       careerProfile = profileRes.data
       growthState   = growthRes.data
-
-      // Inject next action ke profile untuk konteks
       if (nextActionRes.data) careerProfile = { ...careerProfile, _next_action: nextActionRes.data }
     } catch (e) {
       console.error('[career-coach] load error:', e.message)
     }
   }
 
-  // ── Deteksi stage ──
-  const currentStage = detectStage(careerProfile, growthState)
+  const currentStage      = detectStage(careerProfile, growthState)
   const stageInstructions = buildStageInstructions(currentStage, careerProfile, growthState)
+  const isFree            = !plan || plan === 'free'
+  const persuasionLayer   = isFree ? buildFreePersuasion(careerProfile, growthState, msgCount) : ''
 
-  // ── Bangun konteks personal ──
   let personalContext = ''
   if (careerProfile?.summary) {
-    const sesi = careerProfile.sesi_count || 1
+    const sesi    = careerProfile.sesi_count || 1
     const details = []
-    if (careerProfile.nama)              details.push(`Nama: ${careerProfile.nama}`)
-    if (careerProfile.usia)              details.push(`Usia: ${careerProfile.usia}`)
-    if (careerProfile.domisili)          details.push(`Domisili: ${careerProfile.domisili}`)
-    if (careerProfile.posisi_saat_ini)   details.push(`Posisi: ${careerProfile.posisi_saat_ini}`)
-    if (careerProfile.perusahaan)        details.push(`Perusahaan: ${careerProfile.perusahaan}`)
-    if (careerProfile.industri)          details.push(`Industri: ${careerProfile.industri}`)
-    if (careerProfile.lama_pengalaman)   details.push(`Pengalaman: ${careerProfile.lama_pengalaman}`)
-    if (careerProfile.skill_utama?.length) details.push(`Skills: ${careerProfile.skill_utama.join(', ')}`)
-    if (careerProfile.target_posisi)     details.push(`Target: ${careerProfile.target_posisi}`)
-    if (careerProfile.target_gaji)       details.push(`Target gaji: ${careerProfile.target_gaji}`)
-    if (careerProfile.gaji_sekarang)     details.push(`Gaji saat ini: ${careerProfile.gaji_sekarang}`)
-    if (careerProfile.perusahaan_impian) details.push(`Perusahaan impian: ${careerProfile.perusahaan_impian}`)
-    if (careerProfile.timeline_karir)    details.push(`Timeline: ${careerProfile.timeline_karir}`)
-    if (careerProfile.tantangan_karir)   details.push(`Tantangan: ${careerProfile.tantangan_karir}`)
-    if (careerProfile.hambatan)          details.push(`Hambatan: ${careerProfile.hambatan}`)
-    if (careerProfile.motivasi)          details.push(`Motivasi: ${careerProfile.motivasi}`)
-    if (careerProfile.progress_lamaran)  details.push(`Progress lamaran: ${careerProfile.progress_lamaran}`)
-    if (careerProfile.emotional_state)   details.push(`Kondisi emosi: ${careerProfile.emotional_state}`)
-
-    // Career DNA
-    const dna = careerProfile.career_dna
-    if (dna) {
-      if (dna.ambisi)            details.push(`Ambisi: ${dna.ambisi}`)
-      if (dna.nilai_kerja)       details.push(`Nilai kerja: ${dna.nilai_kerja}`)
-      if (dna.kekhawatiran_utama)details.push(`Kekhawatiran: ${dna.kekhawatiran_utama}`)
-    }
-
-    // Next action
-    if (careerProfile._next_action) {
-      details.push(`Next action yang direkomendasikan: ${careerProfile._next_action.title}`)
-    }
-
-    // Growth
-    if (growthState?.career_stage)    details.push(`Career Stage: ${growthState.career_stage}`)
+    if (careerProfile.nama)               details.push(`Nama: ${careerProfile.nama}`)
+    if (careerProfile.usia)               details.push(`Usia: ${careerProfile.usia}`)
+    if (careerProfile.domisili)           details.push(`Domisili: ${careerProfile.domisili}`)
+    if (careerProfile.posisi_saat_ini)    details.push(`Posisi: ${careerProfile.posisi_saat_ini}`)
+    if (careerProfile.perusahaan)         details.push(`Perusahaan: ${careerProfile.perusahaan}`)
+    if (careerProfile.industri)           details.push(`Industri: ${careerProfile.industri}`)
+    if (careerProfile.lama_pengalaman)    details.push(`Pengalaman: ${careerProfile.lama_pengalaman}`)
+    if (careerProfile.skill_utama?.length)details.push(`Skills: ${careerProfile.skill_utama.join(', ')}`)
+    if (careerProfile.target_posisi)      details.push(`Target: ${careerProfile.target_posisi}`)
+    if (careerProfile.target_gaji)        details.push(`Target gaji: ${careerProfile.target_gaji}`)
+    if (careerProfile.gaji_sekarang)      details.push(`Gaji saat ini: ${careerProfile.gaji_sekarang}`)
+    if (careerProfile.perusahaan_impian)  details.push(`Perusahaan impian: ${careerProfile.perusahaan_impian}`)
+    if (careerProfile.timeline_karir)     details.push(`Timeline: ${careerProfile.timeline_karir}`)
+    if (careerProfile.tantangan_karir)    details.push(`Tantangan: ${careerProfile.tantangan_karir}`)
+    if (careerProfile.hambatan)           details.push(`Hambatan: ${careerProfile.hambatan}`)
+    if (careerProfile.motivasi)           details.push(`Motivasi: ${careerProfile.motivasi}`)
+    if (careerProfile.progress_lamaran)   details.push(`Progress lamaran: ${careerProfile.progress_lamaran}`)
+    if (careerProfile.emotional_state)    details.push(`Kondisi emosi: ${careerProfile.emotional_state}`)
+    if (careerProfile.career_dna?.ambisi) details.push(`Ambisi: ${careerProfile.career_dna.ambisi}`)
+    if (careerProfile.career_dna?.nilai_kerja) details.push(`Nilai kerja: ${careerProfile.career_dna.nilai_kerja}`)
+    if (careerProfile.career_dna?.kekhawatiran_utama) details.push(`Kekhawatiran: ${careerProfile.career_dna.kekhawatiran_utama}`)
+    if (careerProfile._next_action) details.push(`Next action: ${careerProfile._next_action.title}`)
+    if (growthState?.career_stage) details.push(`Career Stage: ${growthState.career_stage}`)
     if (growthState?.progress_percent !== undefined) details.push(`Progress: ${growthState.progress_percent}%`)
 
     personalContext = `
 
-=== PROFIL USER (${sesi} sesi | Stage: ${currentStage.toUpperCase()}) ===
+=== PROFIL USER (${sesi} sesi | Stage: ${currentStage.toUpperCase()} | Plan: ${plan.toUpperCase()}) ===
 ${careerProfile.summary}
 
 ${details.length ? `Detail:\n${details.map(d => `• ${d}`).join('\n')}` : ''}
 ${careerProfile.topik_dibahas?.length ? `\nTopik dibahas: ${careerProfile.topik_dibahas.join(', ')}` : ''}
 ===
-${stageInstructions}`
+${stageInstructions}
+${persuasionLayer}`
 
   } else if (userId) {
-    personalContext = `
-${buildStageInstructions('discovery', null, null)}`
+    personalContext = buildStageInstructions('discovery', null, null) + persuasionLayer
+  } else {
+    // Guest / tidak login — tidak ada persuasi
+    personalContext = ''
   }
 
   try {
