@@ -659,14 +659,7 @@ export default function Chat({ user, chatMessages = [], setChatMessages }) {
       // Beri jarak agar tidak langsung muncul setelah reply AI
       await new Promise(r => setTimeout(r, 1200))
       pushBot(
-        'Aku menemukan sesuatu yang menarik. 🔍
-
-' +
-        'Berdasarkan pola percakapan kita, aku sudah bisa memetakan **Career DNA** kamu — ' +
-        'termasuk kekuatan terbesar dan gap yang paling menghambat targetmu.
-
-' +
-        'Mau lihat hasil analisisnya?',
+        `Aku menemukan sesuatu yang menarik. 🔍\n\nBerdasarkan pola percakapan kita, aku sudah bisa memetakan **Career DNA** kamu — termasuk kekuatan terbesar dan gap yang paling menghambat targetmu.\n\nMau lihat hasil analisisnya?`,
         [{ id: '__genome_reveal', label: '✅ Ya, mau lihat!' },
          { id: '__menu',         label: 'Nanti saja' }]
       )
@@ -739,27 +732,7 @@ ${fill}
       await new Promise(r => setTimeout(r, 1800))
 
       pushBot(
-        'Oke, kamu sudah lihat DNA karier kamu. 📊
-
-' +
-        'Sekarang aku mau jujur...
-
-' +
-        'Aku sebenarnya sudah menyiapkan **roadmap 6 bulan** yang sangat spesifik untuk targetmu.
-
-' +
-        'Roadmap ini berisi:
-' +
-        '✓ Skill yang harus dipelajari
-' +
-        '✓ Urutan belajar yang optimal
-' +
-        '✓ Target mingguan yang realistis
-' +
-        '✓ Progress tracking step by step
-
-' +
-        '_Career GPS tersedia di Premium._',
+        `Oke, kamu sudah lihat DNA karier kamu. 📊\n\nSekarang aku mau jujur...\n\nAku sebenarnya sudah menyiapkan **roadmap 6 bulan** yang sangat spesifik untuk targetmu.\n\nRoadmap ini berisi:\n✓ Skill yang harus dipelajari\n✓ Urutan belajar yang optimal\n✓ Target mingguan yang realistis\n✓ Progress tracking step by step\n\n_Career GPS tersedia di Premium._`,
         [{ id: '__upgrade_gps',      label: '🚀 Buka Career GPS — Premium' },
          { id: '__continue_coach',   label: 'Lanjut ngobrol dulu' }]
       )
