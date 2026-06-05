@@ -186,8 +186,6 @@ export default function Home({ user }) {
           </div>
         </div>
         <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-          <button onClick={() => navigate('/blog')} style={{ color: 'rgba(255,255,255,0.5)', fontSize: '0.82rem', fontWeight: 600, background: 'none', border: 'none', cursor: 'pointer', padding: '6px 10px' }}>Blog</button>
-          <button onClick={() => navigate('/pricing')} style={{ color: 'rgba(255,255,255,0.5)', fontSize: '0.82rem', fontWeight: 600, background: 'none', border: 'none', cursor: 'pointer', padding: '6px 10px' }}>Harga</button>
           <button onClick={handleGoogle} style={{ background: 'rgba(37,211,102,0.12)', border: '1px solid rgba(37,211,102,0.3)', color: '#25D366', borderRadius: 20, padding: '7px 16px', fontSize: '0.8rem', fontWeight: 700, cursor: 'pointer' }}>
             Mulai
           </button>
@@ -256,7 +254,7 @@ export default function Home({ user }) {
           <div style={{ background: '#0d1f12', borderRadius: 18, overflow: 'hidden', border: '1px solid rgba(37,211,102,0.15)', boxShadow: '0 20px 60px rgba(0,0,0,0.4)' }}>
             {/* Chat header */}
             <div style={{ background: '#075E54', padding: '12px 16px', display: 'flex', alignItems: 'center', gap: 12 }}>
-              <div style={{ width: 40, height: 40, borderRadius: '50%', background: 'linear-gradient(135deg, #25D366, #128C7E)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.2rem', flexShrink: 0 }}>🧠</div>
+              <img src="/diah-anna.jpg" alt="Diah Anna" style={{ width: 40, height: 40, borderRadius: '50%', objectFit: 'cover', objectPosition: 'top', flexShrink: 0 }} />
               <div>
                 <div style={{ color: '#fff', fontWeight: 700, fontSize: '0.9rem' }}>Diah Anna</div>
                 <div style={{ color: '#25D366', fontSize: '0.68rem', fontWeight: 600 }}>● AI Career Mentor • online</div>
@@ -470,11 +468,11 @@ export default function Home({ user }) {
       ══════════════════════════════════════════════════════════════════════ */}
       <section style={{ position: 'relative', zIndex: 5, padding: '40px 20px' }}>
         <Section>
-          <SectionTitle badge="AI Career Mentor" title="Kenali Diah Anna 🧠" sub="Bukan chatbot biasa. Diah Anna dilatih khusus untuk memahami lanskap karier Indonesia." light />
+          <SectionTitle badge="AI Career Mentor" title="Kenali Diah Anna" sub="Bukan chatbot biasa. Diah Anna dilatih khusus untuk memahami lanskap karier Indonesia." light />
 
           <div style={{ background: 'linear-gradient(135deg, #0d1f12, #0a1a20)', border: '1px solid rgba(37,211,102,0.2)', borderRadius: 18, padding: '20px', marginBottom: 16 }}>
             <div style={{ display: 'flex', gap: 14, marginBottom: 18 }}>
-              <div style={{ width: 56, height: 56, borderRadius: '50%', background: 'linear-gradient(135deg, #25D366, #128C7E)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.6rem', flexShrink: 0 }}>🧠</div>
+              <img src="/diah-anna.jpg" alt="Diah Anna" style={{ width: 56, height: 56, borderRadius: '50%', objectFit: 'cover', objectPosition: 'top', flexShrink: 0 }} />
               <div>
                 <div style={{ color: '#fff', fontWeight: 800, fontSize: '1rem' }}>Diah Anna</div>
                 <div style={{ color: '#25D366', fontSize: '0.75rem', fontWeight: 600 }}>AI Career Mentor • LamarCerdas</div>
@@ -554,66 +552,6 @@ export default function Home({ user }) {
       </section>
 
       {/* ══════════════════════════════════════════════════════════════════════
-          9. PREMIUM SECTION
-      ══════════════════════════════════════════════════════════════════════ */}
-      <section style={{ position: 'relative', zIndex: 5, padding: '40px 20px' }}>
-        <Section>
-          <SectionTitle badge="Upgrade" badgeColor="#CE93D8" title="Free vs Premium 👑" sub="Mulai gratis, upgrade kapan saja ketika kamu siap akselerasi." light />
-
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-            {/* Free */}
-            <div style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 16, padding: '18px' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14 }}>
-                <div>
-                  <div style={{ color: '#fff', fontWeight: 800, fontSize: '1rem' }}>Free</div>
-                  <div style={{ color: 'rgba(255,255,255,0.4)', fontSize: '0.78rem' }}>Selamanya gratis</div>
-                </div>
-                <div style={{ color: '#25D366', fontWeight: 900, fontSize: '1.3rem' }}>Rp 0</div>
-              </div>
-              {['Career Discovery Chat', 'Career Genome', 'Career Readiness Score', 'Career Gap Analysis', 'GPS Preview (3 langkah pertama)'].map(f => (
-                <div key={f} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '5px 0', borderBottom: '1px solid rgba(255,255,255,0.04)' }}>
-                  <span style={{ color: '#25D366', fontSize: '0.85rem' }}>✓</span>
-                  <span style={{ color: 'rgba(255,255,255,0.55)', fontSize: '0.82rem' }}>{f}</span>
-                </div>
-              ))}
-              <button onClick={handleGoogle} style={{ width: '100%', marginTop: 14, padding: '11px', background: 'rgba(255,255,255,0.07)', border: '1px solid rgba(255,255,255,0.15)', color: '#fff', borderRadius: 10, fontWeight: 700, fontSize: '0.85rem', cursor: 'pointer' }}>
-                Mulai Gratis
-              </button>
-            </div>
-
-            {/* Premium */}
-            <div style={{ background: 'linear-gradient(135deg, rgba(37,211,102,0.1), rgba(52,183,241,0.08))', border: '1px solid rgba(37,211,102,0.35)', borderRadius: 16, padding: '18px', position: 'relative', overflow: 'hidden' }}>
-              <div style={{ position: 'absolute', top: 12, right: 12, background: 'linear-gradient(135deg, #25D366, #128C7E)', color: '#fff', fontSize: '0.65rem', fontWeight: 800, padding: '3px 10px', borderRadius: 12 }}>POPULER</div>
-              <div style={{ marginBottom: 14 }}>
-                <div style={{ color: '#fff', fontWeight: 800, fontSize: '1rem' }}>Premium 👑</div>
-                <div style={{ display: 'flex', alignItems: 'baseline', gap: 6 }}>
-                  <span style={{ color: '#25D366', fontWeight: 900, fontSize: '1.5rem' }}>Rp 149rb</span>
-                  <span style={{ color: 'rgba(255,255,255,0.4)', fontSize: '0.78rem' }}>/bulan</span>
-                </div>
-              </div>
-              {[
-                'Semua fitur Free',
-                'Full Career GPS (bulan per bulan)',
-                'Unlimited Diah Anna AI Mentor',
-                'Weekly Coaching & Check-in',
-                'Progress Tracking Dashboard',
-                'Personalized Job Opportunities',
-                'Priority Response',
-              ].map(f => (
-                <div key={f} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '5px 0', borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
-                  <span style={{ color: '#25D366', fontSize: '0.85rem' }}>✓</span>
-                  <span style={{ color: f === 'Semua fitur Free' ? 'rgba(255,255,255,0.35)' : 'rgba(255,255,255,0.75)', fontSize: '0.82rem' }}>{f}</span>
-                </div>
-              ))}
-              <button onClick={() => navigate('/pricing')} style={{ width: '100%', marginTop: 14, padding: '13px', background: 'linear-gradient(135deg, #25D366, #128C7E)', border: 'none', color: '#fff', borderRadius: 10, fontWeight: 800, fontSize: '0.9rem', cursor: 'pointer', boxShadow: '0 4px 20px rgba(37,211,102,0.3)' }}>
-                Mulai Career GPS Premium →
-              </button>
-            </div>
-          </div>
-        </Section>
-      </section>
-
-      {/* ══════════════════════════════════════════════════════════════════════
           10. FAQ
       ══════════════════════════════════════════════════════════════════════ */}
       <section style={{ position: 'relative', zIndex: 5, padding: '40px 20px', borderTop: '1px solid rgba(255,255,255,0.05)' }}>
@@ -682,7 +620,7 @@ export default function Home({ user }) {
           © 2025 LamarCerdas. Made with 💙 for Indonesian professionals.
         </p>
         <div style={{ display: 'flex', justifyContent: 'center', gap: 16 }}>
-          {['Blog', 'Harga', 'Privacy', 'Kontak'].map(l => (
+          {['Privacy', 'Kontak'].map(l => (
             <button key={l} style={{ color: 'rgba(255,255,255,0.3)', fontSize: '0.72rem', background: 'none', border: 'none', cursor: 'pointer' }}>{l}</button>
           ))}
         </div>
