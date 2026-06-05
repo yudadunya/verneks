@@ -186,9 +186,7 @@ export default function Home({ user }) {
           </div>
         </div>
         <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-          <button onClick={handleGoogle} style={{ background: 'rgba(37,211,102,0.12)', border: '1px solid rgba(37,211,102,0.3)', color: '#25D366', borderRadius: 20, padding: '7px 16px', fontSize: '0.8rem', fontWeight: 700, cursor: 'pointer' }}>
-            Mulai
-          </button>
+
         </div>
       </nav>
 
