@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { supabase } from '../lib/supabase'
 
 const OPENING = {
   role: 'bot',
@@ -16,6 +17,13 @@ export default function Discovery() {
   const [computing, setComputing] = useState(false)
   const bottomRef = useRef(null)
   const inputRef = useRef(null)
+
+  // Cek session — kalau sudah login langsung ke dashboard
+  useEffect(() => {
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (session?.user) navigate('/dashboard')
+    })
+  }, [])
 
   // Restore dari localStorage kalau ada
   useEffect(() => {
