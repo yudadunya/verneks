@@ -248,10 +248,10 @@ export default function Home({ user }) {
                 background: i < 2 ? '#25D366' : i < 4 ? '#128C7E' : 'rgba(37,211,102,0.2)',
                 border: `1px solid ${i < 4 ? 'transparent' : 'rgba(37,211,102,0.3)'}`,
                 color: i < 4 ? '#fff' : 'rgba(255,255,255,0.4)',
-                borderRadius: 15, padding: '4px 10px', fontSize: '0.65rem', fontWeight: 700,
+                borderRadius: 20, padding: '3px 8px', fontSize: '0.5rem', fontWeight: 600,
                 whiteSpace: 'nowrap',
               }}>{s}</div>
-              {i < 5 && <div style={{ width: 14, height: 1, background: i < 3 ? '#25D366' : 'rgba(37,211,102,0.2)', flexShrink: 0 }} />}
+              {i < 5 && <div style={{ 0width: 14, height: 1, background: i < 3 ? '#25D366' : 'rgba(37,211,102,0.2)', flexShrink: 0 }} />}
             </div>
           ))}
         </div>
