@@ -177,43 +177,68 @@ export default function Chat({ user, chatMessages = [], setChatMessages }) {
 
     const firstName = (user.user_metadata?.name || user.user_metadata?.full_name || '').split(' ')[0]
 
-    // Fetch growth_state untuk personalisasi greeting
-    supabase
-      .from('user_growth_state')
-      .select('career_stage, progress_percent, current_focus, next_milestone, streak_days')
-      .eq('user_id', user.id)
-      .maybeSingle()
-      .then(({ data: g }) => {
-        let greeting
-        if (!g || !g.career_stage) {
-          // User baru — belum ada profil
-          greeting = `Halo${firstName ? ` ${firstName}` : ''}! 👋 Aku Diah Anna, AI Career Coach kamu.\n\nCeritain dong sekarang kamu di posisi apa dan mau ke mana? Kita mulai petualangan karir kamu! 🚀`
-        } else {
-          const stage = g.career_stage
-          const progress = g.progress_percent || 0
-          const focus = g.current_focus
-          const milestone = g.next_milestone
-          const streak = g.streak_days || 0
+    // Fetch growth_state + profil sekaligus untuk greeting & context injection
+    Promise.all([
+      supabase.from('user_growth_state').select('career_stage, progress_percent, current_focus, next_milestone, streak_days').eq('user_id', user.id).maybeSingle(),
+      supabase.from('user_career_profiles').select('nama, target_posisi, posisi_saat_ini, industri, tantangan_karir, career_readiness, skill_gaps').eq('user_id', user.id).maybeSingle(),
+      supabase.from('user_genome_scores').select('analytical, leadership, builder, creator, communication, risk_taking, top_strength').eq('user_id', user.id).maybeSingle(),
+    ]).then(([{ data: g }, { data: p }, { data: gs }]) => {
+      // ── Inject context ke coachHistory kalau kosong (device baru) ──
+      if (coachHistory.length === 0 && p && (p.target_posisi || p.posisi_saat_ini)) {
+        const GENOME_LABELS = { analytical: 'Analytical', leadership: 'Leadership', builder: 'Builder', creator: 'Creator', communication: 'Communication', risk_taking: 'Risk Taking' }
+        const topGenome = gs ? Object.entries(GENOME_LABELS)
+          .map(([k, label]) => ({ label, val: gs[k] || 0 }))
+          .sort((a, b) => b.val - a.val)
+          .filter(g => g.val > 0)
+          .slice(0, 3)
+          .map(g => `${g.label} (${g.val})`)
+          .join(', ') : null
 
-          const greetingByStage = {
-            'Career Explorer':    `Halo${firstName ? ` ${firstName}` : ''}! 🌱 Kamu masih di tahap eksplorasi karir (${progress}% progress).${focus ? ` Sekarang fokus: **${focus}**.` : ''} Yuk kita telusuri lebih dalam potensimu!`,
-            'Career Builder':     `Halo${firstName ? ` ${firstName}` : ''}! 🔰 Kamu udah di tahap Career Builder — bagus banget! Progress ${progress}%.${milestone ? ` Next target: **${milestone}**.` : ''} Kita gas bareng ya!`,
-            'Career Professional':`Halo${firstName ? ` ${firstName}` : ''}! ⭐ Kamu udah jadi Career Professional (${progress}% progress).${focus ? ` Fokus saat ini: **${focus}**.` : ''} Mau ningkatin ke level berikutnya?`,
-            'Career Expert':      `Halo${firstName ? ` ${firstName}` : ''}! 🏆 Impressive! Kamu sudah di level Career Expert (${progress}%).${milestone ? ` Target selanjutnya: **${milestone}**.` : ''} Apa yang mau kita capai hari ini?`,
-            'Career Leader':      `Halo${firstName ? ` ${firstName}` : ''}! 👑 Career Leader — kamu udah di puncak! Progress ${progress}%.${focus ? ` Sekarang fokusmu: **${focus}**.` : ''} Bagaimana aku bisa bantu lebih jauh?`,
-          }
+        const contextParts = [
+          `[KONTEKS USER — dari sesi Discovery sebelumnya]`,
+          p.nama                ? `Nama: ${p.nama}` : null,
+          p.posisi_saat_ini     ? `Posisi saat ini: ${p.posisi_saat_ini}` : null,
+          p.target_posisi       ? `Target posisi: ${p.target_posisi}` : null,
+          p.industri            ? `Industri: ${p.industri}` : null,
+          p.career_readiness    ? `Career Readiness: ${p.career_readiness}%` : null,
+          p.tantangan_karir     ? `Tantangan utama: ${p.tantangan_karir}` : null,
+          p.skill_gaps?.length  ? `Gap skill: ${(p.skill_gaps || []).slice(0, 4).join(', ')}` : null,
+          topGenome             ? `Career Genome (top): ${topGenome}` : null,
+          g?.career_stage       ? `Career Stage: ${g.career_stage} (${g.progress_percent || 0}%)` : null,
+        ].filter(Boolean).join('\n')
 
-          greeting = greetingByStage[stage] || `Halo${firstName ? ` ${firstName}` : ''}! 👋 Selamat datang kembali. Progress karirmu: ${progress}%. Ada yang bisa aku bantu?`
+        setCoachHistory([{ role: 'user', content: contextParts }, { role: 'assistant', content: 'Baik, aku sudah punya gambaran lengkap tentang kamu. Siap melanjutkan!' }])
+      }
 
-          if (streak >= 3) greeting += `\n\n🔥 Streak ${streak} hari — konsistensimu keren banget!`
+      // ── Greeting ──
+      let greeting
+      if (!g || !g.career_stage) {
+        greeting = `Halo${firstName ? ` ${firstName}` : ''}! 👋 Aku Diah Anna, AI Career Coach kamu.\n\nCeritain dong sekarang kamu di posisi apa dan mau ke mana? Kita mulai petualangan karir kamu! 🚀`
+      } else {
+        const stage = g.career_stage
+        const progress = g.progress_percent || 0
+        const focus = g.current_focus
+        const milestone = g.next_milestone
+        const streak = g.streak_days || 0
+
+        const greetingByStage = {
+          'Career Explorer':    `Halo${firstName ? ` ${firstName}` : ''}! 🌱 Kamu masih di tahap eksplorasi karir (${progress}% progress).${focus ? ` Sekarang fokus: **${focus}**.` : ''} Yuk kita telusuri lebih dalam potensimu!`,
+          'Career Builder':     `Halo${firstName ? ` ${firstName}` : ''}! 🔰 Kamu udah di tahap Career Builder — bagus banget! Progress ${progress}%.${milestone ? ` Next target: **${milestone}**.` : ''} Kita gas bareng ya!`,
+          'Career Professional':`Halo${firstName ? ` ${firstName}` : ''}! ⭐ Kamu udah jadi Career Professional (${progress}% progress).${focus ? ` Fokus saat ini: **${focus}**.` : ''} Mau ningkatin ke level berikutnya?`,
+          'Career Expert':      `Halo${firstName ? ` ${firstName}` : ''}! 🏆 Impressive! Kamu sudah di level Career Expert (${progress}%).${milestone ? ` Target selanjutnya: **${milestone}**.` : ''} Apa yang mau kita capai hari ini?`,
+          'Career Leader':      `Halo${firstName ? ` ${firstName}` : ''}! 👑 Career Leader — kamu udah di puncak! Progress ${progress}%.${focus ? ` Sekarang fokusmu: **${focus}**.` : ''} Bagaimana aku bisa bantu lebih jauh?`,
         }
-        pushBot(greeting)
-      })
-      .catch(() => {
-        // Fallback kalau fetch gagal
-        const firstName2 = (user.user_metadata?.name || user.user_metadata?.full_name || '').split(' ')[0]
-        pushBot(`Halo${firstName2 ? ` ${firstName2}` : ''}! 👋 Aku Diah Anna, AI Career Coach kamu.\n\nAda yang bisa aku bantu hari ini?`)
-      })
+
+        greeting = greetingByStage[stage] || `Halo${firstName ? ` ${firstName}` : ''}! 👋 Selamat datang kembali. Progress karirmu: ${progress}%. Ada yang bisa aku bantu?`
+
+        if (streak >= 3) greeting += `\n\n🔥 Streak ${streak} hari — konsistensimu keren banget!`
+      }
+      pushBot(greeting)
+    }).catch(() => {
+      // Fallback kalau fetch gagal
+      const firstName2 = (user.user_metadata?.name || user.user_metadata?.full_name || '').split(' ')[0]
+      pushBot(`Halo${firstName2 ? ` ${firstName2}` : ''}! 👋 Aku Diah Anna, AI Career Coach kamu.\n\nAda yang bisa aku bantu hari ini?`)
+    })
   }, [user?.id, chatMessages])
 
   // ── Simpan ke localStorage setiap messages berubah ───────────────────
