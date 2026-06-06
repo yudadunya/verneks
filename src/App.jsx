@@ -38,10 +38,14 @@ export default function App() {
   const [loading, setLoading]       = useState(true)
   const [chatMessages, setChatMessages] = useState([])
   const [showUpgrade, setShowUpgrade] = useState(false)
+  const [upgradeData, setUpgradeData] = useState(null)
 
   // Global upgrade modal trigger
   useEffect(() => {
-    const handler = () => setShowUpgrade(true)
+    const handler = (e) => {
+      setUpgradeData(e.detail || null)
+      setShowUpgrade(true)
+    }
     window.addEventListener('show-upgrade', handler)
     return () => window.removeEventListener('show-upgrade', handler)
   }, [])
@@ -192,7 +196,11 @@ export default function App() {
       </Routes>
     </BrowserRouter>
     {showUpgrade && user && (
-      <UpgradeModal user={user} onClose={() => setShowUpgrade(false)} />
+      <UpgradeModal
+        user={user}
+        initialData={upgradeData}
+        onClose={() => { setShowUpgrade(false); setUpgradeData(null) }}
+      />
     )}
     </>
   )
