@@ -443,11 +443,16 @@ export default function Chat({ user, chatMessages = [], setChatMessages }) {
         }
       ])
       setMode('coach')
-      // Ekstrak profil — ada sinyal target posisi & kondisi CV
-      extractAndSaveProfile([
-        { role: 'user', content: `Tolong review CV saya${jobTarget ? ` untuk posisi ${jobTarget}` : ''}.` },
-        { role: 'assistant', content: data.review.slice(0, 600) }
-      ]).catch(() => {})
+      // Ekstrak profil dari CV lengkap — goldmine data karir
+      setTimeout(() => {
+        apiFetch('/api/extract-profile', {
+          userId: user.id,
+          messages: [
+            { role: 'user', content: `Ini CV saya${jobTarget ? ` untuk posisi ${jobTarget}` : ''}:\n\n${cvText.slice(0, 3000)}` },
+            { role: 'assistant', content: data.review }
+          ]
+        }).catch(() => {})
+      }, 1000)
     } catch (e) { pushBot(`Aduh, ada error: ${e.message}\n\nCoba lagi ya! 🙏`); setMode('menu') }
     setLoading(false)
   }
@@ -470,11 +475,16 @@ export default function Chat({ user, chatMessages = [], setChatMessages }) {
         }
       ])
       setMode('coach')
-      // Ekstrak profil — ada sinyal karir dari ATS check
-      extractAndSaveProfile([
-        { role: 'user', content: `Cek ATS score CV saya.` },
-        { role: 'assistant', content: data.result.slice(0, 600) }
-      ]).catch(() => {})
+      // Ekstrak profil dari CV + JD — double sinyal karir
+      setTimeout(() => {
+        apiFetch('/api/extract-profile', {
+          userId: user.id,
+          messages: [
+            { role: 'user', content: `CV saya:\n\n${cvText.slice(0, 2000)}${jobDescription ? `\n\nJob Description: ${jobDescription.slice(0, 500)}` : ''}` },
+            { role: 'assistant', content: data.result }
+          ]
+        }).catch(() => {})
+      }, 1000)
     } catch (e) { pushBot(`Error: ${e.message}`); setMode('menu') }
     setLoading(false)
   }
@@ -735,16 +745,23 @@ export default function Chat({ user, chatMessages = [], setChatMessages }) {
   const doCoach = async (msg) => {
     const newHistory = [...coachHistory, { role: 'user', content: msg }]
     setCoachHistory(newHistory); setLoading(true); await callCoachApi(newHistory); setLoading(false)
+    // Selalu extract setiap pesan — API punya guard min 3 msg sendiri
     maybeExtractProfile()
-    // Cek apakah sudah waktunya teaser genome — setelah extract selesai
     setTimeout(() => triggerGenomeTeaser(), 2000)
   }
 
   const callCoachApi = async (history) => {
     try {
       const data = await apiFetch('/api/career-coach', { messages: history, userId: user?.id || null, plan: plan || 'free' })
-      setCoachHistory(prev => [...prev, { role: 'assistant', content: data.reply }])
+      const fullHistory = [...history, { role: 'assistant', content: data.reply }]
+      setCoachHistory(fullHistory)
       pushBot(data.reply, null)
+      // Extract dengan full history termasuk reply Diah Anna (lebih kaya konteks)
+      if (user?.id && fullHistory.filter(m => m.role === 'user').length >= 3) {
+        setTimeout(() => {
+          apiFetch('/api/extract-profile', { userId: user.id, messages: fullHistory }).catch(() => {})
+        }, 500)
+      }
     } catch { pushBot('Diah Anna lagi sibuk sebentar, coba lagi ya! 🙏') }
   }
 
