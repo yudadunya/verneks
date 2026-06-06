@@ -1,9 +1,8 @@
-// api/redeem-code.js
 import { createClient } from '@supabase/supabase-js'
 
 const supabaseAdmin = createClient(
   process.env.SUPABASE_URL,
-  process.env.SUPABASE_SERVICE_KEY  // service role key — bisa bypass RLS
+  process.env.SUPABASE_SERVICE_KEY
 )
 
 export default async function handler(req, res) {
@@ -21,18 +20,14 @@ export default async function handler(req, res) {
     .eq('code', cleanCode)
     .maybeSingle()
 
-  if (fetchErr || !row) return res.status(404).json({ error: 'Kode tidak ditemukan' })
-  if (row.used_by)      return res.status(409).json({ error: 'Kode sudah pernah digunakan' })
+  if (fetchErr) {
+    console.error('fetchErr:', fetchErr)
+    return res.status(500).json({ error: 'Gagal mengecek kode', detail: fetchErr.message })
+  }
+  if (!row)      return res.status(404).json({ error: 'Kode tidak ditemukan' })
+  if (row.used_by) return res.status(409).json({ error: 'Kode sudah pernah digunakan' })
 
-  // 2. Tandai kode sudah dipakai
-  const { error: updateErr } = await supabaseAdmin
-    .from('redeem_codes')
-    .update({ used_by: userId, used_at: new Date().toISOString() })
-    .eq('code', cleanCode)
-
-  if (updateErr) return res.status(500).json({ error: 'Gagal memproses kode' })
-
-  // 3. Insert subscription premium 30 hari
+  // 2. Insert subscription dulu SEBELUM mark used (supaya bisa rollback)
   const now    = new Date()
   const expiry = new Date(now)
   expiry.setDate(expiry.getDate() + 30)
@@ -47,7 +42,22 @@ export default async function handler(req, res) {
       expires_at: expiry.toISOString(),
     }, { onConflict: 'user_id' })
 
-  if (subErr) return res.status(500).json({ error: 'Gagal mengaktifkan premium' })
+  if (subErr) {
+    console.error('subErr:', JSON.stringify(subErr))
+    return res.status(500).json({ error: 'Gagal mengaktifkan premium', detail: subErr.message })
+  }
+
+  // 3. Baru mark kode sebagai used (setelah premium berhasil)
+  const { error: updateErr } = await supabaseAdmin
+    .from('redeem_codes')
+    .update({ used_by: userId, used_at: now.toISOString() })
+    .eq('code', cleanCode)
+
+  if (updateErr) {
+    console.error('updateErr:', updateErr)
+    // Premium sudah aktif, tapi kode belum ke-mark — log saja, jangan fail
+    // Bisa di-handle manual via dashboard Supabase
+  }
 
   return res.status(200).json({ success: true, expires_at: expiry.toISOString() })
 }
