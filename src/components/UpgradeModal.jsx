@@ -13,13 +13,15 @@ const GPS_STEPS = [
   { label: 'Interview Preparation', done: false, free: false },
 ]
 
-export default function UpgradeModal({ user, onClose }) {
-  const [profile,  setProfile]  = useState(null)
-  const [growth,   setGrowth]   = useState(null)
-  const [genome,   setGenome]   = useState(null)
-  const [loading,  setLoading]  = useState(true)
+export default function UpgradeModal({ user, onClose, initialData = null }) {
+  const [profile,  setProfile]  = useState(initialData?.profile  || null)
+  const [growth,   setGrowth]   = useState(initialData?.growth   || null)
+  const [genome,   setGenome]   = useState(initialData?.genome   || null)
+  const [loading,  setLoading]  = useState(!initialData)
 
   useEffect(() => {
+    // Kalau data sudah dikirim dari Dashboard — langsung pakai, tidak perlu fetch
+    if (initialData?.profile) { setLoading(false); return }
     if (!user?.id) { setLoading(false); return }
     Promise.all([
       supabase.from('user_career_profiles').select('target_posisi,career_readiness,skill_gaps,gap_skills,mentor_message,gps_steps').eq('user_id', user.id).maybeSingle(),
