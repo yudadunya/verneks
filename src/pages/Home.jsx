@@ -185,7 +185,22 @@ export default function Home({ user }) {
           </div>
         </div>
         <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-
+          <button
+            onClick={handleGoogle}
+            disabled={authLoading}
+            style={{
+              display: 'flex', alignItems: 'center', gap: 7,
+              background: 'rgba(255,255,255,0.06)',
+              border: '1px solid rgba(255,255,255,0.12)',
+              color: 'rgba(255,255,255,0.8)', fontWeight: 700, fontSize: '0.8rem',
+              padding: '8px 14px', borderRadius: 10, cursor: authLoading ? 'not-allowed' : 'pointer',
+              fontFamily: 'inherit', transition: 'all 0.2s',
+              opacity: authLoading ? 0.6 : 1,
+            }}
+          >
+            <GoogleIcon />
+            {authLoading ? 'Mengarahkan...' : 'Masuk'}
+          </button>
         </div>
       </nav>
 
@@ -239,6 +254,16 @@ export default function Home({ user }) {
             <CTAButton />
             <p style={{ color: 'rgba(255,255,255,0.2)', fontSize: '0.72rem', margin: 0 }}>
               Gratis · Tidak perlu kartu kredit · Mulai dalam 2 menit
+            </p>
+            <p style={{ margin: 0 }}>
+              <span style={{ color: 'rgba(255,255,255,0.25)', fontSize: '0.72rem' }}>Sudah punya akun? </span>
+              <button
+                onClick={handleGoogle}
+                disabled={authLoading}
+                style={{ background: 'none', border: 'none', color: '#25D366', fontSize: '0.72rem', fontWeight: 700, cursor: 'pointer', padding: 0, fontFamily: 'inherit', textDecoration: 'underline', textUnderlineOffset: 3 }}
+              >
+                Masuk dengan Google
+              </button>
             </p>
           </div>
         </div>
@@ -598,6 +623,16 @@ export default function Home({ user }) {
               <CTAButton label="Mulai Career Discovery — Gratis" />
               <p style={{ color: 'rgba(255,255,255,0.2)', fontSize: '0.72rem', margin: 0 }}>
                 Bergabung dengan 12.000+ profesional Indonesia 🇮🇩
+              </p>
+              <p style={{ margin: 0 }}>
+                <span style={{ color: 'rgba(255,255,255,0.25)', fontSize: '0.72rem' }}>Sudah punya akun? </span>
+                <button
+                  onClick={handleGoogle}
+                  disabled={authLoading}
+                  style={{ background: 'none', border: 'none', color: '#25D366', fontSize: '0.72rem', fontWeight: 700, cursor: 'pointer', padding: 0, fontFamily: 'inherit', textDecoration: 'underline', textUnderlineOffset: 3 }}
+                >
+                  Masuk dengan Google
+                </button>
               </p>
             </div>
           </div>
