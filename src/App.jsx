@@ -43,7 +43,9 @@ export default function App() {
   // Global upgrade modal trigger
   useEffect(() => {
     const handler = (e) => {
-      setUpgradeData(e.detail || null)
+      // Hanya update data kalau event membawa detail (dari Dashboard)
+      // Kalau dari BottomNav (tanpa detail) — pakai data terakhir yang tersimpan
+      if (e.detail) setUpgradeData(e.detail)
       setShowUpgrade(true)
     }
     window.addEventListener('show-upgrade', handler)
