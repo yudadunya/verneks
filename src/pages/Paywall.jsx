@@ -37,10 +37,45 @@ export default function Paywall() {
   const secs = String(timeLeft % 60).padStart(2,'0')
 
   useEffect(() => {
+    // Coba dari localStorage dulu
     const saved = localStorage.getItem('lc_discovery_result')
-    if (!saved) { navigate('/discovery'); return }
-    try { setResult(JSON.parse(saved)); setTimeout(() => setRevealed(true), 80) }
-    catch { navigate('/discovery') }
+    if (saved) {
+      try { setResult(JSON.parse(saved)); setTimeout(() => setRevealed(true), 80); return }
+      catch {}
+    }
+
+    // Fallback: baca dari Supabase kalau localStorage sudah dihapus (setelah login)
+    const loadFromSupabase = async () => {
+      try {
+        const { data: { session } } = await import('../lib/supabase').then(m => m.supabase.auth.getSession())
+        const userId = session?.user?.id
+        if (!userId) { navigate('/discovery'); return }
+
+        const { supabase } = await import('../lib/supabase')
+        const [{ data: p }, { data: g }, { data: gw }] = await Promise.all([
+          supabase.from('user_career_profiles').select('*').eq('user_id', userId).maybeSingle(),
+          supabase.from('user_genome_scores').select('*').eq('user_id', userId).maybeSingle(),
+          supabase.from('user_growth_state').select('*').eq('user_id', userId).maybeSingle(),
+        ])
+
+        if (!p && !g) { navigate('/discovery'); return }
+
+        const reconstructed = {
+          profile_preview:  { nama: p?.nama, target_posisi: p?.target_posisi, posisi_saat_ini: p?.posisi_saat_ini },
+          genome_scores:    { analytical: g?.analytical||0, leadership: g?.leadership||0, builder: g?.builder||0, creator: g?.creator||0, communication: g?.communication||0, risk_taking: g?.risk_taking||0 },
+          career_readiness: gw?.progress_percent || p?.career_readiness || 0,
+          gap_skills:       p?.skill_gaps || [],
+          gps_steps:        gw?.gps_steps || p?.gps_steps || [],
+          mentor_message:   p?.mentor_message,
+          gap_summary:      p?.tantangan_karir || '',
+          growth_state:     { career_stage: gw?.career_stage, current_focus: gw?.current_focus },
+          top_strength:     g?.top_strength,
+        }
+        setResult(reconstructed)
+        setTimeout(() => setRevealed(true), 80)
+      } catch { navigate('/discovery') }
+    }
+    loadFromSupabase()
   }, [])
 
   // Reveal pricing hanya setelah feature list terlihat penuh
