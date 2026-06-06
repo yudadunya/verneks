@@ -12,6 +12,7 @@ import Blog from './pages/Blog'
 import BlogPost from './pages/BlogPost'
 import Journey from './pages/Journey'
 import Discovery from './pages/Discovery'
+import UpgradeModal from './components/UpgradeModal'
 import Paywall from './pages/Paywall'
 import GenomeResult from './pages/GenomeResult'
 import Dashboard from './pages/Dashboard'
@@ -36,6 +37,14 @@ export default function App() {
   const [user, setUser]             = useState(null)
   const [loading, setLoading]       = useState(true)
   const [chatMessages, setChatMessages] = useState([])
+  const [showUpgrade, setShowUpgrade] = useState(false)
+
+  // Global upgrade modal trigger
+  useEffect(() => {
+    const handler = () => setShowUpgrade(true)
+    window.addEventListener('show-upgrade', handler)
+    return () => window.removeEventListener('show-upgrade', handler)
+  }, [])
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
@@ -153,6 +162,7 @@ export default function App() {
   )
 
   return (
+    <>
     <BrowserRouter>
       <Routes>
         <Route path="/"              element={<Home user={user} />} />
@@ -181,5 +191,9 @@ export default function App() {
         <Route path="/cv-maker"       element={<Chat user={user} chatMessages={chatMessages} setChatMessages={setChatMessages} />} />
       </Routes>
     </BrowserRouter>
+    {showUpgrade && user && (
+      <UpgradeModal user={user} onClose={() => setShowUpgrade(false)} />
+    )}
+    </>
   )
 }
