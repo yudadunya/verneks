@@ -38,7 +38,7 @@ function UpgradeModal({ trigger, gapLabel, onClose }) {
             </div>
           ))}
         </div>
-        <button onClick={() => window.location.href = '/pricing'} style={{ width: '100%', padding: '14px', background: 'linear-gradient(135deg,#25D366,#128C7E)', color: '#fff', fontWeight: 800, fontSize: '0.95rem', borderRadius: 12, border: 'none', cursor: 'pointer', boxShadow: '0 4px 20px rgba(37,211,102,0.35)' }}>
+        <button onClick={() => window.dispatchEvent(new CustomEvent('show-upgrade'))} style={{ width: '100%', padding: '14px', background: 'linear-gradient(135deg,#25D366,#128C7E)', color: '#fff', fontWeight: 800, fontSize: '0.95rem', borderRadius: 12, border: 'none', cursor: 'pointer', boxShadow: '0 4px 20px rgba(37,211,102,0.35)' }}>
           🚀 Upgrade Premium — Rp199.000/bln
         </button>
         <button onClick={onClose} style={{ width: '100%', marginTop: 10, padding: '11px', background: 'transparent', border: '1px solid rgba(255,255,255,0.1)', color: 'rgba(255,255,255,0.3)', borderRadius: 10, cursor: 'pointer', fontSize: '0.82rem' }}>
@@ -126,7 +126,7 @@ export default function Dashboard({ user }) {
           <div style={{ color: 'rgba(255,255,255,0.3)', fontSize: '0.7rem' }}>
             {isPremium
               ? <span style={{ color: '#25D366' }}>⭐ Premium</span>
-              : <>Free Plan · <span style={{ color: '#25D366', cursor: 'pointer' }} onClick={() => setModal('gps')}>Upgrade Premium</span></>}
+              : <>Free Plan · <span style={{ color: '#25D366', cursor: 'pointer' }} onClick={() => window.dispatchEvent(new CustomEvent('show-upgrade'))}>Upgrade Premium</span></>}
           </div>
         </div>
       </div>
@@ -208,7 +208,7 @@ export default function Dashboard({ user }) {
               {gaps.map((g, i) => (
                 <div
                   key={i}
-                  onClick={() => { if (!isPremium) { setModalGapLabel(g); setModal('gap') } }}
+                  onClick={() => { if (!isPremium) { setModalGapLabel(g); window.dispatchEvent(new CustomEvent('show-upgrade')) } }}
                   style={{
                     background: 'rgba(239,83,80,0.1)', border: '1px solid rgba(239,83,80,0.2)',
                     borderRadius: 8, padding: '5px 12px', fontSize: '0.78rem',
@@ -239,7 +239,7 @@ export default function Dashboard({ user }) {
                 return (
                   <div
                     key={i}
-                    onClick={() => { if (!unlocked) setModal('gps') }}
+                    onClick={() => { if (!unlocked) window.dispatchEvent(new CustomEvent('show-upgrade')) }}
                     style={{ display: 'flex', alignItems: 'center', gap: 10, cursor: unlocked ? 'default' : 'pointer' }}
                   >
                     <span style={{ fontSize: '0.8rem', flexShrink: 0, color: step.done ? '#25D366' : unlocked ? '#34B7F1' : 'rgba(255,255,255,0.2)' }}>
@@ -260,7 +260,7 @@ export default function Dashboard({ user }) {
             {!isPremium && (
               <>
                 <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, height: 60, background: 'linear-gradient(to top, #0d1a10, transparent)', pointerEvents: 'none' }} />
-                <button onClick={() => setModal('gps')} style={{ marginTop: 14, width: '100%', padding: '10px', background: 'rgba(37,211,102,0.1)', border: '1px solid rgba(37,211,102,0.25)', color: '#25D366', fontWeight: 700, fontSize: '0.82rem', borderRadius: 10, cursor: 'pointer' }}>
+                <button onClick={() => window.dispatchEvent(new CustomEvent('show-upgrade'))} style={{ marginTop: 14, width: '100%', padding: '10px', background: 'rgba(37,211,102,0.1)', border: '1px solid rgba(37,211,102,0.25)', color: '#25D366', fontWeight: 700, fontSize: '0.82rem', borderRadius: 10, cursor: 'pointer' }}>
                   🔓 Buka Roadmap Lengkap
                 </button>
               </>
