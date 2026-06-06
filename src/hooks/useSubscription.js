@@ -1,9 +1,9 @@
 import { useState, useEffect } from 'react'
 import { supabase } from '../lib/supabase'
 
-// Model baru: Free = 15 chat/hari, Premium = unlimited semua fitur
+// Free = 15 chat/hari + fitur masing-masing 1x/bulan, Premium = unlimited semua
 export const LIMITS = {
-  free:    { chat: 15, 'cv-review': 15, ats: 15, coach: 999, interview: 15, 'cv-maker': 15 },
+  free:    { chat: 15, 'cv-review': 1, ats: 1, coach: 999, interview: 1, 'cv-maker': 1 },
   premium: { chat: 999, 'cv-review': 999, ats: 999, coach: 999, interview: 999, 'cv-maker': 999 },
 }
 
@@ -49,7 +49,7 @@ export function useSubscription(userId) {
     setLoading(false)
   }
 
-  // Cek usage — untuk free: limit harian, untuk premium: unlimited
+  // Cek usage — chat: limit harian, fitur (cv-review/ats/interview/cv-maker): limit bulanan
   const checkUsage = async (feature) => {
     const limit = LIMITS[plan]?.[feature] ?? 0
     if (limit === 0) return false
@@ -58,10 +58,17 @@ export function useSubscription(userId) {
     if (!userId) return false
 
     try {
-      // Free: hitung per hari
-      const today = new Date()
-      today.setHours(0, 0, 0, 0)
-      const since = today.toISOString()
+      let since
+      if (feature === 'chat') {
+        // Chat: reset harian
+        const today = new Date()
+        today.setHours(0, 0, 0, 0)
+        since = today.toISOString()
+      } else {
+        // Fitur: reset bulanan
+        const monthStart = new Date(new Date().getFullYear(), new Date().getMonth(), 1)
+        since = monthStart.toISOString()
+      }
 
       const { count, error } = await supabase
         .from('usage_logs')
@@ -76,7 +83,8 @@ export function useSubscription(userId) {
       }
 
       const used = count ?? 0
-      console.log(`[usage] ${feature}: ${used}/${limit} (hari ini)`)
+      const resetLabel = feature === 'chat' ? 'hari ini' : 'bulan ini'
+      console.log(`[usage] ${feature}: ${used}/${limit} (${resetLabel})`)
       return used < limit
 
     } catch (e) {
