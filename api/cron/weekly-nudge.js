@@ -8,9 +8,9 @@ const supabase = createClient(
 
 export default async function handler(req, res) {
   // Hanya izinkan pemicu dari Vercel Cron atau auth token tertentu
-  // if (req.headers['authorization'] !== `Bearer ${process.env.CRON_SECRET}`) {
-  //   return res.status(401).json({ error: 'Unauthorized' })
-  // }
+  if (req.headers['authorization'] !== `Bearer ${process.env.CRON_SECRET}`) {
+    return res.status(401).json({ error: 'Unauthorized' })
+  }
 
   try {
     // 1. Ambil user yang aktif dan punya profil (limit 10 untuk demo/batching)
