@@ -13,6 +13,11 @@ export default function BottomNav({ isPremium = false }) {
     { href: '/profile',   icon: '👤', label: 'Profil' },
   ]
 
+  const handleLockedClick = (e) => {
+    e.preventDefault()
+    window.dispatchEvent(new CustomEvent('show-upgrade'))
+  }
+
   return (
     <nav style={{
       position: 'fixed', bottom: 0, left: '50%', transform: 'translateX(-50%)',
@@ -27,6 +32,7 @@ export default function BottomNav({ isPremium = false }) {
           <Link
             key={tab.href}
             to={tab.href}
+            onClick={tab.locked ? handleLockedClick : undefined}
             style={{
               flex: 1, display: 'flex', flexDirection: 'column',
               alignItems: 'center', justifyContent: 'center',
