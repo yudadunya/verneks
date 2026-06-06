@@ -91,6 +91,11 @@ export default function Chat({ user, chatMessages = [], setChatMessages }) {
   }
   const [cvMakerInfo, setCvMakerInfo]   = useState({ text: '', format: '' })
   const [showOnboarding, setShowOnboarding] = useState(false)
+  const [showCoachGate, setShowCoachGate]   = useState(false)
+
+  // Hitung pesan user dalam sesi ini (dari chatMessages)
+  const freeCoachLimit = 10
+  const userMsgCountInSession = messages.filter(m => m.role === 'user').length
 
   // Skip onboarding kalau user sudah punya profil dari Discovery
   useEffect(() => {
@@ -745,8 +750,18 @@ export default function Chat({ user, chatMessages = [], setChatMessages }) {
   const doCoach = async (msg) => {
     const newHistory = [...coachHistory, { role: 'user', content: msg }]
     setCoachHistory(newHistory); setLoading(true); await callCoachApi(newHistory); setLoading(false)
-    // Selalu extract setiap pesan — API punya guard min 3 msg sendiri
     maybeExtractProfile()
+
+    // Trigger coach gate setelah 10 pesan user (free only)
+    if (plan === 'free') {
+      const count = messagesRef.current.filter(m => m.role === 'user').length
+      if (count >= freeCoachLimit && count % 5 === 0) {
+        // Setiap 5 pesan setelah limit, tampilkan gate lagi
+        setTimeout(() => setShowCoachGate(true), 1500)
+        return
+      }
+    }
+
     setTimeout(() => triggerGenomeTeaser(), 2000)
   }
 
@@ -775,6 +790,63 @@ export default function Chat({ user, chatMessages = [], setChatMessages }) {
 
   const canUpload = ['cv-review-upload', 'ats-upload', 'cv-maker-upload'].includes(mode)
 
+  // ── Coach Gate — muncul saat free user sudah 10 pesan ────────────────────
+  const CoachGate = () => {
+    if (!showCoachGate || plan !== 'free') return null
+    return (
+      <div style={{
+        position: 'absolute', inset: 0, zIndex: 50,
+        background: 'rgba(10,15,13,0.92)', backdropFilter: 'blur(6px)',
+        display: 'flex', flexDirection: 'column', alignItems: 'center',
+        justifyContent: 'flex-end', padding: '0 20px 40px',
+      }}>
+        {/* Diah Anna bubble */}
+        <div style={{ width: '100%', maxWidth: 440, marginBottom: 20 }}>
+          <div style={{ display: 'flex', gap: 10, alignItems: 'flex-start', marginBottom: 16 }}>
+            <img src="/diah-anna.png" alt="Diah Anna"
+              style={{ width: 40, height: 40, borderRadius: '50%', objectFit: 'cover', flexShrink: 0, border: '2px solid rgba(37,211,102,0.5)' }}/>
+            <div style={{ background: '#fff', borderRadius: '3px 14px 14px 14px', padding: '12px 14px', maxWidth: '85%' }}>
+              <div style={{ fontSize: '0.88rem', lineHeight: 1.65, color: '#111', fontWeight: 500 }}>
+                Aku udah ngobrol cukup sama kamu dan <strong>menemukan sesuatu yang penting</strong> tentang karir kamu 🔍
+                <br/><br/>
+                Aku sudah siapkan <strong>roadmap personal 6 bulan</strong> untuk menutup gap-mu — skill yang perlu dipelajari, urutan belajar, target mingguan.
+                <br/><br/>
+                Mau aku buka sekarang?
+              </div>
+            </div>
+          </div>
+
+          {/* Feature preview */}
+          <div style={{ background: 'rgba(37,211,102,0.08)', border: '1px solid rgba(37,211,102,0.2)', borderRadius: 14, padding: '14px 16px', marginBottom: 16 }}>
+            <div style={{ color: '#25D366', fontWeight: 700, fontSize: '0.82rem', marginBottom: 10 }}>Yang sudah aku siapkan untukmu:</div>
+            {[
+              '🗺️ Career GPS — roadmap 6 bulan step by step',
+              '💬 Ngobrol sama aku tanpa batas',
+              '📈 Progress tracking harian',
+              '💼 Lowongan yang cocok DNA karirmu',
+            ].map((f, i) => (
+              <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: '0.82rem', color: 'rgba(255,255,255,0.7)', marginBottom: 6 }}>
+                <span style={{ color: '#25D366', fontWeight: 700, flexShrink: 0 }}>✓</span>{f}
+              </div>
+            ))}
+          </div>
+
+          {/* CTA */}
+          <button
+            onClick={() => window.location.href = '/paywall'}
+            style={{ width: '100%', padding: '14px', background: 'linear-gradient(135deg,#25D366,#128C7E)', color: '#fff', fontWeight: 800, fontSize: '0.95rem', borderRadius: 14, border: 'none', cursor: 'pointer', boxShadow: '0 4px 20px rgba(37,211,102,0.4)', marginBottom: 10 }}>
+            🚀 Buka Roadmap — Rp 199rb/bulan
+          </button>
+          <button
+            onClick={() => { setShowCoachGate(false); pushBot('Oke, kita lanjut! Ada yang mau kamu tanyakan?') }}
+            style={{ width: '100%', padding: '11px', background: 'transparent', border: '1px solid rgba(255,255,255,0.15)', color: 'rgba(255,255,255,0.4)', borderRadius: 12, cursor: 'pointer', fontSize: '0.82rem' }}>
+            Nanti saja, lanjut ngobrol dulu
+          </button>
+        </div>
+      </div>
+    )
+  }
+
   return (
     <>
     {/* ── FIX UTAMA: position fixed + inset 0 → header tidak pernah hilang ── */}
@@ -787,6 +859,7 @@ export default function Chat({ user, chatMessages = [], setChatMessages }) {
       overflow: 'hidden',
     }}>
       {showOnboarding && <Onboarding onDone={handleOnboardingDone} user={user} />}
+      <CoachGate />
       {shareCard && <ShareCard resultText={shareCard.text} type={shareCard.type} onClose={() => setShareCard(null)} />}
       {showShareApp && <ShareAppModal onClose={() => setShowShareApp(false)} />}
 
