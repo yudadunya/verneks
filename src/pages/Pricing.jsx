@@ -1,124 +1,72 @@
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 
+const LYNK_URL = 'http://lynk.id/yudadunya/r3o5ldq5qkex/checkout'
+
 const PLANS = [
   {
     id: 'free',
     name: 'Free',
-    price: null,
     priceDisplay: 'Gratis',
     period: 'selamanya',
-    color: 'rgba(255,255,255,0.08)',
-    border: 'rgba(255,255,255,0.12)',
-    cta: 'Pakai Gratis',
+    color: 'rgba(255,255,255,0.04)',
+    border: 'rgba(255,255,255,0.10)',
+    cta: 'Lanjutkan Gratis',
     ctaStyle: 'ghost',
-    popular: false,
     features: [
-      { label: 'CV Review', val: '1x' },
-      { label: 'Career Coach (Diah Anna)', val: 'Bebas' },
-      { label: 'CV Maker AI', val: false },
-      { label: 'Mock Interview', val: false },
-      { label: 'Priority response', val: false },
+      '15 chat per hari dengan Diah Anna',
+      'CV Review (15x/hari)',
+      'ATS Checker (15x/hari)',
+      'Mock Interview (15x/hari)',
+      'CV Maker AI (15x/hari)',
+    ],
+    locked: [
+      'Kuota reset tiap tengah malam',
     ],
   },
   {
-    id: 'starter',
-    name: 'Starter',
-    price: 49000,
-    priceDisplay: 'Rp 49rb',
-    priceOri: 'Rp 99rb',
-    period: '/bulan',
-    color: 'rgba(52,183,241,0.08)',
-    border: 'rgba(52,183,241,0.3)',
-    cta: 'Pilih Starter',
-    ctaStyle: 'blue',
-    popular: false,
-    features: [
-      { label: 'CV Review', val: '5x/bulan' },
-      { label: 'Career Coach (Diah Anna)', val: 'Bebas' },
-      { label: 'CV Maker AI', val: '5x/bulan' },
-      { label: 'Mock Interview', val: false },
-      { label: 'Priority response', val: false },
-    ],
-  },
-  {
-    id: 'pro',
-    name: 'Pro',
-    price: 199000,
+    id: 'premium',
+    name: 'Premium',
     priceDisplay: 'Rp 199rb',
     priceOri: 'Rp 599rb',
     period: '/bulan',
-    color: 'rgba(37,211,102,0.08)',
+    color: 'rgba(37,211,102,0.07)',
     border: 'rgba(37,211,102,0.4)',
-    cta: 'Pilih Pro — Hemat 67%',
+    cta: '🚀 Mulai Premium — Hemat 67%',
     ctaStyle: 'green',
-    popular: true,
-    badge: '⭐ PALING POPULER',
+    badge: '⭐ PALING WORTH IT',
     features: [
-      { label: 'CV Review', val: '30x/bulan' },
-      { label: 'Career Coach (Diah Anna)', val: 'Bebas' },
-      { label: 'CV Maker AI', val: '30x/bulan' },
-      { label: 'Mock Interview', val: '30x/bulan' },
-      { label: 'Priority response', val: true },
+      'Chat unlimited dengan Diah Anna',
+      'CV Review unlimited',
+      'ATS Checker unlimited',
+      'Mock Interview unlimited',
+      'CV Maker AI unlimited',
+      'Career GPS personal (roadmap 6 bulan)',
+      'Progress tracking harian',
+      'Weekly coaching report',
     ],
   },
 ]
 
 const FAQ = [
-  { q: 'Bisa cancel kapan saja?', a: 'Bisa. Tidak ada komitmen jangka panjang. Cancel sebelum tanggal perpanjangan dan kamu tidak ditagih lagi.' },
-  { q: 'Metode pembayaran apa saja?', a: 'GoPay, OVO, Dana, QRIS, transfer bank (BCA, Mandiri, BNI, BRI), dan kartu kredit/debit via Midtrans.' },
+  { q: 'Bisa cancel kapan saja?', a: 'Bisa. Tidak ada komitmen jangka panjang. Batalkan sebelum tanggal perpanjangan dan kamu tidak ditagih lagi.' },
+  { q: 'Cara bayar gimana?', a: 'Pembayaran lewat Lynk.id — bisa GoPay, OVO, Dana, QRIS, transfer bank, atau kartu kredit/debit.' },
   { q: 'Apakah data CV saya aman?', a: 'Ya. CV dan percakapan kamu tidak disimpan untuk keperluan apapun selain memproses permintaanmu.' },
-  { q: 'Bedanya Free dan Pro apa?', a: 'Free cukup untuk coba-coba. Pro untuk yang serius cari kerja — bisa pakai semua fitur termasuk Mock Interview, lebih banyak kuota, dan respon lebih cepat.' },
+  { q: 'Bedanya Free dan Premium apa?', a: 'Free cukup untuk coba semua fitur dengan batasan 15 chat per hari. Premium untuk yang serius cari kerja — semua fitur unlimited, plus Career GPS dan progress tracking.' },
+  { q: 'Kuota Free reset kapan?', a: 'Setiap tengah malam (00:00 WIB). Jadi kamu bisa pakai 15 chat lagi keesokan harinya.' },
 ]
 
 export default function Pricing({ user }) {
-  const navigate  = useNavigate()
-  const [loading, setLoading]   = useState(null)
-  const [openFaq, setOpenFaq]   = useState(null)
-  const [visible, setVisible]   = useState(false)
+  const navigate = useNavigate()
+  const [openFaq, setOpenFaq] = useState(null)
+  const [visible, setVisible] = useState(false)
 
-  useEffect(() => {
-    setTimeout(() => setVisible(true), 60)
-    const script = document.createElement('script')
-    script.src = 'https://app.sandbox.midtrans.com/snap/snap.js'
-    script.setAttribute('data-client-key', import.meta.env.VITE_MIDTRANS_CLIENT_KEY || '')
-    document.head.appendChild(script)
-    return () => { try { document.head.removeChild(script) } catch {} }
-  }, [])
+  useEffect(() => { setTimeout(() => setVisible(true), 60) }, [])
 
-  const handlePay = async (plan) => {
+  const handleCta = (plan) => {
     if (plan.id === 'free') return navigate('/chat')
-    if (!user) return navigate('/')
-    setLoading(plan.id)
-    try {
-      const res = await fetch('/api/payment', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          plan: plan.id,
-          userId: user.id,
-          userEmail: user.email,
-          userName: user.user_metadata?.full_name || '',
-        }),
-      })
-      const data = await res.json()
-      if (data.error) throw new Error(data.error)
-      window.snap.pay(data.token, {
-        onSuccess: () => navigate('/chat?payment=success'),
-        onPending: () => navigate('/chat?payment=pending'),
-        onError:   () => navigate('/pricing?payment=error'),
-        onClose:   () => setLoading(null),
-      })
-    } catch {
-      alert('Gagal memproses pembayaran. Coba lagi ya.')
-      setLoading(null)
-    }
-  }
-
-  const ctaBg = {
-    green: 'linear-gradient(135deg, #25D366, #128C7E)',
-    blue:  'linear-gradient(135deg, #34B7F1, #1a8fc4)',
-    ghost: 'rgba(255,255,255,0.07)',
+    // Premium → langsung ke Lynk
+    window.open(LYNK_URL, '_blank', 'noopener,noreferrer')
   }
 
   return (
@@ -136,9 +84,11 @@ export default function Pricing({ user }) {
         <span style={{ color: '#fff', fontWeight: 700, fontSize: '0.95rem' }}>Paket & Harga</span>
       </div>
 
-      <div style={{ position: 'relative', zIndex: 5, padding: '28px 18px 48px',
+      <div style={{
+        position: 'relative', zIndex: 5, padding: '28px 18px 60px',
         opacity: visible ? 1 : 0, transform: visible ? 'none' : 'translateY(12px)',
-        transition: 'opacity 0.5s ease, transform 0.5s ease' }}>
+        transition: 'opacity 0.5s ease, transform 0.5s ease',
+      }}>
 
         {/* Heading */}
         <div style={{ textAlign: 'center', marginBottom: 28 }}>
@@ -147,16 +97,16 @@ export default function Pricing({ user }) {
             <span style={{ color: '#25D366', fontSize: '0.72rem', fontWeight: 600, letterSpacing: '0.3px' }}>Harga spesial launch</span>
           </div>
           <h1 style={{ color: '#fff', fontWeight: 800, fontSize: '1.6rem', letterSpacing: '-0.5px', lineHeight: 1.2, marginBottom: 8 }}>
-            Investasi karir<br/>
-            <span style={{ background: 'linear-gradient(90deg, #25D366, #34B7F1)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>lebih murah dari kopi</span>
+            Pilih paket yang<br/>
+            <span style={{ background: 'linear-gradient(90deg, #25D366, #34B7F1)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>tepat buatmu</span>
           </h1>
           <p style={{ color: 'rgba(255,255,255,0.45)', fontSize: '0.85rem', lineHeight: 1.6 }}>
-            Paket Pro cuma Rp 199rb/bulan —<br/>lebih murah dari 1 sesi career coach konvensional.
+            Coba dulu gratis. Upgrade kalau sudah siap<br/>ngegas karir tanpa batas.
           </p>
         </div>
 
         {/* Plan cards */}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 12, marginBottom: 28 }}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 14, marginBottom: 28 }}>
           {PLANS.map((plan, i) => (
             <div key={plan.id} style={{
               background: plan.color,
@@ -165,9 +115,8 @@ export default function Pricing({ user }) {
               overflow: 'hidden',
               opacity: visible ? 1 : 0,
               transform: visible ? 'none' : 'translateY(10px)',
-              transition: `opacity 0.4s ease ${i * 0.08}s, transform 0.4s ease ${i * 0.08}s`,
+              transition: `opacity 0.4s ease ${i * 0.1}s, transform 0.4s ease ${i * 0.1}s`,
             }}>
-              {/* Popular badge */}
               {plan.badge && (
                 <div style={{ background: 'linear-gradient(90deg, #25D366, #128C7E)', color: '#fff', textAlign: 'center', padding: '5px', fontSize: '0.7rem', fontWeight: 700, letterSpacing: '0.5px' }}>
                   {plan.badge}
@@ -175,10 +124,10 @@ export default function Pricing({ user }) {
               )}
 
               <div style={{ padding: '18px' }}>
-                {/* Name & price row */}
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 14 }}>
+                {/* Name & price */}
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 16 }}>
                   <div>
-                    <div style={{ color: '#fff', fontWeight: 800, fontSize: '1rem', marginBottom: 2 }}>{plan.name}</div>
+                    <div style={{ color: '#fff', fontWeight: 800, fontSize: '1.05rem', marginBottom: 2 }}>{plan.name}</div>
                     <div style={{ color: 'rgba(255,255,255,0.35)', fontSize: '0.72rem' }}>{plan.period}</div>
                   </div>
                   <div style={{ textAlign: 'right' }}>
@@ -190,61 +139,56 @@ export default function Pricing({ user }) {
                 </div>
 
                 {/* Features */}
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginBottom: 16 }}>
-                  {plan.features.map((f) => (
-                    <div key={f.label} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                      <span style={{ color: f.val ? 'rgba(255,255,255,0.7)' : 'rgba(255,255,255,0.25)', fontSize: '0.82rem' }}>
-                        {f.val ? '✓' : '–'} {f.label}
-                      </span>
-                      <span style={{
-                        fontSize: '0.75rem', fontWeight: 600,
-                        color: f.val === true ? '#25D366' : f.val === false ? 'rgba(255,255,255,0.2)' : 'rgba(255,255,255,0.6)',
-                        background: f.val && f.val !== true ? 'rgba(255,255,255,0.06)' : 'transparent',
-                        padding: f.val && f.val !== true ? '2px 8px' : '0',
-                        borderRadius: 8,
-                      }}>
-                        {f.val === true ? 'Termasuk' : f.val === false ? 'Tidak termasuk' : f.val}
-                      </span>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 7, marginBottom: 16 }}>
+                  {plan.features.map((f, j) => (
+                    <div key={j} style={{ display: 'flex', alignItems: 'flex-start', gap: 8 }}>
+                      <span style={{ color: '#25D366', fontWeight: 700, flexShrink: 0, fontSize: '0.82rem', marginTop: 1 }}>✓</span>
+                      <span style={{ color: 'rgba(255,255,255,0.7)', fontSize: '0.82rem', lineHeight: 1.4 }}>{f}</span>
+                    </div>
+                  ))}
+                  {plan.locked?.map((f, j) => (
+                    <div key={j} style={{ display: 'flex', alignItems: 'flex-start', gap: 8 }}>
+                      <span style={{ color: 'rgba(255,255,255,0.2)', flexShrink: 0, fontSize: '0.82rem', marginTop: 1 }}>–</span>
+                      <span style={{ color: 'rgba(255,255,255,0.3)', fontSize: '0.78rem', lineHeight: 1.4 }}>{f}</span>
                     </div>
                   ))}
                 </div>
 
                 {/* CTA */}
                 <button
-                  onClick={() => handlePay(plan)}
-                  disabled={loading === plan.id}
+                  onClick={() => handleCta(plan)}
                   style={{
                     width: '100%', padding: '13px', borderRadius: 12, border: 'none',
                     fontWeight: 700, fontSize: '0.9rem',
-                    background: ctaBg[plan.ctaStyle],
-                    color: plan.ctaStyle === 'ghost' ? 'rgba(255,255,255,0.6)' : '#fff',
-                    cursor: loading === plan.id ? 'not-allowed' : 'pointer',
-                    opacity: loading === plan.id ? 0.7 : 1,
-                    transition: 'opacity 0.2s',
+                    background: plan.ctaStyle === 'green'
+                      ? 'linear-gradient(135deg, #25D366, #128C7E)'
+                      : 'rgba(255,255,255,0.07)',
+                    color: plan.ctaStyle === 'ghost' ? 'rgba(255,255,255,0.55)' : '#fff',
+                    cursor: 'pointer',
                     boxShadow: plan.ctaStyle === 'green' ? '0 4px 16px rgba(37,211,102,0.3)' : 'none',
                   }}
                 >
-                  {loading === plan.id ? 'Memproses...' : plan.cta}
+                  {plan.cta}
                 </button>
               </div>
             </div>
           ))}
         </div>
 
-        {/* Payment methods */}
+        {/* Payment info */}
         <div style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 14, padding: '12px 16px', marginBottom: 28, textAlign: 'center' }}>
-          <div style={{ color: 'rgba(255,255,255,0.3)', fontSize: '0.7rem', letterSpacing: '0.5px', textTransform: 'uppercase', fontWeight: 600, marginBottom: 6 }}>Pembayaran aman via Midtrans</div>
+          <div style={{ color: 'rgba(255,255,255,0.3)', fontSize: '0.7rem', letterSpacing: '0.5px', textTransform: 'uppercase', fontWeight: 600, marginBottom: 4 }}>Pembayaran aman via Lynk.id</div>
           <div style={{ color: 'rgba(255,255,255,0.5)', fontSize: '0.8rem' }}>GoPay · OVO · Dana · QRIS · Transfer Bank · Kartu Kredit</div>
         </div>
 
-        {/* Comparison callout */}
+        {/* Value comparison */}
         <div style={{ background: 'rgba(37,211,102,0.06)', border: '1px solid rgba(37,211,102,0.15)', borderRadius: 14, padding: '16px', marginBottom: 28 }}>
           <div style={{ color: '#25D366', fontWeight: 700, fontSize: '0.82rem', marginBottom: 10 }}>💡 Bandingin sama career coach konvensional:</div>
           {[
             { label: 'Sesi career coach 1 jam', price: 'Rp 500rb–1jt' },
             { label: 'Review CV profesional', price: 'Rp 150rb–300rb' },
             { label: 'Kursus mock interview', price: 'Rp 300rb–500rb' },
-            { label: 'LamarCerdas Pro/bulan', price: 'Rp 199rb', highlight: true },
+            { label: 'LamarCerdas Premium/bulan', price: 'Rp 199rb', highlight: true },
           ].map(item => (
             <div key={item.label} style={{ display: 'flex', justifyContent: 'space-between', padding: '5px 0', borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
               <span style={{ color: item.highlight ? '#fff' : 'rgba(255,255,255,0.45)', fontSize: '0.8rem', fontWeight: item.highlight ? 700 : 400 }}>{item.label}</span>
@@ -254,7 +198,7 @@ export default function Pricing({ user }) {
         </div>
 
         {/* FAQ */}
-        <div style={{ marginBottom: 16 }}>
+        <div>
           <div style={{ color: 'rgba(255,255,255,0.3)', fontSize: '0.7rem', letterSpacing: '1.5px', textTransform: 'uppercase', fontWeight: 600, marginBottom: 12, textAlign: 'center' }}>Pertanyaan umum</div>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
             {FAQ.map((item, i) => (
