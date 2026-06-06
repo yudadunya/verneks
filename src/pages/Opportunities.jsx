@@ -3,37 +3,74 @@ import { useEffect, useState } from 'react'
 import { supabase } from '../lib/supabase'
 import BottomNav from '../components/BottomNav'
 
+const CACHE_KEY  = 'lc_job_matches'
+const CACHE_TTL  = 6 * 60 * 60 * 1000 // 6 jam dalam ms
+
+function loadCache(userId) {
+  try {
+    const raw = sessionStorage.getItem(`${CACHE_KEY}_${userId}`)
+    if (!raw) return null
+    const { jobs, ts } = JSON.parse(raw)
+    if (Date.now() - ts > CACHE_TTL) return null
+    return jobs
+  } catch { return null }
+}
+
+function saveCache(userId, jobs) {
+  try {
+    sessionStorage.setItem(`${CACHE_KEY}_${userId}`, JSON.stringify({ jobs, ts: Date.now() }))
+  } catch {}
+}
+
+function clearCache(userId) {
+  try { sessionStorage.removeItem(`${CACHE_KEY}_${userId}`) } catch {}
+}
+
 export default function Opportunities({ user }) {
-  const navigate = useNavigate()
+  const navigate   = useNavigate()
   const [isPremium, setIsPremium] = useState(null)
-  const [jobs, setJobs] = useState([])
-  const [loading, setLoading] = useState(false)
-  const [error, setError] = useState(null)
+  const [jobs,      setJobs]      = useState([])
+  const [loading,   setLoading]   = useState(false)
+  const [error,     setError]     = useState(null)
 
   useEffect(() => {
     if (!user) { navigate('/'); return }
-    supabase.from('subscriptions')
-      .select('plan').eq('user_id', user.id).eq('status', 'active')
-      .gte('expires_at', new Date().toISOString()).limit(1).maybeSingle()
+
+    supabase
+      .from('subscriptions')
+      .select('plan')
+      .eq('user_id', user.id)
+      .eq('status', 'active')
+      .gte('expires_at', new Date().toISOString())
+      .limit(1)
+      .maybeSingle()
       .then(({ data }) => {
         const premium = !!data?.plan && data.plan !== 'free'
         setIsPremium(premium)
-        if (premium) fetchJobs()
+        if (!premium) return
+
+        // Pakai cache kalau masih fresh — tidak fetch ulang
+        const cached = loadCache(user.id)
+        if (cached) { setJobs(cached); return }
+
+        fetchJobs()
       })
   }, [user?.id])
 
-  const fetchJobs = async () => {
+  const fetchJobs = async (forceRefresh = false) => {
+    if (forceRefresh) clearCache(user.id)
     setLoading(true)
     setError(null)
     try {
-      const res = await fetch('/api/job-match', {
-        method: 'POST',
+      const res  = await fetch('/api/job-match', {
+        method:  'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ userId: user.id }),
+        body:    JSON.stringify({ userId: user.id }),
       })
       const data = await res.json()
       if (!res.ok) throw new Error(data.error)
       setJobs(data.jobs)
+      saveCache(user.id, data.jobs)
     } catch (e) {
       setError(e.message)
     } finally {
@@ -43,21 +80,42 @@ export default function Opportunities({ user }) {
 
   if (!user) return null
 
-  // Non-premium gate
+  // ── Non-premium gate ──────────────────────────────────────────────────────
   if (isPremium === false) return (
-    <div style={{ minHeight: '100vh', background: '#0a0f0d', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '0 24px', textAlign: 'center', paddingBottom: 90 }}>
+    <div style={{
+      minHeight: '100vh', background: '#0a0f0d',
+      display: 'flex', flexDirection: 'column',
+      alignItems: 'center', justifyContent: 'center',
+      padding: '0 24px', textAlign: 'center', paddingBottom: 90,
+    }}>
       <div style={{ fontSize: '3rem', marginBottom: 16 }}>💼</div>
-      <div style={{ color: '#fff', fontWeight: 800, fontSize: '1.1rem', marginBottom: 10 }}>Opportunity Matching</div>
-      <div style={{ color: 'rgba(255,255,255,0.4)', fontSize: '0.85rem', lineHeight: 1.7, marginBottom: 28 }}>
-        Lihat lowongan yang benar-benar cocok<br />dengan DNA karier kamu.<br /><br />Fitur ini tersedia untuk pengguna Premium.
+      <div style={{ color: '#fff', fontWeight: 800, fontSize: '1.1rem', marginBottom: 10 }}>
+        Opportunity Matching
       </div>
-      <button onClick={() => window.location.href = '/pricing'} style={{ padding: '13px 32px', background: 'linear-gradient(135deg,#25D366,#128C7E)', color: '#fff', fontWeight: 700, borderRadius: 12, border: 'none', cursor: 'pointer', fontSize: '0.9rem' }}>
+      <div style={{ color: 'rgba(255,255,255,0.4)', fontSize: '0.85rem', lineHeight: 1.7, marginBottom: 28 }}>
+        Lihat lowongan yang benar-benar cocok<br />dengan DNA karier kamu.<br /><br />
+        Fitur ini tersedia untuk pengguna Premium.
+      </div>
+      <button
+        onClick={() => window.location.href = '/pricing'}
+        style={{ padding: '13px 32px', background: 'linear-gradient(135deg,#25D366,#128C7E)', color: '#fff', fontWeight: 700, borderRadius: 12, border: 'none', cursor: 'pointer', fontSize: '0.9rem', boxShadow: '0 4px 16px rgba(37,211,102,0.3)' }}
+      >
         🚀 Upgrade Premium
+      </button>
+      <button
+        onClick={() => window.history.back()}
+        style={{ marginTop: 12, background: 'none', border: 'none', color: 'rgba(255,255,255,0.3)', fontSize: '0.8rem', cursor: 'pointer' }}
+      >
+        ← Kembali
       </button>
       <BottomNav isPremium={false} />
     </div>
   )
 
+  // ── Loading state (initial) ───────────────────────────────────────────────
+  if (isPremium === null) return null
+
+  // ── Main view ─────────────────────────────────────────────────────────────
   return (
     <div style={{ minHeight: '100vh', background: 'var(--wa-bg)', paddingBottom: '80px' }}>
       <div className="wa-header">
@@ -65,54 +123,94 @@ export default function Opportunities({ user }) {
       </div>
 
       <div style={{ padding: '16px' }}>
+
+        {/* Loading */}
         {loading && (
-          <div style={{ textAlign: 'center', padding: '40px 0', color: 'rgba(255,255,255,0.5)', fontSize: '0.85rem' }}>
+          <div style={{ textAlign: 'center', padding: '48px 0' }}>
             <div style={{ fontSize: '2rem', marginBottom: 12 }}>🔍</div>
-            Diah Anna sedang mencarikan lowongan terbaik untukmu...
+            <div style={{ color: '#666', fontSize: '0.85rem', lineHeight: 1.7 }}>
+              Diah Anna sedang mencarikan<br />lowongan terbaik untukmu...
+            </div>
           </div>
         )}
 
-        {error && (
-          <div style={{ background: 'rgba(255,80,80,0.1)', border: '1px solid rgba(255,80,80,0.2)', borderRadius: 12, padding: '14px', marginBottom: 16, color: '#ff6b6b', fontSize: '0.85rem', textAlign: 'center' }}>
-            {error === 'Profil belum lengkap'
-              ? '⚠️ Lengkapi profilmu dulu lewat Discovery ya, biar rekomendasinya akurat!'
-              : `Gagal memuat: ${error}`}
-            <br />
-            <button onClick={fetchJobs} style={{ marginTop: 10, background: 'none', border: '1px solid rgba(255,255,255,0.2)', color: '#fff', padding: '6px 16px', borderRadius: 8, cursor: 'pointer', fontSize: '0.8rem' }}>
+        {/* Error */}
+        {!loading && error && (
+          <div style={{ background: '#fff5f5', border: '1px solid #fecaca', borderRadius: 12, padding: '16px', marginBottom: 16, textAlign: 'center' }}>
+            <div style={{ fontSize: '1.5rem', marginBottom: 8 }}>⚠️</div>
+            <div style={{ color: '#dc2626', fontSize: '0.85rem', marginBottom: 12 }}>
+              {error === 'Profil belum lengkap'
+                ? 'Lengkapi profilmu dulu lewat Discovery ya, biar rekomendasinya akurat!'
+                : `Gagal memuat: ${error}`}
+            </div>
+            <button
+              onClick={() => fetchJobs(true)}
+              style={{ background: '#fff', border: '1px solid #e0e0e0', color: '#444', padding: '8px 20px', borderRadius: 8, cursor: 'pointer', fontSize: '0.82rem', fontWeight: 600 }}
+            >
               Coba lagi
             </button>
           </div>
         )}
 
+        {/* Job cards */}
         {!loading && !error && jobs.length > 0 && (
           <>
-            <div style={{ color: 'rgba(255,255,255,0.35)', fontSize: '0.75rem', marginBottom: 12 }}>
+            <div style={{ color: '#999', fontSize: '0.75rem', marginBottom: 12 }}>
               {jobs.length} lowongan cocok dengan profil kamu
             </div>
+
             {jobs.map((job, i) => (
-              <div key={i} style={{ background: 'rgba(255,255,255,0.04)', padding: '14px', borderRadius: '12px', marginBottom: '10px', border: '1px solid rgba(255,255,255,0.07)' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 6 }}>
-                  <div style={{ fontWeight: 700, color: '#fff', fontSize: '0.95rem' }}>{job.role}</div>
-                  <div style={{ background: 'linear-gradient(135deg,#25D366,#128C7E)', color: '#fff', padding: '3px 10px', borderRadius: '10px', fontSize: '0.7rem', fontWeight: 700, flexShrink: 0 }}>
+              <div key={i} style={{
+                background: '#fff',
+                padding: '14px 16px',
+                borderRadius: '12px',
+                marginBottom: '10px',
+                border: '1px solid #e8e8e8',
+                boxShadow: '0 1px 4px rgba(0,0,0,0.06)',
+              }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 5 }}>
+                  <div style={{ fontWeight: 700, color: '#111', fontSize: '0.95rem', flex: 1, marginRight: 8 }}>
+                    {job.role}
+                  </div>
+                  <div style={{
+                    background: 'linear-gradient(135deg,#25D366,#128C7E)',
+                    color: '#fff', padding: '3px 10px',
+                    borderRadius: '10px', fontSize: '0.7rem',
+                    fontWeight: 700, flexShrink: 0,
+                  }}>
                     {job.match}% Match
                   </div>
                 </div>
-                <div style={{ fontSize: '0.8rem', color: 'rgba(255,255,255,0.45)', marginBottom: 6 }}>
+
+                <div style={{ fontSize: '0.8rem', color: '#666', marginBottom: 6 }}>
                   {job.company} • {job.salary}
                 </div>
+
                 {job.reason && (
-                  <div style={{ fontSize: '0.78rem', color: 'rgba(255,255,255,0.3)', marginBottom: 10, lineHeight: 1.5 }}>
+                  <div style={{ fontSize: '0.78rem', color: '#888', marginBottom: 10, lineHeight: 1.5 }}>
                     {job.reason}
                   </div>
                 )}
-                <button onClick={() => navigate('/chat')} style={{ background: 'none', border: 'none', color: '#25D366', fontSize: '0.8rem', fontWeight: 600, cursor: 'pointer', padding: 0 }}>
-                  Tanya Diah Anna → 
+
+                <button
+                  onClick={() => navigate('/chat')}
+                  style={{ background: 'none', border: 'none', color: '#25D366', fontSize: '0.82rem', fontWeight: 600, cursor: 'pointer', padding: 0 }}
+                >
+                  Tanya Diah Anna →
                 </button>
               </div>
             ))}
-            <button onClick={fetchJobs} style={{ width: '100%', marginTop: 8, background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', color: 'rgba(255,255,255,0.4)', padding: '10px', borderRadius: 10, cursor: 'pointer', fontSize: '0.8rem' }}>
+
+            {/* Refresh manual */}
+            <button
+              onClick={() => fetchJobs(true)}
+              style={{ width: '100%', marginTop: 8, background: '#f5f5f5', border: '1px solid #e0e0e0', color: '#777', padding: '11px', borderRadius: 10, cursor: 'pointer', fontSize: '0.8rem', fontWeight: 500 }}
+            >
               🔄 Refresh rekomendasi
             </button>
+            <div style={{ textAlign: 'center', color: '#ccc', fontSize: '0.7rem', marginTop: 8 }}>
+              Diperbarui otomatis setiap 6 jam
+            </div>
           </>
         )}
       </div>
