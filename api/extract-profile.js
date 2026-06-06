@@ -177,33 +177,58 @@ ${existingContext}`
       summary:           p.summary || existingProfile?.summary,
       career_dna:        memory.career_dna || existingProfile?.career_dna,
       topik_dibahas:     [...new Set([...(existingProfile?.topik_dibahas || []), ...(p.topik_dibahas || [])])].slice(0, 30),
-      sesi_count:        (existingProfile?.sesi_count || 0) + 1,
+      sesi_count: (existingProfile?.sesi_count || 0) + 1,
+      profile_completeness: (() => {
+        const fields = [p.nama, p.posisi_saat_ini, p.target_posisi, p.industri,
+          p.lama_pengalaman, p.target_gaji, p.motivasi, p.tantangan_karir,
+          p.hambatan, p.skill_utama?.length > 0]
+        const filled = fields.filter(Boolean).length
+        return Math.round((filled / fields.length) * 100)
+      })(),
       genome_updated_at: new Date().toISOString(),
       last_updated:      new Date().toISOString(),
     }, { onConflict: 'user_id' })
 
-    // ── 2. Upsert user_genome_scores ──
+    // ── 2. Upsert user_genome_scores — merge, ambil nilai tertinggi ──
     const gs = memory.genome_scores || {}
+    const { data: existingGenome } = await supabase
+      .from('user_genome_scores').select('*').eq('user_id', userId).maybeSingle()
+
+    const mergeScore = (newVal, oldVal) => {
+      const n = newVal || 0
+      const o = oldVal || 0
+      // Kalau nilai baru 0 (tidak cukup sinyal), pertahankan nilai lama
+      // Kalau nilai baru > 0, ambil rata-rata berbobot (70% baru, 30% lama)
+      if (n === 0) return o
+      if (o === 0) return n
+      return Math.round(n * 0.7 + o * 0.3)
+    }
+
     await supabase.from('user_genome_scores').upsert({
       user_id:       userId,
-      analytical:    gs.analytical    || 0,
-      leadership:    gs.leadership    || 0,
-      builder:       gs.builder       || 0,
-      creator:       gs.creator       || 0,
-      communication: gs.communication || 0,
-      risk_taking:   gs.risk_taking   || 0,
+      analytical:    mergeScore(gs.analytical,    existingGenome?.analytical),
+      leadership:    mergeScore(gs.leadership,    existingGenome?.leadership),
+      builder:       mergeScore(gs.builder,       existingGenome?.builder),
+      creator:       mergeScore(gs.creator,       existingGenome?.creator),
+      communication: mergeScore(gs.communication, existingGenome?.communication),
+      risk_taking:   mergeScore(gs.risk_taking,   existingGenome?.risk_taking),
+      top_strength:  memory.profile?.career_dna ? Object.entries(gs).sort((a,b) => b[1]-a[1])[0]?.[0] || existingGenome?.top_strength : existingGenome?.top_strength,
       updated_at:    new Date().toISOString(),
     }, { onConflict: 'user_id' })
 
     // ── 3. Upsert user_growth_state ──
     const gw = memory.growth_state || {}
+    const { data: existingGrowth } = await supabase
+      .from('user_growth_state').select('*').eq('user_id', userId).maybeSingle()
+
     await supabase.from('user_growth_state').upsert({
       user_id:         userId,
-      career_stage:    gw.career_stage    || 'Career Explorer',
-      progress_percent:gw.progress_percent || 0,
-      current_focus:   gw.current_focus,
-      next_milestone:  gw.next_milestone,
-      streak_days:     gw.streak_estimate  || 0,
+      career_stage:    gw.career_stage    || existingGrowth?.career_stage    || 'Career Explorer',
+      progress_percent:gw.progress_percent || existingGrowth?.progress_percent || 0,
+      current_focus:   gw.current_focus   || existingGrowth?.current_focus,
+      next_milestone:  gw.next_milestone  || existingGrowth?.next_milestone,
+      streak_days:     (existingGrowth?.streak_days || 0) + 1,
+      gps_steps:       existingGrowth?.gps_steps || existingProfile?.gps_steps || [],
       last_activity:   new Date().toISOString(),
       updated_at:      new Date().toISOString(),
     }, { onConflict: 'user_id' })
