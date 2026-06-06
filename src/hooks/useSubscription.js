@@ -1,13 +1,13 @@
 import { useState, useEffect } from 'react'
 import { supabase } from '../lib/supabase'
 
+// Model baru: Free = 15 chat/hari, Premium = unlimited semua fitur
 export const LIMITS = {
-  free:    { 'cv-review': 1,  ats: 1,  coach: 999, interview: 0,  'cv-maker': 0  },
-  starter: { 'cv-review': 5,  ats: 5,  coach: 999, interview: 0,  'cv-maker': 5  },
-  pro:     { 'cv-review': 30, ats: 30, coach: 999, interview: 30, 'cv-maker': 30 },
+  free:    { chat: 15, 'cv-review': 15, ats: 15, coach: 999, interview: 15, 'cv-maker': 15 },
+  premium: { chat: 999, 'cv-review': 999, ats: 999, coach: 999, interview: 999, 'cv-maker': 999 },
 }
 
-export const PLAN_LABEL  = { free: 'Free', starter: 'Starter', pro: 'Pro ⭐' }
+export const PLAN_LABEL  = { free: 'Free', premium: 'Premium ⭐' }
 
 export const FEATURE_LABEL = {
   'cv-review': 'CV Review',
@@ -15,6 +15,7 @@ export const FEATURE_LABEL = {
   coach:       'Career Coach',
   interview:   'Mock Interview',
   'cv-maker':  'CV Maker',
+  chat:        'Chat',
 }
 
 export function useSubscription(userId) {
@@ -37,10 +38,10 @@ export function useSubscription(userId) {
         .gte('expires_at', new Date().toISOString())
         .order('created_at', { ascending: false })
         .limit(1)
-        .maybeSingle() // pakai maybeSingle() bukan single() agar tidak throw kalau kosong
+        .maybeSingle()
       if (error) console.error('[useSubscription] fetchPlan error:', error.message)
       if (data?.plan && LIMITS[data.plan]) setPlan(data.plan)
-      else setPlan('free') // default free kalau tidak ada subscription
+      else setPlan('free')
     } catch (e) {
       console.error('[useSubscription] fetchPlan exception:', e)
       setPlan('free')
@@ -48,17 +49,19 @@ export function useSubscription(userId) {
     setLoading(false)
   }
 
-  // Cek usage langsung ke DB
+  // Cek usage — untuk free: limit harian, untuk premium: unlimited
   const checkUsage = async (feature) => {
     const limit = LIMITS[plan]?.[feature] ?? 0
-    if (limit === 0) return false       // fitur tidak ada di plan ini
-    if (limit >= 999) return true       // unlimited
+    if (limit === 0) return false
+    if (limit >= 999) return true
 
     if (!userId) return false
 
     try {
-      const monthStart = new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString()
-      const since = plan === 'free' ? '2000-01-01T00:00:00Z' : monthStart
+      // Free: hitung per hari
+      const today = new Date()
+      today.setHours(0, 0, 0, 0)
+      const since = today.toISOString()
 
       const { count, error } = await supabase
         .from('usage_logs')
@@ -69,21 +72,39 @@ export function useSubscription(userId) {
 
       if (error) {
         console.error('[useSubscription] checkUsage error:', error.message)
-        // Jika tabel tidak ada atau error RLS — BLOCK, jangan biarkan lewat
         return false
       }
 
       const used = count ?? 0
-      console.log(`[usage] ${feature}: ${used}/${limit}`)
+      console.log(`[usage] ${feature}: ${used}/${limit} (hari ini)`)
       return used < limit
 
     } catch (e) {
       console.error('[useSubscription] checkUsage exception:', e)
-      return false // BLOCK kalau error, bukan biarkan lewat
+      return false
     }
   }
 
-  // Log usage ke DB
+  // Cek berapa sisa chat hari ini (untuk UI badge)
+  const getRemainingChat = async () => {
+    if (plan === 'premium') return 999
+    if (!userId) return LIMITS.free.chat
+
+    try {
+      const today = new Date()
+      today.setHours(0, 0, 0, 0)
+      const { count } = await supabase
+        .from('usage_logs')
+        .select('*', { count: 'exact', head: true })
+        .eq('user_id', userId)
+        .eq('feature', 'chat')
+        .gte('created_at', today.toISOString())
+      return Math.max(0, LIMITS.free.chat - (count ?? 0))
+    } catch {
+      return LIMITS.free.chat
+    }
+  }
+
   const logUsage = async (feature) => {
     if (!userId) return
     const { error } = await supabase
@@ -92,5 +113,5 @@ export function useSubscription(userId) {
     if (error) console.error('[useSubscription] logUsage error:', error.message)
   }
 
-  return { plan, loading, checkUsage, logUsage, fetchPlan }
+  return { plan, loading, checkUsage, logUsage, fetchPlan, getRemainingChat }
 }
