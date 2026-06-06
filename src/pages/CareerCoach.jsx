@@ -24,7 +24,7 @@ export default function CareerCoach({ user }) {
   const bottomRef = useRef(null)
   const inputRef  = useRef(null)
 
-  const isPaid = plan === 'starter' || plan === 'pro'
+  const isPaid = plan === 'premium'
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' })
@@ -199,7 +199,7 @@ export default function CareerCoach({ user }) {
             textAlign: 'center',
           }}>
             💡 Histori chat tidak tersimpan di perangkat lain.{' '}
-            <a href="/pricing" style={{ color: '#1a73e8', fontWeight: 600 }}>Upgrade ke Starter</a> untuk sinkronisasi antar device.
+            <a href="/pricing" style={{ color: '#1a73e8', fontWeight: 600 }}>Upgrade ke Premium</a> untuk sinkronisasi antar device.
           </div>
         )}
 
