@@ -4,14 +4,38 @@ import { supabase } from '../lib/supabase'
 
 const PAYMENT_URL = 'http://lynk.id/yudadunya/r3o5ldq5qkex/checkout'
 
-const GPS_STEPS = [
-  { label: 'Career Assessment', done: true, free: true },
-  { label: 'SQL Basic',          done: false, free: true  },
-  { label: 'SQL Intermediate',   done: false, free: false },
-  { label: 'Power BI',           done: false, free: false },
-  { label: 'Portfolio Project',  done: false, free: false },
-  { label: 'Interview Preparation', done: false, free: false },
-]
+// Generate GPS steps dari data user — fallback ke generic kalau data kosong
+function buildGpsSteps(gpsFromDb, gapSkills, targetPosisi) {
+  // Prioritas 1: pakai gps_steps dari DB (hasil compute-genome)
+  if (gpsFromDb?.length >= 3) {
+    return gpsFromDb.map((s, i) => ({
+      label: s.title || s.label || `Langkah ${i+1}`,
+      done:  s.done  || false,
+      free:  i < 2,
+    }))
+  }
+  // Prioritas 2: generate dari gap_skills user
+  if (gapSkills?.length > 0) {
+    const steps = [
+      { label: 'Career Assessment',      done: true,  free: true  },
+      { label: gapSkills[0],             done: false, free: true  },
+      { label: gapSkills[1] || 'Latihan Praktik',  done: false, free: false },
+      { label: gapSkills[2] || 'Portfolio Project', done: false, free: false },
+      { label: gapSkills[3] || 'Personal Branding', done: false, free: false },
+      { label: 'Interview Preparation',  done: false, free: false },
+    ]
+    return steps
+  }
+  // Fallback generic
+  return [
+    { label: 'Career Assessment',     done: true,  free: true  },
+    { label: 'Skill Foundation',      done: false, free: true  },
+    { label: 'Core Skill Building',   done: false, free: false },
+    { label: 'Practice & Portfolio',  done: false, free: false },
+    { label: 'Personal Branding',     done: false, free: false },
+    { label: 'Interview Preparation', done: false, free: false },
+  ]
+}
 
 export default function UpgradeModal({ user, onClose, initialData = null }) {
   const [profile,  setProfile]  = useState(initialData?.profile  || null)
@@ -36,7 +60,7 @@ export default function UpgradeModal({ user, onClose, initialData = null }) {
   const readiness = growth?.progress_percent || profile?.career_readiness || 0
   const gapPct    = Math.max(0, 100 - readiness)
   const gaps      = (profile?.skill_gaps || profile?.gap_skills || []).slice(0, 4)
-  const gpsSteps  = profile?.gps_steps?.length ? profile.gps_steps : GPS_STEPS
+  const gpsSteps  = buildGpsSteps(profile?.gps_steps, gaps, target)
   const mentorMsg = profile?.mentor_message
     || `Berdasarkan hasil analisisku, target ${target} sangat realistis untuk kamu capai. Yang paling penting sekarang bukan belajar lebih banyak, tetapi belajar hal yang tepat dalam urutan yang tepat. Career GPS Premium akan menunjukkan langkah tersebut secara spesifik untuk profilmu.`
 
