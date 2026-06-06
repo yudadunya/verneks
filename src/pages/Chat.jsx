@@ -312,6 +312,7 @@ Pilih yang sesuai buat kamu:`
     if (id === '__share_ats') { const m = [...messages].reverse().find(m => m.role === 'bot' && (m.text?.length || 0) > 100); setShareCard({ text: m?.text || '', type: 'ats' }); return }
     if (id === '__pricing') { navigate('/pricing'); return }
     if (id === '__upgrade_premium') { window.open('http://lynk.id/yudadunya/r3o5ldq5qkex/checkout', '_blank', 'noopener,noreferrer'); return }
+    if (id === '__open_upgrade') { openUpgradeModal(); return }
     if (id === '__genome_reveal') { await doGenomeReveal(); return }
     if (id === '__upgrade_gps')   { navigate('/paywall'); return }
     if (id === '__continue_coach') {
@@ -742,12 +743,24 @@ Pilih yang sesuai buat kamu:`
     setTimeout(() => triggerGenomeTeaser(), 2000)
   }
 
+  // Trigger UpgradeModal dari mana saja via custom event
+  const openUpgradeModal = () => {
+    window.dispatchEvent(new CustomEvent('show-upgrade'))
+  }
+
   const callCoachApi = async (history) => {
     try {
       const data = await apiFetch('/api/career-coach', { messages: history, userId: user?.id || null, plan: plan || 'free' })
       const fullHistory = [...history, { role: 'assistant', content: data.reply }]
       setCoachHistory(fullHistory)
-      pushBot(data.reply, null)
+
+      // Untuk free user: tambahkan quick reply persuasi upgrade di setiap reply
+      const upgradeQr = plan === 'free'
+        ? [{ id: '__open_upgrade', label: '🚀 Buka Career GPS Premium' }]
+        : null
+
+      pushBot(data.reply, upgradeQr)
+
       // Extract dengan full history termasuk reply Diah Anna (lebih kaya konteks)
       if (user?.id && fullHistory.filter(m => m.role === 'user').length >= 3) {
         setTimeout(() => {
