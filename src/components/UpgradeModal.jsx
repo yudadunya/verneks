@@ -24,8 +24,8 @@ export default function UpgradeModal({ user, onClose, initialData = null }) {
     if (initialData?.profile) { setLoading(false); return }
     if (!user?.id) { setLoading(false); return }
     Promise.all([
-      supabase.from('user_career_profiles').select('target_posisi,career_readiness,skill_gaps,gap_skills,mentor_message,gps_steps').eq('user_id', user.id).maybeSingle(),
-      supabase.from('user_growth_state').select('progress_percent,career_stage').eq('user_id', user.id).maybeSingle(),
+      supabase.from('user_career_profiles').select('*').eq('user_id', user.id).maybeSingle(),
+      supabase.from('user_growth_state').select('*').eq('user_id', user.id).maybeSingle(),
       supabase.from('user_genome_scores').select('*').eq('user_id', user.id).maybeSingle(),
     ]).then(([{ data: p }, { data: g }, { data: gs }]) => {
       setProfile(p); setGrowth(g); setGenome(gs); setLoading(false)
