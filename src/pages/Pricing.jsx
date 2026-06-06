@@ -15,13 +15,13 @@ const PLANS = [
     ctaStyle: 'ghost',
     features: [
       '15 chat per hari dengan Diah Anna',
-      'CV Review (15x/hari)',
-      'ATS Checker (15x/hari)',
-      'Mock Interview (15x/hari)',
-      'CV Maker AI (15x/hari)',
+      'CV Review (1x/bulan)',
+      'ATS Checker (1x/bulan)',
+      'Mock Interview (1x/bulan)',
+      'CV Maker AI (1x/bulan)',
     ],
     locked: [
-      'Kuota reset tiap tengah malam',
+      'Chat reset tiap tengah malam, fitur reset tiap awal bulan',
     ],
   },
   {
@@ -53,7 +53,7 @@ const FAQ = [
   { q: 'Cara bayar gimana?', a: 'Pembayaran lewat Lynk.id — bisa GoPay, OVO, Dana, QRIS, transfer bank, atau kartu kredit/debit.' },
   { q: 'Apakah data CV saya aman?', a: 'Ya. CV dan percakapan kamu tidak disimpan untuk keperluan apapun selain memproses permintaanmu.' },
   { q: 'Bedanya Free dan Premium apa?', a: 'Free cukup untuk coba semua fitur dengan batasan 15 chat per hari. Premium untuk yang serius cari kerja — semua fitur unlimited, plus Career GPS dan progress tracking.' },
-  { q: 'Kuota Free reset kapan?', a: 'Setiap tengah malam (00:00 WIB). Jadi kamu bisa pakai 15 chat lagi keesokan harinya.' },
+  { q: 'Kuota Free reset kapan?', a: 'Chat 15x/hari reset setiap tengah malam (00:00 WIB). Kuota fitur (CV Review, ATS, Interview, CV Maker) masing-masing 1x reset setiap awal bulan.' },
 ]
 
 export default function Pricing({ user }) {
