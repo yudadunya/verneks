@@ -1,221 +1,212 @@
-import { useNavigate } from 'react-router-dom'
-import { useEffect, useState } from 'react'
-import { supabase } from '../lib/supabase'
-import BottomNav from '../components/BottomNav'
+import { BrowserRouter, Routes, Route } from 'react-router-dom'
+import { useState, useEffect } from 'react'
+import { supabase } from './lib/supabase'
+import Home from './pages/Home'
+import Login from './pages/Login'
+import Register from './pages/Register'
+import ForgotPassword from './pages/ForgotPassword'
+import ResetPassword from './pages/ResetPassword'
+import Chat from './pages/Chat'
+import Pricing from './pages/Pricing'
+import Blog from './pages/Blog'
+import BlogPost from './pages/BlogPost'
+import Journey from './pages/Journey'
+import Discovery from './pages/Discovery'
+import UpgradeModal from './components/UpgradeModal'
+import Paywall from './pages/Paywall'
+import GenomeResult from './pages/GenomeResult'
+import Dashboard from './pages/Dashboard'
+import DNA from './pages/DNA'
+import Opportunities from './pages/Opportunities'
+import Profile from './pages/Profile'
+import AdminPanel from './pages/AdminPanel'
 
-const CACHE_KEY  = 'lc_job_matches'
-const CACHE_TTL  = 6 * 60 * 60 * 1000 // 6 jam dalam ms
-
-function loadCache(userId) {
+// Helper baca localStorage
+function loadMessages(userId) {
+  if (!userId) return []
   try {
-    const raw = sessionStorage.getItem(`${CACHE_KEY}_${userId}`)
-    if (!raw) return null
-    const { jobs, ts } = JSON.parse(raw)
-    if (Date.now() - ts > CACHE_TTL) return null
-    return jobs
-  } catch { return null }
-}
-
-function saveCache(userId, jobs) {
-  try {
-    sessionStorage.setItem(`${CACHE_KEY}_${userId}`, JSON.stringify({ jobs, ts: Date.now() }))
+    const saved = localStorage.getItem(`lc_chat_${userId}`)
+    if (saved) {
+      const parsed = JSON.parse(saved)
+      if (Array.isArray(parsed) && parsed.length > 0) return parsed
+    }
   } catch {}
+  return []
 }
 
-function clearCache(userId) {
-  try { sessionStorage.removeItem(`${CACHE_KEY}_${userId}`) } catch {}
-}
+export default function App() {
+  const [user, setUser]             = useState(null)
+  const [loading, setLoading]       = useState(true)
+  const [chatMessages, setChatMessages] = useState([])
+  const [showUpgrade, setShowUpgrade] = useState(false)
+  const [upgradeData, setUpgradeData] = useState(null)
 
-export default function Opportunities({ user }) {
-  const navigate   = useNavigate()
-  const [isPremium, setIsPremium] = useState(null)
-  const [jobs,      setJobs]      = useState([])
-  const [loading,   setLoading]   = useState(false)
-  const [error,     setError]     = useState(null)
+  // Global upgrade modal trigger
+  useEffect(() => {
+    const handler = (e) => {
+      // Hanya update data kalau event membawa detail (dari Dashboard)
+      // Kalau dari BottomNav (tanpa detail) — pakai data terakhir yang tersimpan
+      if (e.detail) setUpgradeData(e.detail)
+      setShowUpgrade(true)
+    }
+    window.addEventListener('show-upgrade', handler)
+    return () => window.removeEventListener('show-upgrade', handler)
+  }, [])
 
   useEffect(() => {
-    if (!user) { navigate('/'); return }
-
-    supabase
-      .from('subscriptions')
-      .select('plan')
-      .eq('user_id', user.id)
-      .eq('status', 'active')
-      .gte('expires_at', new Date().toISOString())
-      .limit(1)
-      .maybeSingle()
-      .then(({ data }) => {
-        const premium = !!data?.plan && data.plan !== 'free'
-        setIsPremium(premium)
-        if (!premium) return
-
-        // Pakai cache kalau masih fresh — tidak fetch ulang
-        const cached = loadCache(user.id)
-        if (cached) { setJobs(cached); return }
-
-        fetchJobs()
-      })
-  }, [user?.id])
-
-  const fetchJobs = async (forceRefresh = false) => {
-    if (forceRefresh) clearCache(user.id)
-    setLoading(true)
-    setError(null)
-    try {
-      const res  = await fetch('/api/job-match', {
-        method:  'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body:    JSON.stringify({ userId: user.id }),
-      })
-      const data = await res.json()
-      if (!res.ok) throw new Error(data.error)
-      setJobs(data.jobs)
-      saveCache(user.id, data.jobs)
-    } catch (e) {
-      setError(e.message)
-    } finally {
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      const u = session?.user ?? null
+      setUser(u)
+      if (u) setChatMessages(loadMessages(u.id))
       setLoading(false)
-    }
-  }
+    })
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      if (_event === 'PASSWORD_RECOVERY') {
+        window.location.href = '/reset-password'
+        return
+      }
+      const u = session?.user ?? null
+      setUser(u)
+      if (u) {
+        setChatMessages(loadMessages(u.id))
+        if (_event === 'SIGNED_IN') {
+          // Sync discovery result ke Supabase
+          const discoveryResult = localStorage.getItem('lc_discovery_result')
+          const discoveryMessages = localStorage.getItem('lc_discovery_messages')
+          if (discoveryResult) {
+            try {
+              const result = JSON.parse(discoveryResult)
+              const p  = result.profile_preview || {}
+              const gs = result.genome_scores   || {}
+              const gw = result.growth_state    || {}
 
-  if (!user) return null
+              // 1. Simpan profil + genome data langsung (tidak lewat extract-profile)
+              supabase.from('user_career_profiles').upsert({
+                user_id:          u.id,
+                nama:             p.nama             || null,
+                target_posisi:    p.target_posisi    || null,
+                posisi_saat_ini:  p.posisi_saat_ini  || null,
+                industri:         p.industri         || null,
+                tantangan_karir:  p.hambatan_utama   || null,
+                career_readiness: result.career_readiness || 0,
+                skill_gaps:       result.gap_skills  || [],
+                gps_steps:        result.gps_steps   || [],
+                mentor_message:   result.mentor_message || null,
+                summary:          result.mentor_message || null,
+                last_updated:     new Date().toISOString(),
+              }, { onConflict: 'user_id' }).then(({ error }) => {
+                if (error) console.warn('[discovery-save] profile error:', error.message)
+              })
 
-  // ── Non-premium gate ──────────────────────────────────────────────────────
-  if (isPremium === false) return (
+              // 2. Simpan genome scores
+              if (Object.values(gs).some(v => v > 0)) {
+                supabase.from('user_genome_scores').upsert({
+                  user_id:      u.id,
+                  ...gs,
+                  top_strength: result.top_strength || null,
+                  updated_at:   new Date().toISOString(),
+                }, { onConflict: 'user_id' }).catch(e => console.warn('[genome-save]', e.message))
+              }
+
+              // 3. Simpan growth state
+              if (gw.career_stage) {
+                supabase.from('user_growth_state').upsert({
+                  user_id:          u.id,
+                  career_stage:     gw.career_stage,
+                  progress_percent: gw.progress_percent || result.career_readiness || 0,
+                  current_focus:    gw.current_focus || null,
+                  updated_at:       new Date().toISOString(),
+                }, { onConflict: 'user_id' }).catch(e => console.warn('[growth-save]', e.message))
+              }
+
+              // 4. Juga kirim messages ke extract-profile untuk profil teks (nama, domisili, dll)
+              if (discoveryMessages) {
+                try {
+                  const msgs = JSON.parse(discoveryMessages)
+                  const apiMsgs = msgs
+                    .filter(m => m.role === 'user' || m.role === 'bot')
+                    .map(m => ({ role: m.role === 'bot' ? 'assistant' : 'user', content: m.text || '' }))
+                    .filter(m => m.content)
+                  fetch('/api/extract-profile', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ userId: u.id, messages: apiMsgs })
+                  }).catch(e => console.warn('[extract-profile]', e))
+                } catch {}
+              }
+
+            } catch (e) {
+              console.warn('[discovery-save] error:', e.message)
+            }
+            localStorage.removeItem('lc_discovery_result')
+            localStorage.removeItem('lc_discovery_messages')
+            sessionStorage.removeItem(`lc_job_matches_${u.id}`)
+          }
+          if (window.location.pathname === '/' ||
+              window.location.pathname === '/discovery' ||
+              window.location.pathname === '/genome-result' ||
+              window.location.pathname === '/paywall' ||
+              window.location.hash.includes('access_token')) {
+            window.location.replace('/dashboard')
+          }
+        }
+      } else {
+        setChatMessages([])
+      }
+    })
+    return () => subscription.unsubscribe()
+  }, [])
+
+  if (loading) return (
     <div style={{
-      minHeight: '100vh', background: '#0a0f0d',
-      display: 'flex', flexDirection: 'column',
-      alignItems: 'center', justifyContent: 'center',
-      padding: '0 24px', textAlign: 'center', paddingBottom: 90,
+      display: 'flex', flexDirection: 'column', alignItems: 'center',
+      justifyContent: 'center', height: '100vh', gap: '16px',
+      background: 'var(--wa-header)'
     }}>
-      <div style={{ fontSize: '3rem', marginBottom: 16 }}>💼</div>
-      <div style={{ color: '#fff', fontWeight: 800, fontSize: '1.1rem', marginBottom: 10 }}>
-        Opportunity Matching
-      </div>
-      <div style={{ color: 'rgba(255,255,255,0.4)', fontSize: '0.85rem', lineHeight: 1.7, marginBottom: 28 }}>
-        Lihat lowongan yang benar-benar cocok<br />dengan DNA karier kamu.<br /><br />
-        Fitur ini tersedia untuk pengguna Premium.
-      </div>
-      <button
-        onClick={() => window.location.href = '/pricing'}
-        style={{ padding: '13px 32px', background: 'linear-gradient(135deg,#25D366,#128C7E)', color: '#fff', fontWeight: 700, borderRadius: 12, border: 'none', cursor: 'pointer', fontSize: '0.9rem', boxShadow: '0 4px 16px rgba(37,211,102,0.3)' }}
-      >
-        🚀 Upgrade Premium
-      </button>
-      <button
-        onClick={() => window.history.back()}
-        style={{ marginTop: 12, background: 'none', border: 'none', color: 'rgba(255,255,255,0.3)', fontSize: '0.8rem', cursor: 'pointer' }}
-      >
-        ← Kembali
-      </button>
-      <BottomNav isPremium={false} />
+      <div style={{ fontSize: '3rem' }}>💼</div>
+      <div style={{ color: '#fff', fontWeight: 700, fontSize: '1.4rem' }}>LamarCerdas</div>
+      <div style={{ color: 'rgba(255,255,255,0.7)', fontSize: '0.85rem' }}>Memuat...</div>
     </div>
   )
 
-  // ── Loading state (initial) ───────────────────────────────────────────────
-  if (isPremium === null) return null
-
-  // ── Main view ─────────────────────────────────────────────────────────────
   return (
-    <div style={{ minHeight: '100vh', background: 'var(--wa-bg)', paddingBottom: '80px' }}>
-      <div className="wa-header">
-        <div className="wa-header-title">💼 Opportunity Matching</div>
-      </div>
-
-      <div style={{ padding: '16px' }}>
-
-        {/* Loading */}
-        {loading && (
-          <div style={{ textAlign: 'center', padding: '48px 0' }}>
-            <div style={{ fontSize: '2rem', marginBottom: 12 }}>🔍</div>
-            <div style={{ color: '#666', fontSize: '0.85rem', lineHeight: 1.7 }}>
-              Diah Anna sedang mencarikan<br />lowongan terbaik untukmu...
-            </div>
-          </div>
-        )}
-
-        {/* Error */}
-        {!loading && error && (
-          <div style={{ background: '#fff5f5', border: '1px solid #fecaca', borderRadius: 12, padding: '16px', marginBottom: 16, textAlign: 'center' }}>
-            <div style={{ fontSize: '1.5rem', marginBottom: 8 }}>⚠️</div>
-            <div style={{ color: '#dc2626', fontSize: '0.85rem', marginBottom: 12 }}>
-              {error === 'Profil belum lengkap'
-                ? 'Lengkapi profilmu dulu lewat Discovery ya, biar rekomendasinya akurat!'
-                : `Gagal memuat: ${error}`}
-            </div>
-            <button
-              onClick={() => fetchJobs(true)}
-              style={{ background: '#fff', border: '1px solid #e0e0e0', color: '#444', padding: '8px 20px', borderRadius: 8, cursor: 'pointer', fontSize: '0.82rem', fontWeight: 600 }}
-            >
-              Coba lagi
-            </button>
-          </div>
-        )}
-
-        {/* Job cards */}
-        {!loading && !error && jobs.length > 0 && (
-          <>
-            <div style={{ color: '#999', fontSize: '0.75rem', marginBottom: 12 }}>
-              {jobs.length} lowongan cocok dengan profil kamu
-            </div>
-
-            {jobs.map((job, i) => (
-              <div key={i} style={{
-                background: '#fff',
-                padding: '14px 16px',
-                borderRadius: '12px',
-                marginBottom: '10px',
-                border: '1px solid #e8e8e8',
-                boxShadow: '0 1px 4px rgba(0,0,0,0.06)',
-              }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 5 }}>
-                  <div style={{ fontWeight: 700, color: '#111', fontSize: '0.95rem', flex: 1, marginRight: 8 }}>
-                    {job.role}
-                  </div>
-                  <div style={{
-                    background: 'linear-gradient(135deg,#25D366,#128C7E)',
-                    color: '#fff', padding: '3px 10px',
-                    borderRadius: '10px', fontSize: '0.7rem',
-                    fontWeight: 700, flexShrink: 0,
-                  }}>
-                    {job.match}% Match
-                  </div>
-                </div>
-
-                <div style={{ fontSize: '0.8rem', color: '#666', marginBottom: 6 }}>
-                  {job.company} • {job.salary}
-                </div>
-
-                {job.reason && (
-                  <div style={{ fontSize: '0.78rem', color: '#888', marginBottom: 10, lineHeight: 1.5 }}>
-                    {job.reason}
-                  </div>
-                )}
-
-                <button
-                  onClick={() => navigate('/chat')}
-                  style={{ background: 'none', border: 'none', color: '#25D366', fontSize: '0.82rem', fontWeight: 600, cursor: 'pointer', padding: 0 }}
-                >
-                  Tanya Diah Anna →
-                </button>
-              </div>
-            ))}
-
-            {/* Refresh manual */}
-            <button
-              onClick={() => fetchJobs(true)}
-              style={{ width: '100%', marginTop: 8, background: '#f5f5f5', border: '1px solid #e0e0e0', color: '#777', padding: '11px', borderRadius: 10, cursor: 'pointer', fontSize: '0.8rem', fontWeight: 500 }}
-            >
-              🔄 Refresh rekomendasi
-            </button>
-            <div style={{ textAlign: 'center', color: '#ccc', fontSize: '0.7rem', marginTop: 8 }}>
-              Diperbarui otomatis setiap 6 jam
-            </div>
-          </>
-        )}
-      </div>
-
-      <BottomNav isPremium={isPremium} />
-    </div>
+    <>
+    <BrowserRouter>
+      <Routes>
+        <Route path="/"              element={<Home user={user} />} />
+        <Route path="/login"         element={<Login />} />
+        <Route path="/register"      element={<Register />} />
+        <Route path="/forgot-password" element={<ForgotPassword />} />
+        <Route path="/reset-password"  element={<ResetPassword />} />
+        <Route path="/pricing"       element={<Pricing user={user} />} />
+        <Route path="/chat"          element={<Chat user={user} chatMessages={chatMessages} setChatMessages={setChatMessages} />} />
+        <Route path="/discovery"      element={<Discovery />} />
+        <Route path="/genome-result"   element={<GenomeResult />} />
+        <Route path="/paywall"          element={<Paywall />} />
+        <Route path="/dashboard"       element={<Dashboard user={user} />} />
+        <Route path="/journey"         element={<Journey user={user} />} />
+        <Route path="/dna"            element={<DNA user={user} />} />
+        <Route path="/opportunities"  element={<Opportunities user={user} />} />
+        <Route path="/profile"        element={<Profile user={user} />} />
+        <Route path="/blog"          element={<Blog user={user} />} />
+        <Route path="/blog/:slug"    element={<BlogPost user={user} />} />
+        <Route path="/adm-lc"        element={<AdminPanel />} />
+        
+        {/* Backward Compatibility: Semua route lama redirect ke /chat */}
+        <Route path="/cv-review"      element={<Chat user={user} chatMessages={chatMessages} setChatMessages={setChatMessages} />} />
+        <Route path="/ats-checker"    element={<Chat user={user} chatMessages={chatMessages} setChatMessages={setChatMessages} />} />
+        <Route path="/mock-interview" element={<Chat user={user} chatMessages={chatMessages} setChatMessages={setChatMessages} />} />
+        <Route path="/career-coach"   element={<Chat user={user} chatMessages={chatMessages} setChatMessages={setChatMessages} />} />
+        <Route path="/cv-maker"       element={<Chat user={user} chatMessages={chatMessages} setChatMessages={setChatMessages} />} />
+      </Routes>
+    </BrowserRouter>
+    {showUpgrade && user && (
+      <UpgradeModal
+        user={user}
+        initialData={upgradeData}
+        onClose={() => { setShowUpgrade(false); setUpgradeData(null) }}
+      />
+    )}
+    </>
   )
 }
