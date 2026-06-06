@@ -86,6 +86,15 @@ export default function Discovery() {
       const data = await res.json()
       if (data.success) {
         localStorage.setItem('lc_discovery_result', JSON.stringify(data.result))
+        // Cek session — kalau belum login, wajib Google Sign In dulu
+        const { data: { session } } = await supabase.auth.getSession()
+        if (!session?.user) {
+          await supabase.auth.signInWithOAuth({
+            provider: 'google',
+            options: { redirectTo: `${window.location.origin}/genome-result` }
+          })
+          return
+        }
         navigate('/genome-result')
       }
     } catch {
