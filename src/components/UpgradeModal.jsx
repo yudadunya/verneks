@@ -43,6 +43,13 @@ export default function UpgradeModal({ user, onClose, initialData = null }) {
   const [genome,   setGenome]   = useState(initialData?.genome   || null)
   const [loading,  setLoading]  = useState(!initialData)
 
+  // Redeem code state
+  const [showRedeem,   setShowRedeem]   = useState(false)
+  const [redeemCode,   setRedeemCode]   = useState('')
+  const [redeemLoading, setRedeemLoading] = useState(false)
+  const [redeemMsg,    setRedeemMsg]    = useState(null)  // { type: 'ok'|'err', text }
+  const [redeemDone,   setRedeemDone]   = useState(false)
+
   useEffect(() => {
     // Kalau data sudah dikirim dari Dashboard — langsung pakai, tidak perlu fetch
     if (initialData?.profile) { setLoading(false); return }
@@ -261,6 +268,86 @@ export default function UpgradeModal({ user, onClose, initialData = null }) {
             }}>
             Lanjutkan Versi Gratis
           </button>
+
+          {/* ── Redeem Code ── */}
+          {!redeemDone ? (
+            <div style={{ marginTop: 16, textAlign: 'center' }}>
+              {!showRedeem ? (
+                <button
+                  onClick={() => setShowRedeem(true)}
+                  style={{ background: 'none', border: 'none', color: 'rgba(255,255,255,0.3)', fontSize: '0.75rem', cursor: 'pointer', textDecoration: 'underline', textUnderlineOffset: 3 }}
+                >
+                  Sudah punya kode redeem?
+                </button>
+              ) : (
+                <div style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 12, padding: '14px 16px', textAlign: 'left' }}>
+                  <div style={{ color: 'rgba(255,255,255,0.5)', fontSize: '0.75rem', marginBottom: 8 }}>Masukkan kode redeem (12 karakter)</div>
+                  <div style={{ display: 'flex', gap: 8 }}>
+                    <input
+                      value={redeemCode}
+                      onChange={e => { setRedeemCode(e.target.value.toUpperCase()); setRedeemMsg(null) }}
+                      placeholder="XXXX-XXXX-XXXX"
+                      maxLength={12}
+                      style={{
+                        flex: 1, padding: '10px 12px', borderRadius: 9,
+                        border: '1px solid rgba(255,255,255,0.12)',
+                        background: 'rgba(255,255,255,0.05)', color: '#fff',
+                        fontSize: '0.95rem', fontFamily: 'monospace', letterSpacing: 2,
+                        outline: 'none',
+                      }}
+                    />
+                    <button
+                      disabled={redeemCode.length < 12 || redeemLoading}
+                      onClick={async () => {
+                        if (!user?.id) return
+                        setRedeemLoading(true); setRedeemMsg(null)
+                        try {
+                          const res  = await fetch('/api/redeem-code', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ code: redeemCode, userId: user.id }),
+                          })
+                          const data = await res.json()
+                          if (data.success) {
+                            setRedeemDone(true)
+                            setRedeemMsg({ type: 'ok', text: '🎉 Premium aktif 30 hari! Silakan refresh halaman.' })
+                          } else {
+                            setRedeemMsg({ type: 'err', text: data.error || 'Kode tidak valid' })
+                          }
+                        } catch {
+                          setRedeemMsg({ type: 'err', text: 'Koneksi bermasalah, coba lagi.' })
+                        }
+                        setRedeemLoading(false)
+                      }}
+                      style={{
+                        padding: '10px 16px', borderRadius: 9,
+                        background: redeemCode.length < 12 ? 'rgba(37,211,102,0.2)' : 'linear-gradient(135deg,#25D366,#128C7E)',
+                        color: '#fff', fontWeight: 700, fontSize: '0.82rem',
+                        border: 'none', cursor: redeemCode.length < 12 ? 'not-allowed' : 'pointer',
+                        whiteSpace: 'nowrap',
+                      }}
+                    >
+                      {redeemLoading ? '⏳' : 'Aktifkan'}
+                    </button>
+                  </div>
+                  {redeemMsg && (
+                    <div style={{ marginTop: 8, fontSize: '0.78rem', color: redeemMsg.type === 'ok' ? '#25D366' : '#EF5350', fontWeight: 600 }}>
+                      {redeemMsg.text}
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+          ) : (
+            <div style={{ marginTop: 16, padding: '14px', background: 'rgba(37,211,102,0.1)', border: '1px solid rgba(37,211,102,0.3)', borderRadius: 12, textAlign: 'center' }}>
+              <div style={{ fontSize: '1.4rem', marginBottom: 4 }}>🎉</div>
+              <div style={{ color: '#25D366', fontWeight: 700, fontSize: '0.9rem' }}>Premium berhasil diaktifkan!</div>
+              <div style={{ color: 'rgba(255,255,255,0.45)', fontSize: '0.75rem', marginTop: 4 }}>Berlaku 30 hari. Refresh halaman untuk mulai.</div>
+              <button onClick={() => window.location.reload()} style={{ marginTop: 10, padding: '9px 20px', borderRadius: 9, background: '#25D366', color: '#fff', fontWeight: 700, fontSize: '0.82rem', border: 'none', cursor: 'pointer' }}>
+                Refresh Sekarang
+              </button>
+            </div>
+          )}
 
         </div>
       </div>
