@@ -748,20 +748,34 @@ Pilih yang sesuai buat kamu:`
     window.dispatchEvent(new CustomEvent('show-upgrade'))
   }
 
+  // Rotasi pesan persuasi halus — berbeda tiap muncul, tidak monoton
+  const UPGRADE_NUDGES = [
+    'Btw, aku sudah siapkan roadmap 6 bulan khusus untuk targetmu — tinggal dibuka. 🗺️',
+    'Kalau mau langkah yang lebih spesifik untuk situasimu, Career GPS-mu sudah siap. ✨',
+    'Ada lebih banyak yang bisa aku kasih kalau roadmap personalmu sudah terbuka. 🚀',
+    'Jujur — untuk kondisimu ini ada 1 langkah yang jauh lebih efektif. Sudah aku tulis di Career GPS-mu.',
+    'Aku udah petakan gap dan urutan belajar yang tepat untukmu — mau lihat? 🔍',
+  ]
+
+  const nudgeIndexRef = useRef(0)
+
   const callCoachApi = async (history) => {
     try {
       const data = await apiFetch('/api/career-coach', { messages: history, userId: user?.id || null, plan: plan || 'free' })
       const fullHistory = [...history, { role: 'assistant', content: data.reply }]
       setCoachHistory(fullHistory)
 
-      // Untuk free user: tambahkan quick reply persuasi upgrade di setiap reply
-      const upgradeQr = plan === 'free'
-        ? [{ id: '__open_upgrade', label: '🚀 Buka Career GPS Premium' }]
-        : null
+      // Untuk free user: tambahkan persuasi halus + tombol upgrade di setiap reply
+      let upgradeQr = null
+      if (plan === 'free') {
+        const nudge = UPGRADE_NUDGES[nudgeIndexRef.current % UPGRADE_NUDGES.length]
+        nudgeIndexRef.current += 1
+        const replyWithNudge = `${data.reply}\n\n_${nudge}_`
+        pushBot(replyWithNudge, [{ id: '__open_upgrade', label: '🚀 Buka Career GPS Premium' }])
+      } else {
+        pushBot(data.reply, null)
+      }
 
-      pushBot(data.reply, upgradeQr)
-
-      // Extract dengan full history termasuk reply Diah Anna (lebih kaya konteks)
       if (user?.id && fullHistory.filter(m => m.role === 'user').length >= 3) {
         setTimeout(() => {
           apiFetch('/api/extract-profile', { userId: user.id, messages: fullHistory }).catch(() => {})
