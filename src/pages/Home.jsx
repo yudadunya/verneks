@@ -149,18 +149,17 @@ export default function Home({ user }) {
   }
 
   const CTAButton = ({ label = 'Temukan Career DNA Kamu — Gratis', style = {} }) => (
-    <button onClick={handleGoogle} disabled={authLoading} style={{
+    <button onClick={() => navigate('/discovery')} style={{
       display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10,
-      background: authLoading ? '#1a3a20' : 'linear-gradient(135deg, #25D366 0%, #128C7E 100%)',
+      background: 'linear-gradient(135deg, #25D366 0%, #128C7E 100%)',
       color: '#fff', fontWeight: 800, fontSize: '0.95rem',
       padding: '15px 22px', borderRadius: 14, border: 'none',
-      cursor: authLoading ? 'not-allowed' : 'pointer',
-      boxShadow: authLoading ? 'none' : '0 4px 24px rgba(37,211,102,0.35)',
+      cursor: 'pointer',
+      boxShadow: '0 4px 24px rgba(37,211,102,0.35)',
       width: '100%', maxWidth: 420,
       transition: 'all 0.2s', ...style
     }}>
-      {!authLoading && <GoogleIcon />}
-      {authLoading ? 'Mengarahkan...' : label}
+      {label}
     </button>
   )
 
