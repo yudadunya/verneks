@@ -51,7 +51,7 @@ const CV_FORMATS = [
 
 export default function Chat({ user, chatMessages = [], setChatMessages }) {
   const navigate = useNavigate()
-  const { plan, loading: subLoading, checkUsage, logUsage, getRemainingChat } = useSubscription(user?.id)
+  const { plan, loading: subLoading, checkUsage, logUsage, getRemainingChat, isExpired } = useSubscription(user?.id)
 
   const storageKey     = user?.id ? `lc_chat_${user.id}` : null
   const ONBOARDING_KEY = user?.id ? `onboarded_${user.id}` : null
@@ -240,6 +240,22 @@ export default function Chat({ user, chatMessages = [], setChatMessages }) {
       pushBot(`Halo${firstName2 ? ` ${firstName2}` : ''}! 👋 Aku Diah Anna, AI Career Coach kamu.\n\nAda yang bisa aku bantu hari ini?`)
     })
   }, [user?.id, chatMessages])
+
+  // ── Persuasi Diah Anna saat premium expired ──────────────────────────────
+  useEffect(() => {
+    if (!isExpired) return
+    if (messages.length > 0) return   // hanya di sesi baru
+
+    const firstName = (user?.user_metadata?.name || user?.user_metadata?.full_name || '').split(' ')[0]
+    const name = firstName ? ` ${firstName}` : ''
+
+    setTimeout(() => {
+      pushBot(
+        `Halo${name}! 👋 Selamat datang kembali.\n\nAku perhatikan akses Premium kamu sudah berakhir. Selama premium, kamu sudah banyak berkembang — sayang kalau momentumnya berhenti di sini. 💪\n\nYuk lanjutkan perjalanan kariermu! Aktifkan kembali Premium dan aku siap bantu kamu capai target berikutnya. 🚀`,
+        [{ id: '__open_upgrade', label: '⭐ Aktifkan Premium Lagi' }]
+      )
+    }, 800)
+  }, [isExpired, user?.id])
 
   // ── Simpan ke localStorage setiap messages berubah ───────────────────
   useEffect(() => {
