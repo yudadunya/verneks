@@ -180,7 +180,7 @@ export default function Chat({ user, chatMessages = [], setChatMessages }) {
     // Fetch growth_state + profil sekaligus untuk greeting & context injection
     Promise.all([
       supabase.from('user_growth_state').select('career_stage, progress_percent, current_focus, next_milestone, streak_days').eq('user_id', user.id).maybeSingle(),
-      supabase.from('user_career_profiles').select('nama, target_posisi, posisi_saat_ini, industri, tantangan_karir, career_readiness, skill_gaps').eq('user_id', user.id).maybeSingle(),
+      supabase.from('user_career_profiles').select('nama, target_posisi, posisi_saat_ini, industri, tantangan_karir, career_readiness, skill_gaps, gps_steps, mentor_message, gap_skills').eq('user_id', user.id).maybeSingle(),
       supabase.from('user_genome_scores').select('analytical, leadership, builder, creator, communication, risk_taking, top_strength').eq('user_id', user.id).maybeSingle(),
     ]).then(([{ data: g }, { data: p }, { data: gs }]) => {
       // ── Inject context ke coachHistory kalau kosong (device baru) ──
@@ -195,19 +195,50 @@ export default function Chat({ user, chatMessages = [], setChatMessages }) {
           .join(', ') : null
 
         const contextParts = [
-          `[KONTEKS USER — dari sesi Discovery sebelumnya]`,
+          `[KONTEKS DASHBOARD USER — data lengkap dari profil & Discovery]`,
           p.nama                ? `Nama: ${p.nama}` : null,
           p.posisi_saat_ini     ? `Posisi saat ini: ${p.posisi_saat_ini}` : null,
           p.target_posisi       ? `Target posisi: ${p.target_posisi}` : null,
           p.industri            ? `Industri: ${p.industri}` : null,
-          p.career_readiness    ? `Career Readiness: ${p.career_readiness}%` : null,
+          p.career_readiness != null ? `Career Readiness: ${p.career_readiness}%` : null,
+          g?.career_stage       ? `Career Stage: ${g.career_stage} (progress ${g.progress_percent || 0}%)` : null,
+          g?.current_focus      ? `Focus saat ini: ${g.current_focus}` : null,
+          g?.next_milestone     ? `Next milestone: ${g.next_milestone}` : null,
           p.tantangan_karir     ? `Tantangan utama: ${p.tantangan_karir}` : null,
-          p.skill_gaps?.length  ? `Gap skill: ${(p.skill_gaps || []).slice(0, 4).join(', ')}` : null,
-          topGenome             ? `Career Genome (top): ${topGenome}` : null,
-          g?.career_stage       ? `Career Stage: ${g.career_stage} (${g.progress_percent || 0}%)` : null,
+
+          // Skill gaps
+          (() => {
+            const gaps = p.skill_gaps || p.gap_skills || []
+            return gaps.length ? `Skill gaps yang perlu dikembangkan: ${gaps.slice(0, 5).join(', ')}` : null
+          })(),
+
+          // GPS Steps (roadmap)
+          (() => {
+            const steps = g?.gps_steps || p.gps_steps || []
+            if (!steps.length) return null
+            const stepList = steps.slice(0, 5).map((s, i) => {
+              const label = typeof s === 'string' ? s : (s.step || s.label || s.title || JSON.stringify(s))
+              const done  = typeof s === 'object' && s.done ? '✓' : `${i + 1}.`
+              return `  ${done} ${label}`
+            }).join('\n')
+            return `GPS Roadmap (langkah karir):\n${stepList}`
+          })(),
+
+          // Mentor message
+          (() => {
+            const msg = p.mentor_message || g?.mentor_message
+            return msg ? `Pesan mentor terakhir: "${msg}"` : null
+          })(),
+
+          // Genome scores
+          topGenome ? `Career Genome (top 3): ${topGenome}` : null,
+          gs?.top_strength ? `Top strength: ${gs.top_strength}` : null,
         ].filter(Boolean).join('\n')
 
-        setCoachHistory([{ role: 'user', content: contextParts }, { role: 'assistant', content: 'Baik, aku sudah punya gambaran lengkap tentang kamu. Siap melanjutkan!' }])
+        setCoachHistory([
+          { role: 'user', content: contextParts },
+          { role: 'assistant', content: 'Baik! Aku sudah baca semua data dashboard kamu — profil, roadmap GPS, skill gaps, dan genome. Kalau kamu mau tanya soal progress, langkah selanjutnya, atau apapun yang ada di dashboard, aku siap jelasin! 💪' }
+        ])
       }
 
       // ── Greeting ──
