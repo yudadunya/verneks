@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
+import { useSubscription } from '../hooks/useSubscription'
 import BottomNav from '../components/BottomNav'
 
 const STAGE_COLOR = {
@@ -17,6 +18,7 @@ const EMOTION_EMOJI = {
 }
 
 export default function Profile({ user }) {
+  const { plan } = useSubscription(user?.id)
   const navigate = useNavigate()
   const [profile, setProfile]     = useState(null)
   const [growth, setGrowth]       = useState(null)
@@ -203,7 +205,7 @@ export default function Profile({ user }) {
           {logoutLoading ? 'Keluar...' : '🚪 Logout'}
         </button>
       </div>
-      <BottomNav />
+      <BottomNav isPremium={plan === 'premium'} />
     </div>
   )
 }
