@@ -173,29 +173,8 @@ export default function Chat({ user, chatMessages = [], setChatMessages }) {
   useEffect(() => {
     if (!user) return
     if (messages.length > 0) return
-    if (chatMessages && chatMessages.length > 0) return
 
     const firstName = (user.user_metadata?.name || user.user_metadata?.full_name || '').split(' ')[0]
-
-    // ── Guard awal: cek flag greeting Discovery ──
-    const discoveryGreetedKey = `lc_discovery_greeted_${user.id}`
-    let alreadyGreetedEarly = localStorage.getItem(discoveryGreetedKey)
-
-    // Kalau flag ada tapi coachHistory kosong → flag stale (dari session lama/bug)
-    // Reset supaya user bisa dapat greeting yang benar
-    const coachKeyCheck = `lc_coach_${user.id}`
-    const hasCoachHistory = (() => {
-      try {
-        const saved = localStorage.getItem(coachKeyCheck)
-        if (!saved) return false
-        const parsed = JSON.parse(saved)
-        return Array.isArray(parsed) && parsed.length > 0
-      } catch { return false }
-    })()
-    if (alreadyGreetedEarly && !hasCoachHistory) {
-      localStorage.removeItem(discoveryGreetedKey)
-      alreadyGreetedEarly = null
-    }
 
     // Fetch growth_state + profil sekaligus untuk greeting & context injection
     Promise.all([
@@ -254,63 +233,68 @@ export default function Chat({ user, chatMessages = [], setChatMessages }) {
       }
 
       // ── Cek apakah ini pertama kali masuk Chat setelah Discovery ──
-      // Sinyal utama: coachHistory kosong (belum pernah chat sama sekali) + ada data Discovery
-      // alreadyGreetedEarly hanya sebagai guard prevent double-render dalam sesi yang sama
+      // Sumber kebenaran: usage_logs di Supabase (bukan localStorage)
       const hasDiscoveryData = p && (p.target_posisi || p.career_readiness)
-      const noHistory = coachHistory.length === 0
-      const isFirstDiscoveryChat = !alreadyGreetedEarly && hasDiscoveryData && noHistory
 
-      if (isFirstDiscoveryChat) {
-        // ── GREETING PERTAMA SETELAH DISCOVERY ──
-        // Tampil summary hasil analisis dalam format "pesan tersimpan"
-        localStorage.setItem(discoveryGreetedKey, '1') // flag permanen, tidak dihapus saat logout
+      if (hasDiscoveryData) {
+        // Cek apakah user sudah pernah kirim pesan chat sebelumnya
+        supabase
+          .from('usage_logs')
+          .select('*', { count: 'exact', head: true })
+          .eq('user_id', user.id)
+          .eq('feature', 'chat')
+          .then(({ count }) => {
+            const neverChatted = (count ?? 0) === 0
 
-        const name = firstName || p?.nama?.split(' ')[0] || 'Kamu'
-        const target = p.target_posisi || '—'
-        const readiness = p.career_readiness || g?.progress_percent || 0
-        const gaps = (p.skill_gaps || p.gap_skills || []).slice(0, 3)
-
-        const gapLine = gaps.length > 0 ? `
+            if (neverChatted) {
+              // ── GREETING PERTAMA SETELAH DISCOVERY ──
+              const name = firstName || p?.nama?.split(' ')[0] || 'Kamu'
+              const target = p.target_posisi || '—'
+              const readiness = p.career_readiness || g?.progress_percent || 0
+              const gaps = (p.skill_gaps || p.gap_skills || []).slice(0, 3)
+              const gapLine = gaps.length > 0 ? `
 ⚠ Gap Utama:${gaps.join(', ')}` : ''
-        const summaryMsg =
+              const summaryMsg =
 `Halo ${name} 👋
 Saya sudah menyimpan hasil Career Discovery kamu.
 🎯 Target:${target}
 📊 Readiness:${readiness}%${gapLine}
 Saya akan membantu kamu memahami langkah berikutnya.`
-
-        pushBot(summaryMsg)
+              pushBot(summaryMsg)
+            } else {
+              // ── Greeting returning user (sudah pernah chat) ──
+              let greeting
+              if (!g || !g.career_stage) {
+                greeting = `Halo${firstName ? ` ${firstName}` : ''}! 👋 Ada yang bisa aku bantu hari ini?`
+              } else {
+                const stage = g.career_stage
+                const progress = g.progress_percent || 0
+                const focus = g.current_focus
+                const milestone = g.next_milestone
+                const streak = g.streak_days || 0
+                const greetingByStage = {
+                  'Career Explorer':    `Halo${firstName ? ` ${firstName}` : ''}! 🌱 Progress ${progress}%.${focus ? ` Fokus sekarang: **${focus}**.` : ''} Mau bahas apa hari ini?`,
+                  'Career Builder':     `Halo${firstName ? ` ${firstName}` : ''}! 🔰 Progress ${progress}%.${milestone ? ` Next: **${milestone}**.` : ''} Ada yang bisa aku bantu?`,
+                  'Career Professional':`Halo${firstName ? ` ${firstName}` : ''}! ⭐ Progress ${progress}%.${focus ? ` Fokus: **${focus}**.` : ''} Mau naik level?`,
+                  'Career Expert':      `Halo${firstName ? ` ${firstName}` : ''}! 🏆 Progress ${progress}%.${milestone ? ` Target: **${milestone}**.` : ''} Apa yang mau kita capai?`,
+                  'Career Leader':      `Halo${firstName ? ` ${firstName}` : ''}! 👑 Progress ${progress}%. Bagaimana aku bisa bantu lebih jauh?`,
+                }
+                greeting = greetingByStage[stage] || `Halo${firstName ? ` ${firstName}` : ''}! 👋 Progress karirmu: ${progress}%. Ada yang bisa aku bantu?`
+                if (streak >= 3) greeting += `\n\n🔥 Streak ${streak} hari — mantap!`
+              }
+              pushBot(greeting)
+            }
+          })
         return
       }
 
-      // ── Greeting normal (returning user) ──
-      let greeting
-      if (!g || !g.career_stage) {
-        greeting = `Halo${firstName ? ` ${firstName}` : ''}! 👋 Aku Diah Anna, AI Career Coach kamu.\n\nCeritain dong sekarang kamu di posisi apa dan mau ke mana? Kita mulai petualangan karir kamu! 🚀`
-      } else {
-        const stage    = g.career_stage
-        const progress = g.progress_percent || 0
-        const focus    = g.current_focus
-        const milestone = g.next_milestone
-        const streak   = g.streak_days || 0
-
-        const greetingByStage = {
-          'Career Explorer':    `Halo${firstName ? ` ${firstName}` : ''}! 🌱 Progress ${progress}%.${focus ? ` Fokus sekarang: **${focus}**.` : ''} Mau bahas apa hari ini?`,
-          'Career Builder':     `Halo${firstName ? ` ${firstName}` : ''}! 🔰 Progress ${progress}%.${milestone ? ` Next: **${milestone}**.` : ''} Ada yang bisa aku bantu?`,
-          'Career Professional':`Halo${firstName ? ` ${firstName}` : ''}! ⭐ Progress ${progress}%.${focus ? ` Fokus: **${focus}**.` : ''} Mau naik level?`,
-          'Career Expert':      `Halo${firstName ? ` ${firstName}` : ''}! 🏆 Progress ${progress}%.${milestone ? ` Target: **${milestone}**.` : ''} Apa yang mau kita capai?`,
-          'Career Leader':      `Halo${firstName ? ` ${firstName}` : ''}! 👑 Progress ${progress}%. Bagaimana aku bisa bantu lebih jauh?`,
-        }
-
-        greeting = greetingByStage[stage] || `Halo${firstName ? ` ${firstName}` : ''}! 👋 Progress karirmu: ${progress}%. Ada yang bisa aku bantu?`
-        if (streak >= 3) greeting += `\n\n🔥 Streak ${streak} hari — mantap!`
-      }
-      pushBot(greeting)
+      // ── No discovery data: greeting fresh user tanpa history ──
+      pushBot(`Halo${firstName ? ` ${firstName}` : ''}! 👋 Aku Diah Anna, AI Career Coach kamu.\n\nAda yang bisa aku bantu hari ini?`)
     }).catch(() => {
       const firstName2 = (user.user_metadata?.name || user.user_metadata?.full_name || '').split(' ')[0]
       pushBot(`Halo${firstName2 ? ` ${firstName2}` : ''}! 👋 Aku Diah Anna, AI Career Coach kamu.\n\nAda yang bisa aku bantu hari ini?`)
     })
-  }, [user?.id, chatMessages])
+  }, [user?.id])
 
   // ── Persuasi Diah Anna saat premium expired ──────────────────────────────
   useEffect(() => {
