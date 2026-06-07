@@ -129,7 +129,7 @@ export default function Home({ user }) {
   const [barAnim, setBarAnim] = useState(false)
 
   useEffect(() => {
-    if (user) { window.location.href = '/discovery'; return }
+    if (user) { window.location.href = '/dashboard'; return }
     setTimeout(() => setVisible(true), 100)
     setTimeout(() => setBarAnim(true), 800)
   }, [user])
@@ -148,8 +148,18 @@ export default function Home({ user }) {
     setAuthLoading(false)
   }
 
+  const handleCTA = async () => {
+    // Cek dulu apakah user pernah login (ada session Supabase)
+    const { data: { session } } = await supabase.auth.getSession()
+    if (session?.user) {
+      navigate('/dashboard')
+    } else {
+      navigate('/discovery')
+    }
+  }
+
   const CTAButton = ({ label = 'Temukan Career DNA Kamu — Gratis', style = {} }) => (
-    <button onClick={() => navigate('/discovery')} style={{
+    <button onClick={handleCTA} style={{
       display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10,
       background: 'linear-gradient(135deg, #25D366 0%, #128C7E 100%)',
       color: '#fff', fontWeight: 800, fontSize: '0.95rem',
