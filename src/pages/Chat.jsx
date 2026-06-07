@@ -820,7 +820,6 @@ Pilih yang sesuai buat kamu:`
       if (user?.id && fullHistory.filter(m => m.role === 'user').length >= 3) {
         setTimeout(() => {
           apiFetch('/api/extract-profile', { userId: user.id, messages: fullHistory }).catch(() => {})
-          sessionStorage.removeItem(`lc_job_matches_${user.id}`)
         }, 500)
       }
     } catch { pushBot('Diah Anna lagi sibuk sebentar, coba lagi ya! 🙏') }
@@ -947,7 +946,7 @@ Pilih yang sesuai buat kamu:`
         div::-webkit-scrollbar { display: none; }
       `}</style>
     </div>
-    <BottomNav />
+    <BottomNav isPremium={plan === 'premium'} />
     </>
   )
 }
