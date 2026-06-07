@@ -182,6 +182,10 @@ export default function Chat({ user, chatMessages = [], setChatMessages }) {
       supabase.from('user_career_profiles').select('nama, target_posisi, posisi_saat_ini, industri, tantangan_karir, career_readiness, skill_gaps, gps_steps, mentor_message, gap_skills').eq('user_id', user.id).maybeSingle(),
       supabase.from('user_genome_scores').select('analytical, leadership, builder, creator, communication, risk_taking, top_strength').eq('user_id', user.id).maybeSingle(),
     ]).then(([{ data: g }, { data: p }, { data: gs }]) => {
+      // DEBUG — hapus setelah fix confirmed
+      console.log("[Chat greeting] profiles:", JSON.stringify(p))
+      console.log("[Chat greeting] growth:", JSON.stringify(g))
+      console.log("[Chat greeting] hasDiscovery:", !!(p && (p.target_posisi || p.career_readiness)))
       // ── Inject context ke coachHistory kalau kosong (device baru) ──
       if (coachHistory.length === 0 && p && (p.target_posisi || p.posisi_saat_ini)) {
         const GENOME_LABELS = { analytical: 'Analytical', leadership: 'Leadership', builder: 'Builder', creator: 'Creator', communication: 'Communication', risk_taking: 'Risk Taking' }
