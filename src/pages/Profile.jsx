@@ -4,26 +4,14 @@ import { supabase } from '../lib/supabase'
 import { useSubscription } from '../hooks/useSubscription'
 import BottomNav from '../components/BottomNav'
 
-const STAGE_COLOR = {
-  'Career Explorer':    '#34B7F1',
-  'Career Builder':     '#25D366',
-  'Career Professional':'#FFB74D',
-  'Career Expert':      '#F48FB1',
-  'Career Leader':      '#CE93D8',
-}
-
-const EMOTION_EMOJI = {
-  positif: '😊', semangat: '🔥', bingung: '😕', khawatir: '😟',
-  frustasi: '😤', optimis: '💪', lelah: '😔', excited: '🎉',
-}
-
 export default function Profile({ user }) {
   const { plan } = useSubscription(user?.id)
   const navigate = useNavigate()
-  const [profile, setProfile]     = useState(null)
-  const [growth, setGrowth]       = useState(null)
-  const [loading, setLoading]     = useState(true)
+  const [profile, setProfile]       = useState(null)
+  const [growth, setGrowth]         = useState(null)
+  const [loading, setLoading]       = useState(true)
   const [logoutLoading, setLogoutLoading] = useState(false)
+  const [visible, setVisible]       = useState(false)
 
   useEffect(() => {
     if (!user) { navigate('/'); return }
@@ -34,187 +22,223 @@ export default function Profile({ user }) {
       setProfile(p)
       setGrowth(g)
       setLoading(false)
+      setTimeout(() => setVisible(true), 80)
     })
   }, [user?.id])
 
   const handleLogout = async () => {
     setLogoutLoading(true)
-    // Bersihkan discovery data supaya fresh saat login berikutnya
     localStorage.removeItem('lc_discovery_messages')
     localStorage.removeItem('lc_discovery_result')
+    if (user?.id) localStorage.removeItem(`lc_discovery_greeted_${user.id}`)
     await supabase.auth.signOut()
     navigate('/')
   }
 
-  const firstName = user?.user_metadata?.full_name?.split(' ')[0]
-               || user?.user_metadata?.name?.split(' ')[0]
-               || 'Kamu'
+  const displayName = profile?.nama
+    || user?.user_metadata?.full_name
+    || user?.user_metadata?.name
+    || 'Kamu'
 
-  const avatarUrl = user?.user_metadata?.avatar_url
-  const stageColor = STAGE_COLOR[growth?.career_stage] || 'var(--wa-green)'
-  const emotionEmoji = Object.entries(EMOTION_EMOJI).find(([k]) =>
-    profile?.emotional_state?.toLowerCase().includes(k)
-  )?.[1] || '💙'
+  const firstName   = displayName.split(' ')[0]
+  const avatarUrl   = user?.user_metadata?.avatar_url
+  const email       = user?.email || '—'
+  const readiness   = profile?.career_readiness || growth?.progress_percent || 0
+  const target      = profile?.target_posisi || null
+  const posisi      = profile?.posisi_saat_ini || null
+  const isPremium   = plan === 'premium'
+
+  // Tanggal discovery: ambil dari last_updated profil
+  const discoveryDate = profile?.last_updated
+    ? new Date(profile.last_updated).toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' })
+    : null
+
+  const fade = (delay = 0) => ({
+    opacity: visible ? 1 : 0,
+    transform: visible ? 'translateY(0)' : 'translateY(14px)',
+    transition: `opacity 0.4s ease ${delay}s, transform 0.4s ease ${delay}s`,
+  })
 
   return (
-    <div style={{ minHeight: '100vh', background: 'var(--wa-bg)', paddingBottom: '80px' }}>
-      <div className="wa-header">
-        <div className="wa-header-title">Profil Karir</div>
-        <div className="wa-header-subtitle">{user?.email}</div>
+    <div style={{ minHeight: '100vh', background: '#0a0f0d', paddingBottom: 90, fontFamily: "'Plus Jakarta Sans', -apple-system, sans-serif" }}>
+
+      {/* Header */}
+      <div style={{
+        background: 'rgba(255,255,255,0.02)',
+        borderBottom: '1px solid rgba(255,255,255,0.05)',
+        padding: '14px 18px',
+      }}>
+        <div style={{ color: '#fff', fontWeight: 800, fontSize: '1rem' }}>👤 Profil</div>
+        <div style={{ color: 'rgba(255,255,255,0.3)', fontSize: '0.7rem', marginTop: 2 }}>Informasi akun kamu</div>
       </div>
 
-      <div style={{ padding: '16px' }}>
+      <div style={{ padding: '16px', maxWidth: 480, margin: '0 auto' }}>
 
-        {/* Avatar & nama */}
-        <div style={{ background: '#fff', borderRadius: '12px', padding: '20px', marginBottom: '12px', textAlign: 'center' }}>
+        {/* ── Avatar + Nama ── */}
+        <div style={{
+          background: 'linear-gradient(135deg, rgba(37,211,102,0.08), rgba(52,183,241,0.05))',
+          border: '1px solid rgba(37,211,102,0.15)',
+          borderRadius: 20, padding: '24px 20px', marginBottom: 14,
+          textAlign: 'center',
+          ...fade(0.04),
+        }}>
+          {/* Avatar */}
           <div style={{
-            width: 64, height: 64, borderRadius: '50%', margin: '0 auto 10px',
-            background: 'var(--wa-green)', display: 'flex', alignItems: 'center', justifyContent: 'center',
-            overflow: 'hidden', border: '3px solid rgba(37,211,102,0.3)'
+            width: 72, height: 72, borderRadius: '50%', margin: '0 auto 14px',
+            background: 'rgba(37,211,102,0.15)', border: '2px solid rgba(37,211,102,0.3)',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            overflow: 'hidden', position: 'relative',
           }}>
             {avatarUrl
               ? <img src={avatarUrl} style={{ width: '100%', height: '100%', objectFit: 'cover' }} alt="avatar" />
-              : <span style={{ fontSize: '1.8rem' }}>👤</span>}
+              : <span style={{ fontSize: '2rem' }}>👤</span>
+            }
           </div>
-          <div style={{ fontWeight: '700', fontSize: '1.1rem', color: 'var(--wa-dark)' }}>
-            {profile?.nama || firstName}
+
+          {/* Nama */}
+          <div style={{ color: '#fff', fontWeight: 800, fontSize: '1.15rem', marginBottom: 4 }}>
+            {loading ? '—' : displayName}
           </div>
-          {profile?.posisi_saat_ini && (
-            <div style={{ fontSize: '0.82rem', color: 'var(--wa-gray)', marginTop: '2px' }}>
-              {profile.posisi_saat_ini}
-            </div>
-          )}
-          {growth?.career_stage && (
-            <div style={{
-              display: 'inline-block', marginTop: '8px',
-              background: stageColor + '22', color: stageColor,
-              padding: '3px 12px', borderRadius: '99px', fontSize: '0.75rem', fontWeight: '700'
-            }}>
-              {growth.career_stage}
-            </div>
-          )}
+
+          {/* Plan badge */}
+          <div style={{
+            display: 'inline-flex', alignItems: 'center', gap: 5,
+            padding: '4px 14px', borderRadius: 99, marginBottom: 4,
+            background: isPremium ? 'rgba(255,183,77,0.12)' : 'rgba(255,255,255,0.06)',
+            border: isPremium ? '1px solid rgba(255,183,77,0.3)' : '1px solid rgba(255,255,255,0.1)',
+          }}>
+            <span style={{ fontSize: '0.75rem' }}>{isPremium ? '⭐' : '🆓'}</span>
+            <span style={{ color: isPremium ? '#FFB74D' : 'rgba(255,255,255,0.45)', fontSize: '0.75rem', fontWeight: 700 }}>
+              {isPremium ? 'Premium' : 'Free'}
+            </span>
+          </div>
         </div>
 
-        {loading && (
-          <div style={{ textAlign: 'center', padding: '24px', color: 'var(--wa-gray)', fontSize: '0.85rem' }}>
-            ⏳ Memuat data karir...
+        {/* ── Info Akun ── */}
+        <div style={{
+          background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.07)',
+          borderRadius: 16, marginBottom: 12, overflow: 'hidden',
+          ...fade(0.10),
+        }}>
+          <div style={{ padding: '14px 16px', borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
+            <div style={{ color: 'rgba(255,255,255,0.3)', fontSize: '0.62rem', letterSpacing: '1px', marginBottom: 2 }}>AKUN</div>
           </div>
-        )}
+          <InfoRow label="Nama" value={loading ? '—' : displayName} icon="👤" />
+          <InfoRow label="Email" value={email} icon="📧" last />
+        </div>
 
-        {/* Career Info */}
-        {!loading && profile && (
-          <div style={{ background: '#fff', borderRadius: '12px', padding: '16px', marginBottom: '12px' }}>
-            <div style={{ fontWeight: '700', marginBottom: '12px', color: 'var(--wa-dark)', fontSize: '0.9rem' }}>
-              🎯 Informasi Karir
+        {/* ── Info Karier ── */}
+        <div style={{
+          background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.07)',
+          borderRadius: 16, marginBottom: 12, overflow: 'hidden',
+          ...fade(0.16),
+        }}>
+          <div style={{ padding: '14px 16px', borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
+            <div style={{ color: 'rgba(255,255,255,0.3)', fontSize: '0.62rem', letterSpacing: '1px', marginBottom: 2 }}>KARIER</div>
+          </div>
+
+          <InfoRow label="Target Karier" value={loading ? '—' : (target || 'Belum diisi')} icon="🎯" />
+          <InfoRow label="Posisi Saat Ini" value={loading ? '—' : (posisi || 'Belum diisi')} icon="💼" />
+
+          {/* Readiness */}
+          <div style={{ padding: '12px 16px', borderBottom: '1px solid rgba(255,255,255,0.04)' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                <span style={{ fontSize: '0.9rem' }}>📊</span>
+                <span style={{ color: 'rgba(255,255,255,0.5)', fontSize: '0.8rem' }}>Career Readiness</span>
+              </div>
+              <span style={{ color: '#25D366', fontWeight: 800, fontSize: '0.95rem' }}>{loading ? '—' : `${readiness}%`}</span>
             </div>
-
-            {profile.target_posisi && (
-              <Row label="Target Posisi" value={profile.target_posisi} />
-            )}
-            {profile.posisi_saat_ini && (
-              <Row label="Posisi Saat Ini" value={profile.posisi_saat_ini} />
-            )}
-            {profile.emotional_state && (
-              <Row label="Kondisi" value={`${emotionEmoji} ${profile.emotional_state}`} />
-            )}
-            {profile.topik_dibahas?.length > 0 && (
-              <div style={{ marginBottom: '10px' }}>
-                <div style={{ fontSize: '0.72rem', color: 'var(--wa-gray)', marginBottom: '4px' }}>Topik Dibahas</div>
-                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px' }}>
-                  {profile.topik_dibahas.map(t => (
-                    <span key={t} style={{
-                      background: 'rgba(37,211,102,0.1)', color: 'var(--wa-green)',
-                      padding: '2px 8px', borderRadius: '99px', fontSize: '0.75rem', fontWeight: '600'
-                    }}>{t}</span>
-                  ))}
-                </div>
+            {!loading && (
+              <div style={{ background: 'rgba(255,255,255,0.07)', borderRadius: 99, height: 5, overflow: 'hidden' }}>
+                <div style={{
+                  background: 'linear-gradient(90deg,#25D366,#34B7F1)',
+                  width: `${readiness}%`, height: '100%', borderRadius: 99,
+                  transition: 'width 1s ease 0.3s',
+                }} />
               </div>
             )}
-            {profile.summary && (
-              <div style={{ marginTop: '8px', padding: '10px', background: '#f8f9fa', borderRadius: '8px', fontSize: '0.82rem', color: 'var(--wa-dark)', lineHeight: 1.6 }}>
-                {profile.summary}
-              </div>
-            )}
           </div>
-        )}
 
-        {/* Career DNA dari career_dna field */}
-        {!loading && profile?.career_dna && (
-          <div style={{ background: '#fff', borderRadius: '12px', padding: '16px', marginBottom: '12px' }}>
-            <div style={{ fontWeight: '700', marginBottom: '12px', color: 'var(--wa-dark)', fontSize: '0.9rem' }}>
-              🧬 Career DNA
-            </div>
-            {profile.career_dna.ambisi && <Row label="Ambisi" value={profile.career_dna.ambisi} />}
-            {profile.career_dna.nilai_kerja && <Row label="Nilai Kerja" value={profile.career_dna.nilai_kerja} />}
-            {profile.career_dna.kekhawatiran_utama && <Row label="Kekhawatiran" value={profile.career_dna.kekhawatiran_utama} />}
-            {profile.career_dna.preferensi_industri?.length > 0 && (
-              <Row label="Industri Incaran" value={profile.career_dna.preferensi_industri.join(', ')} />
-            )}
-          </div>
-        )}
+          <InfoRow
+            label="Tanggal Discovery"
+            value={loading ? '—' : (discoveryDate || 'Belum Discovery')}
+            icon="📅"
+            last
+          />
+        </div>
 
-        {/* Growth State */}
-        {!loading && growth && (
-          <div style={{ background: '#fff', borderRadius: '12px', padding: '16px', marginBottom: '12px' }}>
-            <div style={{ fontWeight: '700', marginBottom: '12px', color: 'var(--wa-dark)', fontSize: '0.9rem' }}>
-              📈 Progress Karir
-            </div>
-            <div style={{ marginBottom: '10px' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.82rem', marginBottom: '5px' }}>
-                <span style={{ color: 'var(--wa-gray)' }}>Progress</span>
-                <span style={{ fontWeight: '700', color: stageColor }}>{growth.progress_percent || 0}%</span>
-              </div>
-              <div style={{ background: 'var(--wa-gray-light)', borderRadius: '99px', height: '7px', overflow: 'hidden' }}>
-                <div style={{ background: stageColor, width: `${growth.progress_percent || 0}%`, height: '100%', borderRadius: '99px', transition: 'width 0.8s ease' }} />
+        {/* ── Upgrade CTA (free only) ── */}
+        {!isPremium && !loading && (
+          <div style={{
+            background: 'rgba(37,211,102,0.05)', border: '1px solid rgba(37,211,102,0.15)',
+            borderRadius: 16, padding: '16px', marginBottom: 14,
+            ...fade(0.22),
+          }}>
+            <div style={{ display: 'flex', gap: 10, alignItems: 'flex-start', marginBottom: 12 }}>
+              <img src="/diah-anna.png" alt="" style={{ width: 30, height: 30, borderRadius: '50%', objectFit: 'cover', flexShrink: 0 }} />
+              <div style={{ color: 'rgba(255,255,255,0.6)', fontSize: '0.8rem', lineHeight: 1.6 }}>
+                <span style={{ color: '#25D366', fontWeight: 700 }}>Diah Anna: </span>
+                Upgrade ke Premium untuk roadmap 6 bulan, chat unlimited, dan progress tracking harian.
               </div>
             </div>
-            {growth.current_focus && <Row label="Fokus Sekarang" value={growth.current_focus} />}
-            {growth.next_milestone && <Row label="Target Berikutnya" value={growth.next_milestone} />}
-            {(growth.streak_days || 0) > 0 && <Row label="Streak Aktif" value={`🔥 ${growth.streak_days} hari`} />}
-          </div>
-        )}
-
-        {/* CTA jika belum ada profil */}
-        {!loading && !profile && (
-          <div style={{ background: '#fff', borderRadius: '12px', padding: '20px', marginBottom: '12px', textAlign: 'center' }}>
-            <div style={{ fontSize: '2rem', marginBottom: '8px' }}>💬</div>
-            <div style={{ fontWeight: '700', marginBottom: '6px' }}>Profil karir belum dibuat</div>
-            <div style={{ fontSize: '0.82rem', color: 'var(--wa-gray)', marginBottom: '16px' }}>
-              Ngobrol dengan Diah Anna minimal 3 pesan agar profil karirmu terbentuk otomatis.
-            </div>
-            <button
-              onClick={() => navigate('/chat')}
-              style={{ background: 'var(--wa-green)', color: '#fff', padding: '10px 24px', borderRadius: '8px', border: 'none', fontWeight: '600', fontSize: '0.9rem', cursor: 'pointer' }}
+            <a
+              href="http://lynk.id/yudadunya/r3o5ldq5qkex/checkout"
+              target="_blank"
+              rel="noopener noreferrer"
+              style={{
+                display: 'block', width: '100%', padding: '12px',
+                background: 'linear-gradient(135deg,#25D366,#128C7E)',
+                color: '#fff', fontWeight: 700, fontSize: '0.88rem',
+                borderRadius: 12, textDecoration: 'none', textAlign: 'center',
+                boxShadow: '0 3px 14px rgba(37,211,102,0.35)',
+              }}
             >
-              Mulai Chat
-            </button>
+              🚀 Upgrade Premium — Rp 199rb/bln
+            </a>
           </div>
         )}
 
-        {/* Logout */}
+        {/* ── Logout ── */}
         <button
           onClick={handleLogout}
           disabled={logoutLoading}
           style={{
-            width: '100%', padding: '13px',
-            border: '1px solid var(--wa-red)', color: 'var(--wa-red)',
-            background: '#fff', borderRadius: '10px',
-            fontWeight: '600', fontSize: '0.9rem', cursor: 'pointer'
+            width: '100%', padding: '14px',
+            background: 'transparent',
+            border: '1px solid rgba(239,83,80,0.3)',
+            color: 'rgba(239,83,80,0.8)',
+            borderRadius: 14, fontWeight: 600, fontSize: '0.9rem',
+            cursor: logoutLoading ? 'not-allowed' : 'pointer',
+            fontFamily: 'inherit',
+            opacity: logoutLoading ? 0.5 : 1,
+            transition: 'opacity 0.2s ease',
+            ...fade(0.28),
           }}
         >
           {logoutLoading ? 'Keluar...' : '🚪 Logout'}
         </button>
+
       </div>
-      <BottomNav isPremium={plan === 'premium'} />
+      <BottomNav isPremium={isPremium} />
     </div>
   )
 }
 
-function Row({ label, value }) {
+function InfoRow({ label, icon, value, last }) {
   return (
-    <div style={{ marginBottom: '8px' }}>
-      <div style={{ fontSize: '0.72rem', color: 'var(--wa-gray)' }}>{label}</div>
-      <div style={{ fontSize: '0.85rem', fontWeight: '600', color: 'var(--wa-dark)' }}>{value}</div>
+    <div style={{
+      display: 'flex', alignItems: 'center', gap: 12,
+      padding: '12px 16px',
+      borderBottom: last ? 'none' : '1px solid rgba(255,255,255,0.04)',
+    }}>
+      <span style={{ fontSize: '0.9rem', width: 20, textAlign: 'center', flexShrink: 0 }}>{icon}</span>
+      <div style={{ flex: 1, minWidth: 0 }}>
+        <div style={{ color: 'rgba(255,255,255,0.3)', fontSize: '0.65rem', marginBottom: 2 }}>{label}</div>
+        <div style={{ color: 'rgba(255,255,255,0.8)', fontSize: '0.83rem', fontWeight: 500, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+          {value}
+        </div>
+      </div>
     </div>
   )
 }

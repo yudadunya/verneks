@@ -205,14 +205,10 @@ export default function Chat({ user, chatMessages = [], setChatMessages }) {
           g?.current_focus      ? `Focus saat ini: ${g.current_focus}` : null,
           g?.next_milestone     ? `Next milestone: ${g.next_milestone}` : null,
           p.tantangan_karir     ? `Tantangan utama: ${p.tantangan_karir}` : null,
-
-          // Skill gaps
           (() => {
             const gaps = p.skill_gaps || p.gap_skills || []
             return gaps.length ? `Skill gaps yang perlu dikembangkan: ${gaps.slice(0, 5).join(', ')}` : null
           })(),
-
-          // GPS Steps (roadmap)
           (() => {
             const steps = g?.gps_steps || p.gps_steps || []
             if (!steps.length) return null
@@ -223,14 +219,10 @@ export default function Chat({ user, chatMessages = [], setChatMessages }) {
             }).join('\n')
             return `GPS Roadmap (langkah karir):\n${stepList}`
           })(),
-
-          // Mentor message
           (() => {
             const msg = p.mentor_message || g?.mentor_message
             return msg ? `Pesan mentor terakhir: "${msg}"` : null
           })(),
-
-          // Genome scores
           topGenome ? `Career Genome (top 3): ${topGenome}` : null,
           gs?.top_strength ? `Top strength: ${gs.top_strength}` : null,
         ].filter(Boolean).join('\n')
@@ -241,32 +233,74 @@ export default function Chat({ user, chatMessages = [], setChatMessages }) {
         ])
       }
 
-      // ── Greeting ──
+      // ── Cek apakah ini pertama kali masuk Chat setelah Discovery ──
+      // Flag: lc_discovery_greeted_{userId} — set setelah greeting pertama ditampilkan
+      const discoveryGreetedKey = `lc_discovery_greeted_${user.id}`
+      const alreadyGreeted = localStorage.getItem(discoveryGreetedKey)
+
+      const hasDiscoveryData = p && (p.target_posisi || p.career_readiness)
+      const isFirstDiscoveryChat = !alreadyGreeted && hasDiscoveryData
+
+      if (isFirstDiscoveryChat) {
+        // ── GREETING PERTAMA SETELAH DISCOVERY ──
+        // Tampil summary hasil analisis dalam format "pesan tersimpan"
+        localStorage.setItem(discoveryGreetedKey, '1')
+
+        const name = firstName || p?.nama?.split(' ')[0] || 'Kamu'
+        const target = p.target_posisi || '—'
+        const readiness = p.career_readiness || g?.progress_percent || 0
+        const gaps = (p.skill_gaps || p.gap_skills || []).slice(0, 3)
+
+        const summaryMsg =
+`Halo ${name} 👋
+
+Saya sudah menyimpan hasil Career Discovery kamu.
+
+🎯 **Target:** ${target}
+📊 **Readiness:** ${readiness}%
+${gaps.length > 0 ? `⚠ **Gap Utama:** ${gaps.join(', ')}` : ''}
+
+Saya akan membantu kamu memahami langkah berikutnya.`
+
+        pushBot(summaryMsg)
+
+        // Setelah pesan summary, tambahkan quick action
+        setTimeout(() => {
+          pushBot(
+            'Mau mulai dari mana dulu?',
+            [
+              { id: 'coach', label: '💬 Tanya langkah pertama' },
+              { id: '__open_upgrade', label: '🗺️ Lihat Roadmap Lengkap' },
+            ]
+          )
+        }, 900)
+        return
+      }
+
+      // ── Greeting normal (returning user) ──
       let greeting
       if (!g || !g.career_stage) {
         greeting = `Halo${firstName ? ` ${firstName}` : ''}! 👋 Aku Diah Anna, AI Career Coach kamu.\n\nCeritain dong sekarang kamu di posisi apa dan mau ke mana? Kita mulai petualangan karir kamu! 🚀`
       } else {
-        const stage = g.career_stage
+        const stage    = g.career_stage
         const progress = g.progress_percent || 0
-        const focus = g.current_focus
+        const focus    = g.current_focus
         const milestone = g.next_milestone
-        const streak = g.streak_days || 0
+        const streak   = g.streak_days || 0
 
         const greetingByStage = {
-          'Career Explorer':    `Halo${firstName ? ` ${firstName}` : ''}! 🌱 Kamu masih di tahap eksplorasi karir (${progress}% progress).${focus ? ` Sekarang fokus: **${focus}**.` : ''} Yuk kita telusuri lebih dalam potensimu!`,
-          'Career Builder':     `Halo${firstName ? ` ${firstName}` : ''}! 🔰 Kamu udah di tahap Career Builder — bagus banget! Progress ${progress}%.${milestone ? ` Next target: **${milestone}**.` : ''} Kita gas bareng ya!`,
-          'Career Professional':`Halo${firstName ? ` ${firstName}` : ''}! ⭐ Kamu udah jadi Career Professional (${progress}% progress).${focus ? ` Fokus saat ini: **${focus}**.` : ''} Mau ningkatin ke level berikutnya?`,
-          'Career Expert':      `Halo${firstName ? ` ${firstName}` : ''}! 🏆 Impressive! Kamu sudah di level Career Expert (${progress}%).${milestone ? ` Target selanjutnya: **${milestone}**.` : ''} Apa yang mau kita capai hari ini?`,
-          'Career Leader':      `Halo${firstName ? ` ${firstName}` : ''}! 👑 Career Leader — kamu udah di puncak! Progress ${progress}%.${focus ? ` Sekarang fokusmu: **${focus}**.` : ''} Bagaimana aku bisa bantu lebih jauh?`,
+          'Career Explorer':    `Halo${firstName ? ` ${firstName}` : ''}! 🌱 Progress ${progress}%.${focus ? ` Fokus sekarang: **${focus}**.` : ''} Mau bahas apa hari ini?`,
+          'Career Builder':     `Halo${firstName ? ` ${firstName}` : ''}! 🔰 Progress ${progress}%.${milestone ? ` Next: **${milestone}**.` : ''} Ada yang bisa aku bantu?`,
+          'Career Professional':`Halo${firstName ? ` ${firstName}` : ''}! ⭐ Progress ${progress}%.${focus ? ` Fokus: **${focus}**.` : ''} Mau naik level?`,
+          'Career Expert':      `Halo${firstName ? ` ${firstName}` : ''}! 🏆 Progress ${progress}%.${milestone ? ` Target: **${milestone}**.` : ''} Apa yang mau kita capai?`,
+          'Career Leader':      `Halo${firstName ? ` ${firstName}` : ''}! 👑 Progress ${progress}%. Bagaimana aku bisa bantu lebih jauh?`,
         }
 
-        greeting = greetingByStage[stage] || `Halo${firstName ? ` ${firstName}` : ''}! 👋 Selamat datang kembali. Progress karirmu: ${progress}%. Ada yang bisa aku bantu?`
-
-        if (streak >= 3) greeting += `\n\n🔥 Streak ${streak} hari — konsistensimu keren banget!`
+        greeting = greetingByStage[stage] || `Halo${firstName ? ` ${firstName}` : ''}! 👋 Progress karirmu: ${progress}%. Ada yang bisa aku bantu?`
+        if (streak >= 3) greeting += `\n\n🔥 Streak ${streak} hari — mantap!`
       }
       pushBot(greeting)
     }).catch(() => {
-      // Fallback kalau fetch gagal
       const firstName2 = (user.user_metadata?.name || user.user_metadata?.full_name || '').split(' ')[0]
       pushBot(`Halo${firstName2 ? ` ${firstName2}` : ''}! 👋 Aku Diah Anna, AI Career Coach kamu.\n\nAda yang bisa aku bantu hari ini?`)
     })
