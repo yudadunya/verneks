@@ -122,14 +122,16 @@ export default async function handler(req, res) {
 
   if (userId) {
     try {
-      const [profileRes, growthRes, nextActionRes] = await Promise.all([
+      const [profileRes, growthRes, nextActionRes, genomeRes] = await Promise.all([
         supabase.from('user_career_profiles').select('*').eq('user_id', userId).maybeSingle(),
         supabase.from('user_growth_state').select('*').eq('user_id', userId).maybeSingle(),
         supabase.from('user_next_actions').select('*').eq('user_id', userId).eq('is_done', false).order('created_at', { ascending: false }).limit(1).maybeSingle(),
+        supabase.from('user_genome_scores').select('*').eq('user_id', userId).maybeSingle(),
       ])
       careerProfile = profileRes.data
       growthState   = growthRes.data
       if (nextActionRes.data) careerProfile = { ...careerProfile, _next_action: nextActionRes.data }
+      if (genomeRes.data)     careerProfile = { ...careerProfile, _genome: genomeRes.data }
     } catch (e) {
       console.error('[career-coach] load error:', e.message)
     }
@@ -141,49 +143,78 @@ export default async function handler(req, res) {
   const persuasionLayer   = isFree ? buildFreePersuasion(careerProfile, growthState, msgCount) : ''
 
   let personalContext = ''
-  if (careerProfile?.summary) {
-    const sesi    = careerProfile.sesi_count || 1
+  if (careerProfile || growthState) {
+    const sesi    = careerProfile?.sesi_count || 1
     const details = []
-    if (careerProfile.nama)               details.push(`Nama: ${careerProfile.nama}`)
-    if (careerProfile.usia)               details.push(`Usia: ${careerProfile.usia}`)
-    if (careerProfile.domisili)           details.push(`Domisili: ${careerProfile.domisili}`)
-    if (careerProfile.posisi_saat_ini)    details.push(`Posisi: ${careerProfile.posisi_saat_ini}`)
-    if (careerProfile.perusahaan)         details.push(`Perusahaan: ${careerProfile.perusahaan}`)
-    if (careerProfile.industri)           details.push(`Industri: ${careerProfile.industri}`)
-    if (careerProfile.lama_pengalaman)    details.push(`Pengalaman: ${careerProfile.lama_pengalaman}`)
-    if (careerProfile.skill_utama?.length)details.push(`Skills: ${careerProfile.skill_utama.join(', ')}`)
-    if (careerProfile.target_posisi)      details.push(`Target: ${careerProfile.target_posisi}`)
-    if (careerProfile.target_gaji)        details.push(`Target gaji: ${careerProfile.target_gaji}`)
-    if (careerProfile.gaji_sekarang)      details.push(`Gaji saat ini: ${careerProfile.gaji_sekarang}`)
-    if (careerProfile.perusahaan_impian)  details.push(`Perusahaan impian: ${careerProfile.perusahaan_impian}`)
-    if (careerProfile.timeline_karir)     details.push(`Timeline: ${careerProfile.timeline_karir}`)
-    if (careerProfile.tantangan_karir)    details.push(`Tantangan: ${careerProfile.tantangan_karir}`)
-    if (careerProfile.hambatan)           details.push(`Hambatan: ${careerProfile.hambatan}`)
-    if (careerProfile.motivasi)           details.push(`Motivasi: ${careerProfile.motivasi}`)
-    if (careerProfile.progress_lamaran)   details.push(`Progress lamaran: ${careerProfile.progress_lamaran}`)
-    if (careerProfile.emotional_state)    details.push(`Kondisi emosi: ${careerProfile.emotional_state}`)
-    if (careerProfile.career_dna?.ambisi) details.push(`Ambisi: ${careerProfile.career_dna.ambisi}`)
-    if (careerProfile.career_dna?.nilai_kerja) details.push(`Nilai kerja: ${careerProfile.career_dna.nilai_kerja}`)
-    if (careerProfile.career_dna?.kekhawatiran_utama) details.push(`Kekhawatiran: ${careerProfile.career_dna.kekhawatiran_utama}`)
-    if (careerProfile._next_action) details.push(`Next action: ${careerProfile._next_action.title}`)
-    if (growthState?.career_stage) details.push(`Career Stage: ${growthState.career_stage}`)
+    if (careerProfile?.nama)               details.push(`Nama: ${careerProfile.nama}`)
+    if (careerProfile?.usia)               details.push(`Usia: ${careerProfile.usia}`)
+    if (careerProfile?.domisili)           details.push(`Domisili: ${careerProfile.domisili}`)
+    if (careerProfile?.posisi_saat_ini)    details.push(`Posisi saat ini: ${careerProfile.posisi_saat_ini}`)
+    if (careerProfile?.perusahaan)         details.push(`Perusahaan: ${careerProfile.perusahaan}`)
+    if (careerProfile?.industri)           details.push(`Industri: ${careerProfile.industri}`)
+    if (careerProfile?.lama_pengalaman)    details.push(`Pengalaman: ${careerProfile.lama_pengalaman}`)
+    if (careerProfile?.skill_utama?.length)details.push(`Skills: ${careerProfile.skill_utama.join(', ')}`)
+    if (careerProfile?.target_posisi)      details.push(`Target: ${careerProfile.target_posisi}`)
+    if (careerProfile?.target_gaji)        details.push(`Target gaji: ${careerProfile.target_gaji}`)
+    if (careerProfile?.gaji_sekarang)      details.push(`Gaji saat ini: ${careerProfile.gaji_sekarang}`)
+    if (careerProfile?.perusahaan_impian)  details.push(`Perusahaan impian: ${careerProfile.perusahaan_impian}`)
+    if (careerProfile?.timeline_karir)     details.push(`Timeline: ${careerProfile.timeline_karir}`)
+    if (careerProfile?.tantangan_karir)    details.push(`Tantangan: ${careerProfile.tantangan_karir}`)
+    if (careerProfile?.hambatan)           details.push(`Hambatan: ${careerProfile.hambatan}`)
+    if (careerProfile?.motivasi)           details.push(`Motivasi: ${careerProfile.motivasi}`)
+    if (careerProfile?.progress_lamaran)   details.push(`Progress lamaran: ${careerProfile.progress_lamaran}`)
+    if (careerProfile?.emotional_state)    details.push(`Kondisi emosi: ${careerProfile.emotional_state}`)
+    if (careerProfile?.career_dna?.ambisi) details.push(`Ambisi: ${careerProfile.career_dna.ambisi}`)
+    if (careerProfile?.career_dna?.nilai_kerja) details.push(`Nilai kerja: ${careerProfile.career_dna.nilai_kerja}`)
+    if (careerProfile?.career_dna?.kekhawatiran_utama) details.push(`Kekhawatiran: ${careerProfile.career_dna.kekhawatiran_utama}`)
+    if (careerProfile?._next_action)       details.push(`Next action: ${careerProfile._next_action.title}`)
+    if (growthState?.career_stage)         details.push(`Career Stage: ${growthState.career_stage}`)
     if (growthState?.progress_percent !== undefined) details.push(`Progress: ${growthState.progress_percent}%`)
+    if (growthState?.current_focus)        details.push(`Focus saat ini: ${growthState.current_focus}`)
+    if (growthState?.next_milestone)       details.push(`Next milestone: ${growthState.next_milestone}`)
+    const gaps = careerProfile?.skill_gaps || careerProfile?.gap_skills || []
+    if (gaps.length) details.push(`Skill gaps: ${gaps.slice(0, 5).join(', ')}`)
+    const readiness = growthState?.progress_percent || careerProfile?.career_readiness
+    if (readiness != null) details.push(`Career Readiness: ${readiness}%`)
+    const gpsSteps = growthState?.gps_steps || careerProfile?.gps_steps || []
+    if (gpsSteps.length) {
+      const stepList = gpsSteps.slice(0, 6).map((s, i) => {
+        const label = typeof s === 'string' ? s : (s.step || s.label || s.title || '')
+        const done  = typeof s === 'object' && s.done ? '✓' : `${i + 1}.`
+        return `  ${done} ${label}`
+      }).join('\n')
+      details.push(`GPS Roadmap (Journey page):\n${stepList}`)
+    }
+    const mentorMsg = careerProfile?.mentor_message || growthState?.mentor_message
+    if (mentorMsg) details.push(`Pesan mentor: "${mentorMsg}"`)
+    const genome = careerProfile?._genome
+    if (genome) {
+      const GENOME_KEYS = ['analytical','leadership','builder','creator','communication','risk_taking']
+      const genomeScores = GENOME_KEYS
+        .filter(k => (genome[k] || 0) > 0)
+        .sort((a, b) => (genome[b] || 0) - (genome[a] || 0))
+        .slice(0, 3)
+        .map(k => `${k}(${genome[k]})`)
+        .join(', ')
+      if (genomeScores) details.push(`Career Genome (DNA page): ${genomeScores}`)
+      if (genome.top_strength) details.push(`Top strength: ${genome.top_strength}`)
+    }
 
     personalContext = `
 
-=== PROFIL USER (${sesi} sesi | Stage: ${currentStage.toUpperCase()} | Plan: ${plan.toUpperCase()}) ===
-${careerProfile.summary}
-
-${details.length ? `Detail:\n${details.map(d => `• ${d}`).join('\n')}` : ''}
-${careerProfile.topik_dibahas?.length ? `\nTopik dibahas: ${careerProfile.topik_dibahas.join(', ')}` : ''}
+=== DATA USER LENGKAP (${sesi} sesi | Stage: ${currentStage.toUpperCase()} | Plan: ${plan.toUpperCase()}) ===
+${careerProfile?.summary ? `Ringkasan: ${careerProfile.summary}\n` : ''}
+${details.length ? details.map(d => `• ${d}`).join('\n') : '(data profil belum lengkap — gali natural)'}
+${careerProfile?.topik_dibahas?.length ? `\nTopik pernah dibahas: ${careerProfile.topik_dibahas.join(', ')}` : ''}
 ===
+PENTING: Gunakan data di atas secara natural — jangan bilang "berdasarkan data kamu" atau "aku lihat di profil kamu". Bicara seperti kamu memang sudah kenal user ini dari banyak sesi sebelumnya.
 ${stageInstructions}
 ${persuasionLayer}`
 
   } else if (userId) {
     personalContext = buildStageInstructions('discovery', null, null) + persuasionLayer
   } else {
-    // Guest / tidak login — tidak ada persuasi
+    // Guest / tidak login
     personalContext = ''
   }
 
