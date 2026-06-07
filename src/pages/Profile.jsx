@@ -30,7 +30,8 @@ export default function Profile({ user }) {
     setLogoutLoading(true)
     localStorage.removeItem('lc_discovery_messages')
     localStorage.removeItem('lc_discovery_result')
-    if (user?.id) localStorage.removeItem(`lc_discovery_greeted_${user.id}`)
+    // lc_discovery_greeted_{userId} TIDAK dihapus — flag permanen
+    // supaya greeting Discovery tidak muncul ulang setiap login
     await supabase.auth.signOut()
     navigate('/')
   }

@@ -177,6 +177,10 @@ export default function Chat({ user, chatMessages = [], setChatMessages }) {
 
     const firstName = (user.user_metadata?.name || user.user_metadata?.full_name || '').split(' ')[0]
 
+    // ── Guard awal: kalau sudah pernah greeted Discovery, skip summary path ──
+    const discoveryGreetedKey = `lc_discovery_greeted_${user.id}`
+    const alreadyGreetedEarly = localStorage.getItem(discoveryGreetedKey)
+
     // Fetch growth_state + profil sekaligus untuk greeting & context injection
     Promise.all([
       supabase.from('user_growth_state').select('career_stage, progress_percent, current_focus, next_milestone, streak_days').eq('user_id', user.id).maybeSingle(),
@@ -234,17 +238,14 @@ export default function Chat({ user, chatMessages = [], setChatMessages }) {
       }
 
       // ── Cek apakah ini pertama kali masuk Chat setelah Discovery ──
-      // Flag: lc_discovery_greeted_{userId} — set setelah greeting pertama ditampilkan
-      const discoveryGreetedKey = `lc_discovery_greeted_${user.id}`
-      const alreadyGreeted = localStorage.getItem(discoveryGreetedKey)
-
+      // Flag cek: gunakan alreadyGreetedEarly yang sudah dicek sebelum fetch
       const hasDiscoveryData = p && (p.target_posisi || p.career_readiness)
-      const isFirstDiscoveryChat = !alreadyGreeted && hasDiscoveryData
+      const isFirstDiscoveryChat = !alreadyGreetedEarly && hasDiscoveryData
 
       if (isFirstDiscoveryChat) {
         // ── GREETING PERTAMA SETELAH DISCOVERY ──
         // Tampil summary hasil analisis dalam format "pesan tersimpan"
-        localStorage.setItem(discoveryGreetedKey, '1')
+        localStorage.setItem(discoveryGreetedKey, '1') // flag permanen, tidak dihapus saat logout
 
         const name = firstName || p?.nama?.split(' ')[0] || 'Kamu'
         const target = p.target_posisi || '—'
