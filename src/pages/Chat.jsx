@@ -252,29 +252,16 @@ export default function Chat({ user, chatMessages = [], setChatMessages }) {
         const readiness = p.career_readiness || g?.progress_percent || 0
         const gaps = (p.skill_gaps || p.gap_skills || []).slice(0, 3)
 
+        const gapLine = gaps.length > 0 ? `
+⚠ Gap Utama:${gaps.join(', ')}` : ''
         const summaryMsg =
 `Halo ${name} 👋
-
 Saya sudah menyimpan hasil Career Discovery kamu.
-
-🎯 **Target:** ${target}
-📊 **Readiness:** ${readiness}%
-${gaps.length > 0 ? `⚠ **Gap Utama:** ${gaps.join(', ')}` : ''}
-
+🎯 Target:${target}
+📊 Readiness:${readiness}%${gapLine}
 Saya akan membantu kamu memahami langkah berikutnya.`
 
         pushBot(summaryMsg)
-
-        // Setelah pesan summary, tambahkan quick action
-        setTimeout(() => {
-          pushBot(
-            'Mau mulai dari mana dulu?',
-            [
-              { id: 'coach', label: '💬 Tanya langkah pertama' },
-              { id: '__open_upgrade', label: '🗺️ Lihat Roadmap Lengkap' },
-            ]
-          )
-        }, 900)
         return
       }
 
