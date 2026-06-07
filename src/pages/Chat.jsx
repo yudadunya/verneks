@@ -177,9 +177,25 @@ export default function Chat({ user, chatMessages = [], setChatMessages }) {
 
     const firstName = (user.user_metadata?.name || user.user_metadata?.full_name || '').split(' ')[0]
 
-    // ── Guard awal: kalau sudah pernah greeted Discovery, skip summary path ──
+    // ── Guard awal: cek flag greeting Discovery ──
     const discoveryGreetedKey = `lc_discovery_greeted_${user.id}`
-    const alreadyGreetedEarly = localStorage.getItem(discoveryGreetedKey)
+    let alreadyGreetedEarly = localStorage.getItem(discoveryGreetedKey)
+
+    // Kalau flag ada tapi coachHistory kosong → flag stale (dari session lama/bug)
+    // Reset supaya user bisa dapat greeting yang benar
+    const coachKeyCheck = `lc_coach_${user.id}`
+    const hasCoachHistory = (() => {
+      try {
+        const saved = localStorage.getItem(coachKeyCheck)
+        if (!saved) return false
+        const parsed = JSON.parse(saved)
+        return Array.isArray(parsed) && parsed.length > 0
+      } catch { return false }
+    })()
+    if (alreadyGreetedEarly && !hasCoachHistory) {
+      localStorage.removeItem(discoveryGreetedKey)
+      alreadyGreetedEarly = null
+    }
 
     // Fetch growth_state + profil sekaligus untuk greeting & context injection
     Promise.all([
@@ -238,9 +254,11 @@ export default function Chat({ user, chatMessages = [], setChatMessages }) {
       }
 
       // ── Cek apakah ini pertama kali masuk Chat setelah Discovery ──
-      // Flag cek: gunakan alreadyGreetedEarly yang sudah dicek sebelum fetch
+      // Sinyal utama: coachHistory kosong (belum pernah chat sama sekali) + ada data Discovery
+      // alreadyGreetedEarly hanya sebagai guard prevent double-render dalam sesi yang sama
       const hasDiscoveryData = p && (p.target_posisi || p.career_readiness)
-      const isFirstDiscoveryChat = !alreadyGreetedEarly && hasDiscoveryData
+      const noHistory = coachHistory.length === 0
+      const isFirstDiscoveryChat = !alreadyGreetedEarly && hasDiscoveryData && noHistory
 
       if (isFirstDiscoveryChat) {
         // ── GREETING PERTAMA SETELAH DISCOVERY ──
