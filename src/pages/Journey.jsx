@@ -3,290 +3,568 @@ import { useNavigate } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import BottomNav from '../components/BottomNav'
 
-const STAGE_ORDER = [
-  'Career Explorer',
-  'Career Builder',
-  'Career Professional',
-  'Career Expert',
-  'Career Leader',
-]
+// ─── HELPERS ──────────────────────────────────────────────────────────────────
 
-const STAGE_COLOR = {
-  'Career Explorer':     '#34B7F1',
-  'Career Builder':      '#25D366',
-  'Career Professional': '#FFB74D',
-  'Career Expert':       '#F48FB1',
-  'Career Leader':       '#CE93D8',
+// Estimasi timeline berdasarkan progress & career stage
+function getTimeline(stage, progress) {
+  const base = {
+    'Career Explorer':     12,
+    'Career Builder':      9,
+    'Career Professional': 6,
+    'Career Expert':       4,
+    'Career Leader':       2,
+  }
+  const months = base[stage] || 10
+  const remaining = Math.max(1, Math.round(months * (1 - (progress || 0) / 100)))
+  return remaining === 1 ? '~1 Bulan Lagi' : `~${remaining} Bulan Lagi`
 }
 
-const STAGE_DESC = {
-  'Career Explorer':     'Masih menjelajahi arah karir yang tepat',
-  'Career Builder':      'Sedang membangun skill & pengalaman',
-  'Career Professional': 'Sudah establish, scale up karir',
-  'Career Expert':       'Spesialis yang diakui di bidangnya',
-  'Career Leader':       'Memimpin & punya pengaruh besar',
+// Bagi gps_steps (max 6 item) ke dalam 3 fase, tambah Fase 4 implied
+function buildPhases(steps = [], targetPosisi = '') {
+  // Pastikan selalu ada minimal 6 slot
+  const padded = [...steps]
+  while (padded.length < 6) padded.push({ title: '—', done: false })
+
+  const phases = [
+    {
+      id: 1, label: 'Phase 1', name: 'Fondasi',
+      emoji: '🌱', color: '#34B7F1',
+      steps: padded.slice(0, 2),
+    },
+    {
+      id: 2, label: 'Phase 2', name: 'Pengembangan',
+      emoji: '📚', color: '#FFB74D',
+      steps: padded.slice(2, 4),
+    },
+    {
+      id: 3, label: 'Phase 3', name: 'Eksekusi',
+      emoji: '🚀', color: '#25D366',
+      steps: padded.slice(4, 6),
+    },
+    {
+      id: 4, label: 'Phase 4', name: 'Pendaratan',
+      emoji: '🏆', color: '#F48FB1',
+      steps: [
+        { title: 'Apply Pekerjaan', done: false, locked: true },
+        { title: targetPosisi ? `First Role: ${targetPosisi}` : 'First Role', done: false, locked: true },
+      ],
+    },
+  ]
+  return phases
 }
 
+// Cari indeks step aktif (pertama yang belum done)
+function findCurrentStepIdx(phases) {
+  let globalIdx = 0
+  for (const phase of phases) {
+    for (const step of phase.steps) {
+      if (!step.done) return globalIdx
+      globalIdx++
+    }
+  }
+  return -1 // semua done
+}
+
+// Total steps
+function totalSteps(phases) {
+  return phases.reduce((sum, p) => sum + p.steps.length, 0)
+}
+
+// Done steps
+function doneSteps(phases) {
+  return phases.reduce((sum, p) => sum + p.steps.filter(s => s.done).length, 0)
+}
+
+// ─── STEP ROW ─────────────────────────────────────────────────────────────────
+function StepRow({ step, globalIdx, currentIdx, isPremium, onExpand, expanded, onChat }) {
+  const isDone    = step.done
+  const isCurrent = globalIdx === currentIdx
+  const isLocked  = step.locked || (!isDone && !isCurrent && globalIdx > currentIdx && !isPremium)
+  const isBlurred = isLocked && globalIdx >= 6 // Phase 4 always blurred
+
+  const iconColor = isDone ? '#25D366' : isCurrent ? '#34B7F1' : 'rgba(255,255,255,0.18)'
+  const textColor = isDone ? '#25D366' : isCurrent ? '#fff' : isBlurred ? 'rgba(255,255,255,0.15)' : 'rgba(255,255,255,0.35)'
+  const icon      = isDone ? '✅' : isCurrent ? '📍' : isLocked ? '🔒' : '○'
+
+  return (
+    <div>
+      <div
+        onClick={() => !isBlurred && onExpand(globalIdx)}
+        style={{
+          display: 'flex', alignItems: 'center', gap: 12,
+          padding: '11px 14px',
+          background: isCurrent ? 'rgba(52,183,241,0.08)' : isDone ? 'rgba(37,211,102,0.05)' : 'transparent',
+          border: `1px solid ${isCurrent ? 'rgba(52,183,241,0.2)' : 'rgba(255,255,255,0.04)'}`,
+          borderRadius: 12, marginBottom: 6,
+          cursor: isBlurred ? 'default' : 'pointer',
+          transition: 'background 0.2s',
+        }}
+      >
+        <span style={{ fontSize: '0.9rem', flexShrink: 0 }}>{icon}</span>
+        <span style={{
+          flex: 1, fontSize: '0.84rem', fontWeight: isCurrent ? 700 : isDone ? 500 : 400,
+          color: textColor,
+          filter: isBlurred ? 'blur(5px)' : 'none',
+          userSelect: isBlurred ? 'none' : 'auto',
+        }}>
+          {step.title}
+        </span>
+        {isCurrent && (
+          <span style={{ background: 'rgba(52,183,241,0.15)', color: '#34B7F1', fontSize: '0.6rem', padding: '2px 8px', borderRadius: 99, fontWeight: 700, flexShrink: 0 }}>
+            SEKARANG
+          </span>
+        )}
+        {!isBlurred && !isDone && !isCurrent && (
+          <span style={{ color: 'rgba(255,255,255,0.2)', fontSize: '0.75rem' }}>›</span>
+        )}
+      </div>
+
+      {/* Expanded detail */}
+      {expanded === globalIdx && !isBlurred && (
+        <div style={{
+          margin: '-2px 0 8px 38px',
+          background: 'rgba(255,255,255,0.03)',
+          border: '1px solid rgba(255,255,255,0.07)',
+          borderRadius: '0 0 12px 12px',
+          padding: '12px 14px',
+        }}>
+          <div style={{ color: 'rgba(255,255,255,0.45)', fontSize: '0.75rem', lineHeight: 1.65, marginBottom: 10 }}>
+            {isDone
+              ? `✓ Kamu sudah menyelesaikan langkah ini. Bagus!`
+              : isCurrent
+              ? `Ini langkah aktif kamu sekarang. Fokus di sini dulu sebelum lanjut.`
+              : `Langkah ini menunggu setelah kamu menyelesaikan langkah sebelumnya.`
+            }
+          </div>
+          <button
+            onClick={onChat}
+            style={{
+              padding: '8px 14px',
+              background: 'rgba(37,211,102,0.1)',
+              border: '1px solid rgba(37,211,102,0.25)',
+              color: '#25D366', fontWeight: 600, fontSize: '0.78rem',
+              borderRadius: 9, cursor: 'pointer',
+            }}
+          >
+            💬 Tanya Diah Anna tentang ini →
+          </button>
+        </div>
+      )}
+    </div>
+  )
+}
+
+// ─── PHASE BLOCK ──────────────────────────────────────────────────────────────
+function PhaseBlock({ phase, globalStartIdx, currentIdx, isPremium, expanded, onExpand, onChat, visible, delay }) {
+  const allDone   = phase.steps.every(s => s.done)
+  const hasActive = phase.steps.some((_, i) => globalStartIdx + i === currentIdx)
+  const isLocked  = phase.id === 4 && !isPremium
+
+  const phaseColor = allDone ? '#25D366' : hasActive ? phase.color : 'rgba(255,255,255,0.15)'
+
+  return (
+    <div style={{
+      marginBottom: 14,
+      opacity: visible ? 1 : 0,
+      transform: visible ? 'translateY(0)' : 'translateY(14px)',
+      transition: `opacity 0.45s ease ${delay}s, transform 0.45s ease ${delay}s`,
+    }}>
+      {/* Phase Header */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 10, paddingLeft: 2 }}>
+        <div style={{
+          width: 30, height: 30, borderRadius: '50%',
+          background: allDone ? 'rgba(37,211,102,0.15)' : hasActive ? `${phase.color}22` : 'rgba(255,255,255,0.05)',
+          border: `1.5px solid ${phaseColor}`,
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          fontSize: '0.8rem', flexShrink: 0,
+        }}>
+          {allDone ? '✓' : phase.emoji}
+        </div>
+        <div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            <span style={{ color: phaseColor, fontWeight: 700, fontSize: '0.75rem', letterSpacing: '0.5px' }}>
+              {phase.label.toUpperCase()}
+            </span>
+            {isLocked && (
+              <span style={{ color: 'rgba(255,255,255,0.2)', fontSize: '0.65rem' }}>🔒 Premium</span>
+            )}
+          </div>
+          <div style={{ color: allDone ? '#25D366' : hasActive ? '#fff' : 'rgba(255,255,255,0.3)', fontWeight: hasActive ? 700 : 400, fontSize: '0.83rem' }}>
+            {phase.name}
+          </div>
+        </div>
+        {allDone && (
+          <span style={{ marginLeft: 'auto', background: 'rgba(37,211,102,0.1)', color: '#25D366', fontSize: '0.62rem', padding: '2px 9px', borderRadius: 99, fontWeight: 700 }}>
+            SELESAI ✓
+          </span>
+        )}
+      </div>
+
+      {/* Steps */}
+      <div style={{ paddingLeft: 8 }}>
+        {phase.steps.map((step, i) => (
+          <StepRow
+            key={i}
+            step={step}
+            globalIdx={globalStartIdx + i}
+            currentIdx={currentIdx}
+            isPremium={isPremium}
+            expanded={expanded}
+            onExpand={onExpand}
+            onChat={onChat}
+          />
+        ))}
+      </div>
+
+      {/* Phase 4 upgrade nudge */}
+      {isLocked && (
+        <div
+          onClick={() => window.dispatchEvent(new CustomEvent('show-upgrade'))}
+          style={{
+            margin: '8px 0 0 8px',
+            padding: '10px 14px',
+            background: 'rgba(37,211,102,0.06)',
+            border: '1px dashed rgba(37,211,102,0.25)',
+            borderRadius: 12, cursor: 'pointer',
+            display: 'flex', alignItems: 'center', gap: 8,
+          }}
+        >
+          <span style={{ fontSize: '0.85rem' }}>🔓</span>
+          <span style={{ color: '#25D366', fontSize: '0.8rem', fontWeight: 600 }}>
+            Buka Phase 4 dengan Premium
+          </span>
+        </div>
+      )}
+    </div>
+  )
+}
+
+// ─── MAIN PAGE ────────────────────────────────────────────────────────────────
 export default function Journey({ user }) {
-  const navigate  = useNavigate()
-  const [profile, setProfile]   = useState(null)
-  const [growth, setGrowth]     = useState(null)
-  const [actions, setActions]   = useState([])
-  const [events, setEvents]     = useState([])
-  const [loading, setLoading]   = useState(true)
-  const [isPremium, setIsPremium] = useState(null) // null = belum dicek
+  const navigate = useNavigate()
+
+  const [profile,   setProfile]   = useState(null)
+  const [growth,    setGrowth]    = useState(null)
+  const [actions,   setActions]   = useState([])
+  const [events,    setEvents]    = useState([])
+  const [isPremium, setIsPremium] = useState(null)
+  const [loading,   setLoading]   = useState(true)
+  const [visible,   setVisible]   = useState(false)
+  const [expanded,  setExpanded]  = useState(null) // globalIdx of expanded step
 
   useEffect(() => {
     if (!user) { navigate('/'); return }
-    // Cek subscription
-    supabase.from('subscriptions').select('plan').eq('user_id', user.id).eq('status', 'active').gte('expires_at', new Date().toISOString()).limit(1).maybeSingle()
+
+    supabase
+      .from('subscriptions').select('plan')
+      .eq('user_id', user.id).eq('status', 'active')
+      .gte('expires_at', new Date().toISOString())
+      .limit(1).maybeSingle()
       .then(({ data }) => setIsPremium(!!data?.plan && data.plan !== 'free'))
+
     Promise.all([
-      supabase.from('user_career_profiles').select('nama,target_posisi,posisi_saat_ini,sesi_count,topik_dibahas').eq('user_id', user.id).maybeSingle(),
-      supabase.from('user_growth_state').select('*').eq('user_id', user.id).maybeSingle(),
-      supabase.from('user_next_actions').select('*').eq('user_id', user.id).order('created_at', { ascending: false }).limit(5),
-      supabase.from('career_events').select('*').eq('user_id', user.id).order('created_at', { ascending: false }).limit(10),
+      supabase.from('user_career_profiles')
+        .select('target_posisi,posisi_saat_ini,career_readiness,skill_gaps,gps_steps,mentor_message')
+        .eq('user_id', user.id).maybeSingle(),
+      supabase.from('user_growth_state')
+        .select('*').eq('user_id', user.id).maybeSingle(),
+      supabase.from('user_next_actions')
+        .select('*').eq('user_id', user.id)
+        .eq('is_done', false)
+        .order('created_at', { ascending: false }).limit(4),
+      supabase.from('career_events')
+        .select('*').eq('user_id', user.id)
+        .order('created_at', { ascending: false }).limit(5),
     ]).then(([{ data: p }, { data: g }, { data: a }, { data: e }]) => {
       setProfile(p)
       setGrowth(g)
       setActions(a || [])
       setEvents(e || [])
       setLoading(false)
+      setTimeout(() => setVisible(true), 80)
     })
   }, [user?.id])
 
-  const hasData = growth?.career_stage
-
-  const currentStageIdx = STAGE_ORDER.indexOf(growth?.career_stage || '')
-  const stageColor = STAGE_COLOR[growth?.career_stage] || 'var(--wa-green)'
-
-  const toggleAction = async (id, isDone) => {
+  const handleToggleAction = async (id, isDone) => {
     await supabase.from('user_next_actions').update({ is_done: !isDone }).eq('id', id)
     setActions(prev => prev.map(a => a.id === id ? { ...a, is_done: !isDone } : a))
   }
 
-  // Lock screen untuk free user
+  const handleChatAboutStep = (stepTitle) => {
+    localStorage.setItem('lc_chat_topic', `Jelaskan langkah "${stepTitle}" di career GPS saya dan apa yang harus saya lakukan sekarang.`)
+    navigate('/chat')
+  }
+
+  // ── Guards ──────────────────────────────────────────────────────────────────
+  if (loading || isPremium === null) return (
+    <div style={{ minHeight: '100vh', background: '#0a0f0d', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: "'Plus Jakarta Sans', sans-serif" }}>
+      <div style={{ textAlign: 'center' }}>
+        <div style={{ fontSize: '2rem', marginBottom: 12 }}>🗺️</div>
+        <div style={{ color: 'rgba(255,255,255,0.25)', fontSize: '0.85rem' }}>Memuat Career Journey...</div>
+      </div>
+    </div>
+  )
+
   if (isPremium === false) return (
-    <div style={{ minHeight: '100vh', background: '#0a0f0d', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '0 24px', textAlign: 'center', paddingBottom: 90 }}>
+    <div style={{ minHeight: '100vh', background: '#0a0f0d', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '0 28px', textAlign: 'center', paddingBottom: 90, fontFamily: "'Plus Jakarta Sans', sans-serif" }}>
       <div style={{ fontSize: '3rem', marginBottom: 16 }}>🗺️</div>
       <div style={{ color: '#fff', fontWeight: 800, fontSize: '1.1rem', marginBottom: 10 }}>Career Journey</div>
-      <div style={{ color: 'rgba(255,255,255,0.4)', fontSize: '0.85rem', lineHeight: 1.7, marginBottom: 28 }}>
-        Lacak perjalanan karier kamu hari demi hari.<br />Fitur ini tersedia untuk pengguna Premium.
+      <div style={{ color: 'rgba(255,255,255,0.38)', fontSize: '0.85rem', lineHeight: 1.75, marginBottom: 28 }}>
+        Lacak perjalanan karier kamu hari demi hari.<br />
+        Fitur ini tersedia untuk pengguna Premium.
       </div>
-      <button onClick={() => window.location.href = '/pricing'} style={{ padding: '13px 32px', background: 'linear-gradient(135deg,#25D366,#128C7E)', color: '#fff', fontWeight: 700, borderRadius: 12, border: 'none', cursor: 'pointer', fontSize: '0.9rem', boxShadow: '0 4px 16px rgba(37,211,102,0.3)' }}>
+      <button
+        onClick={() => window.dispatchEvent(new CustomEvent('show-upgrade'))}
+        style={{ padding: '14px 32px', background: 'linear-gradient(135deg,#25D366,#128C7E)', color: '#fff', fontWeight: 700, borderRadius: 13, border: 'none', cursor: 'pointer', fontSize: '0.9rem', boxShadow: '0 4px 18px rgba(37,211,102,0.3)' }}
+      >
         🚀 Upgrade Premium
       </button>
-      <button onClick={() => window.history.back()} style={{ marginTop: 12, background: 'none', border: 'none', color: 'rgba(255,255,255,0.3)', fontSize: '0.8rem', cursor: 'pointer' }}>← Kembali</button>
       <BottomNav isPremium={false} />
     </div>
   )
 
+  // ── Data preparation ────────────────────────────────────────────────────────
+  const targetPosisi = profile?.target_posisi || null
+  const readiness    = growth?.progress_percent || profile?.career_readiness || 0
+  const stage        = growth?.career_stage || null
+  const currentFocus = growth?.current_focus || null
+  const gpsSteps     = profile?.gps_steps || growth?.gps_steps || []
+  const hasData      = gpsSteps.length > 0 || stage
+
+  const phases       = buildPhases(gpsSteps, targetPosisi)
+  const currentIdx   = findCurrentStepIdx(phases)
+  const total        = totalSteps(phases)
+  const done         = doneSteps(phases)
+  const timeline     = stage ? getTimeline(stage, readiness) : null
+
+  // Global step index per phase
+  const phaseStartIdxs = phases.reduce((acc, phase, i) => {
+    acc.push(i === 0 ? 0 : acc[i - 1] + phases[i - 1].steps.length)
+    return acc
+  }, [])
+
+  // ── No data ─────────────────────────────────────────────────────────────────
+  if (!hasData) return (
+    <div style={{ minHeight: '100vh', background: '#0a0f0d', paddingBottom: 90, fontFamily: "'Plus Jakarta Sans', sans-serif" }}>
+      <div style={{ background: 'rgba(255,255,255,0.025)', borderBottom: '1px solid rgba(255,255,255,0.05)', padding: '14px 18px' }}>
+        <div style={{ color: '#fff', fontWeight: 800, fontSize: '1rem' }}>🗺️ Career Journey</div>
+        <div style={{ color: 'rgba(255,255,255,0.3)', fontSize: '0.7rem', marginTop: 2 }}>Peta perjalanan karier kamu</div>
+      </div>
+      <div style={{ textAlign: 'center', padding: '52px 24px' }}>
+        <div style={{ fontSize: '3rem', marginBottom: 14 }}>🗺️</div>
+        <div style={{ color: '#fff', fontWeight: 700, fontSize: '1rem', marginBottom: 8 }}>Journey belum terbentuk</div>
+        <div style={{ color: 'rgba(255,255,255,0.38)', fontSize: '0.83rem', lineHeight: 1.7, marginBottom: 24 }}>
+          Selesaikan Career Discovery agar Diah Anna bisa memetakan roadmap personal kamu.
+        </div>
+        <button onClick={() => navigate('/discovery')} style={{ padding: '12px 28px', background: 'linear-gradient(135deg,#25D366,#128C7E)', color: '#fff', fontWeight: 700, borderRadius: 12, border: 'none', cursor: 'pointer' }}>
+          🚀 Mulai Career Discovery
+        </button>
+      </div>
+      <BottomNav isPremium={isPremium} />
+    </div>
+  )
+
   return (
-    <div style={{ minHeight: '100vh', background: 'var(--wa-bg)', paddingBottom: '80px' }}>
-      <div className="wa-header">
-        <div className="wa-header-title">Career Journey 🗺️</div>
-        <div className="wa-header-subtitle">Peta perjalanan karirmu</div>
+    <div style={{ minHeight: '100vh', background: '#0a0f0d', paddingBottom: 90, fontFamily: "'Plus Jakarta Sans', sans-serif" }}>
+      <style>{`@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;700;800;900&display=swap');`}</style>
+
+      {/* ── Header ── */}
+      <div style={{ background: 'rgba(255,255,255,0.025)', borderBottom: '1px solid rgba(255,255,255,0.05)', padding: '14px 18px' }}>
+        <div style={{ color: '#fff', fontWeight: 800, fontSize: '1rem' }}>🗺️ Career Journey</div>
+        <div style={{ color: 'rgba(255,255,255,0.3)', fontSize: '0.7rem', marginTop: 2 }}>Peta perjalanan karier kamu</div>
       </div>
 
-      <div style={{ padding: '16px' }}>
+      <div style={{ padding: '16px 16px 0', maxWidth: 480, margin: '0 auto' }}>
 
-        {loading && (
-          <div style={{ textAlign: 'center', padding: '48px 0', color: 'var(--wa-gray)' }}>
-            <div style={{ fontSize: '2rem', marginBottom: '8px' }}>⏳</div>
-            <div>Memuat journey...</div>
-          </div>
-        )}
-
-        {!loading && !hasData && (
-          <div style={{ textAlign: 'center', padding: '40px 16px', background: '#fff', borderRadius: '12px' }}>
-            <div style={{ fontSize: '3rem', marginBottom: '12px' }}>🗺️</div>
-            <div style={{ fontWeight: '700', marginBottom: '8px', color: 'var(--wa-dark)' }}>Journey belum terbentuk</div>
-            <div style={{ fontSize: '0.85rem', color: 'var(--wa-gray)', marginBottom: '20px', lineHeight: 1.5 }}>
-              Ngobrol minimal 3 pesan dengan Diah Anna agar AI bisa memetakan perjalanan karirmu.
-            </div>
-            <button
-              onClick={() => navigate('/chat')}
-              style={{ background: 'var(--wa-green)', color: '#fff', padding: '10px 24px', borderRadius: '8px', border: 'none', fontWeight: '600', cursor: 'pointer' }}
-            >
-              💬 Mulai ngobrol
-            </button>
-          </div>
-        )}
-
-        {!loading && hasData && (
-          <>
-            {/* Progress bar */}
-            <div style={{ background: '#fff', borderRadius: '12px', padding: '16px', marginBottom: '12px' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px', alignItems: 'center' }}>
-                <div style={{ fontWeight: '700', color: 'var(--wa-dark)', fontSize: '0.9rem' }}>
-                  🎯 Progress ke Target
-                </div>
-                <div style={{ fontWeight: '700', color: stageColor, fontSize: '1rem' }}>
-                  {growth.progress_percent || 0}%
-                </div>
-              </div>
-              <div style={{ background: 'var(--wa-gray-light)', borderRadius: '99px', height: '8px', overflow: 'hidden', marginBottom: '8px' }}>
-                <div style={{
-                  background: `linear-gradient(90deg, ${stageColor}, ${stageColor}aa)`,
-                  height: '100%', borderRadius: '99px',
-                  width: `${growth.progress_percent || 0}%`,
-                  transition: 'width 1s ease'
-                }} />
-              </div>
-              {profile?.target_posisi && (
-                <div style={{ fontSize: '0.78rem', color: 'var(--wa-gray)' }}>
-                  Menuju: <strong>{profile.target_posisi}</strong>
-                </div>
+        {/* ── HERO: Target + Progress ─────────────────────────────────────── */}
+        <div style={{
+          background: 'linear-gradient(135deg,#0a2218,#0f3324)',
+          border: '1px solid rgba(37,211,102,0.25)',
+          borderRadius: 18, padding: '20px 18px', marginBottom: 12,
+          opacity: visible ? 1 : 0,
+          transition: 'opacity 0.4s ease 0.05s',
+        }}>
+          {/* Target + Timeline */}
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 16 }}>
+            <div>
+              <div style={{ color: 'rgba(255,255,255,0.35)', fontSize: '0.63rem', letterSpacing: '0.8px', marginBottom: 5 }}>🎯 TARGET KARIER</div>
+              <div style={{ color: '#fff', fontWeight: 800, fontSize: '1.05rem' }}>{targetPosisi || '—'}</div>
+              {stage && (
+                <div style={{ color: 'rgba(255,255,255,0.3)', fontSize: '0.7rem', marginTop: 3 }}>{stage}</div>
               )}
             </div>
-
-            {/* Career Stage Roadmap */}
-            <div style={{ background: '#fff', borderRadius: '12px', padding: '16px', marginBottom: '12px' }}>
-              <div style={{ fontWeight: '700', marginBottom: '16px', color: 'var(--wa-dark)', fontSize: '0.9rem' }}>
-                🏔️ Career Stage
+            {timeline && (
+              <div style={{ textAlign: 'right' }}>
+                <div style={{ color: '#25D366', fontWeight: 900, fontSize: '1rem' }}>{timeline}</div>
+                <div style={{ color: 'rgba(255,255,255,0.25)', fontSize: '0.62rem' }}>estimasi</div>
               </div>
-              {STAGE_ORDER.map((stage, idx) => {
-                const isCompleted = idx < currentStageIdx
-                const isCurrent   = idx === currentStageIdx
-                const isNext      = idx === currentStageIdx + 1
-                const color       = STAGE_COLOR[stage]
-                return (
-                  <div key={stage} style={{ display: 'flex', gap: '12px', marginBottom: '16px', alignItems: 'flex-start' }}>
-                    {/* Icon */}
-                    <div style={{
-                      width: 36, height: 36, borderRadius: '50%', flexShrink: 0,
-                      background: isCompleted ? color : isCurrent ? color : 'var(--wa-gray-light)',
-                      border: `2px solid ${isCurrent ? color : isCompleted ? color : 'var(--wa-border)'}`,
-                      display: 'flex', alignItems: 'center', justifyContent: 'center',
-                      fontSize: '0.8rem', fontWeight: '700',
-                      color: (isCompleted || isCurrent) ? '#fff' : 'var(--wa-gray)',
-                      boxShadow: isCurrent ? `0 0 0 4px ${color}33` : 'none'
-                    }}>
-                      {isCompleted ? '✓' : isCurrent ? '●' : idx + 1}
-                    </div>
+            )}
+          </div>
 
-                    <div style={{ flex: 1 }}>
-                      <div style={{
-                        fontWeight: isCurrent ? '700' : '500',
-                        fontSize: '0.88rem',
-                        color: isCurrent ? color : isCompleted ? 'var(--wa-dark)' : 'var(--wa-gray)',
-                        marginBottom: '2px'
-                      }}>
-                        {stage}
-                        {isCurrent && <span style={{ fontSize: '0.7rem', background: color + '22', color, padding: '1px 8px', borderRadius: '99px', marginLeft: '6px' }}>Kamu di sini</span>}
-                        {isNext && <span style={{ fontSize: '0.7rem', background: 'var(--wa-gray-light)', color: 'var(--wa-gray)', padding: '1px 8px', borderRadius: '99px', marginLeft: '6px' }}>Next</span>}
-                      </div>
-                      <div style={{ fontSize: '0.75rem', color: 'var(--wa-gray)' }}>{STAGE_DESC[stage]}</div>
-                      {isCurrent && growth.current_focus && (
-                        <div style={{ fontSize: '0.75rem', color, marginTop: '4px', fontStyle: 'italic' }}>
-                          Fokus sekarang: {growth.current_focus}
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                )
-              })}
+          {/* Readiness bar */}
+          <div style={{ marginBottom: 12 }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.72rem', marginBottom: 6 }}>
+              <span style={{ color: 'rgba(255,255,255,0.4)' }}>Career Readiness</span>
+              <span style={{ color: '#25D366', fontWeight: 700 }}>{readiness}%</span>
             </div>
+            <div style={{ background: 'rgba(255,255,255,0.08)', borderRadius: 99, height: 8, overflow: 'hidden' }}>
+              <div style={{ background: 'linear-gradient(90deg,#25D366,#34B7F1)', width: `${readiness}%`, height: '100%', borderRadius: 99, transition: 'width 1.2s ease' }} />
+            </div>
+          </div>
 
-            {/* Next Milestone */}
-            {growth.next_milestone && (
-              <div style={{ background: `${stageColor}11`, border: `1px solid ${stageColor}44`, borderRadius: '12px', padding: '14px', marginBottom: '12px' }}>
-                <div style={{ fontWeight: '700', fontSize: '0.82rem', color: stageColor, marginBottom: '4px' }}>
-                  🎯 Milestone Berikutnya
-                </div>
-                <div style={{ fontSize: '0.85rem', color: 'var(--wa-dark)', lineHeight: 1.5 }}>
-                  {growth.next_milestone}
-                </div>
+          {/* Step counter + current focus */}
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <div style={{ color: 'rgba(255,255,255,0.4)', fontSize: '0.72rem' }}>
+              {done} dari {total} langkah selesai
+            </div>
+            {currentFocus && (
+              <div style={{ background: 'rgba(52,183,241,0.1)', border: '1px solid rgba(52,183,241,0.2)', borderRadius: 8, padding: '4px 10px', fontSize: '0.68rem', color: '#34B7F1', fontWeight: 600 }}>
+                📍 {currentFocus}
               </div>
             )}
+          </div>
+        </div>
 
-            {/* Next Actions */}
-            {actions.length > 0 && (
-              <div style={{ background: '#fff', borderRadius: '12px', padding: '16px', marginBottom: '12px' }}>
-                <div style={{ fontWeight: '700', marginBottom: '12px', color: 'var(--wa-dark)', fontSize: '0.9rem' }}>
-                  ✅ Aksi yang Disarankan Diah Anna
-                </div>
-                {actions.map(action => (
-                  <div
-                    key={action.id}
-                    onClick={() => toggleAction(action.id, action.is_done)}
-                    style={{
-                      display: 'flex', gap: '10px', alignItems: 'flex-start',
-                      padding: '10px', borderRadius: '8px', marginBottom: '8px', cursor: 'pointer',
-                      background: action.is_done ? 'rgba(37,211,102,0.08)' : 'var(--wa-gray-light)',
-                      opacity: action.is_done ? 0.7 : 1
-                    }}
-                  >
-                    <div style={{
-                      width: 20, height: 20, borderRadius: '50%', flexShrink: 0, marginTop: '1px',
-                      background: action.is_done ? 'var(--wa-green)' : 'transparent',
-                      border: `2px solid ${action.is_done ? 'var(--wa-green)' : 'var(--wa-border)'}`,
-                      display: 'flex', alignItems: 'center', justifyContent: 'center',
-                      color: '#fff', fontSize: '0.65rem'
-                    }}>
-                      {action.is_done && '✓'}
-                    </div>
-                    <div>
-                      <div style={{
-                        fontWeight: '600', fontSize: '0.85rem',
-                        color: 'var(--wa-dark)',
-                        textDecoration: action.is_done ? 'line-through' : 'none'
-                      }}>
-                        {action.title}
-                      </div>
-                      {action.description && (
-                        <div style={{ fontSize: '0.76rem', color: 'var(--wa-gray)', marginTop: '2px', lineHeight: 1.4 }}>
-                          {action.description}
-                        </div>
-                      )}
-                      {action.estimated_days && !action.is_done && (
-                        <div style={{ fontSize: '0.72rem', color: stageColor, marginTop: '3px' }}>
-                          ⏱ ~{action.estimated_days} hari
-                        </div>
-                      )}
-                    </div>
+        {/* ── PHASES ─────────────────────────────────────────────────────────── */}
+        <div style={{
+          background: 'rgba(255,255,255,0.025)',
+          border: '1px solid rgba(255,255,255,0.06)',
+          borderRadius: 18, padding: '18px', marginBottom: 12,
+          opacity: visible ? 1 : 0,
+          transform: visible ? 'none' : 'translateY(14px)',
+          transition: 'opacity 0.45s ease 0.1s, transform 0.45s ease 0.1s',
+        }}>
+          <div style={{ color: '#fff', fontWeight: 700, fontSize: '0.88rem', marginBottom: 16 }}>🗺️ Career GPS</div>
+
+          {phases.map((phase, pi) => (
+            <PhaseBlock
+              key={phase.id}
+              phase={phase}
+              globalStartIdx={phaseStartIdxs[pi]}
+              currentIdx={currentIdx}
+              isPremium={isPremium}
+              expanded={expanded}
+              onExpand={(idx) => setExpanded(prev => prev === idx ? null : idx)}
+              onChat={() => handleChatAboutStep(
+                phases[pi].steps.find((_, si) => phaseStartIdxs[pi] + si === expanded)?.title || ''
+              )}
+              visible={visible}
+              delay={0.1 + pi * 0.05}
+            />
+          ))}
+        </div>
+
+        {/* ── ACTION ITEMS ────────────────────────────────────────────────────── */}
+        {actions.length > 0 && (
+          <div style={{
+            background: 'rgba(255,255,255,0.025)',
+            border: '1px solid rgba(255,255,255,0.06)',
+            borderRadius: 18, padding: '18px', marginBottom: 12,
+            opacity: visible ? 1 : 0,
+            transform: visible ? 'none' : 'translateY(14px)',
+            transition: 'opacity 0.45s ease 0.25s, transform 0.45s ease 0.25s',
+          }}>
+            <div style={{ color: '#fff', fontWeight: 700, fontSize: '0.88rem', marginBottom: 14 }}>
+              ✅ Aksi yang Disarankan Diah Anna
+            </div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 9 }}>
+              {actions.map(action => (
+                <div
+                  key={action.id}
+                  onClick={() => handleToggleAction(action.id, action.is_done)}
+                  style={{
+                    display: 'flex', gap: 11, alignItems: 'flex-start',
+                    padding: '11px 13px', borderRadius: 12, cursor: 'pointer',
+                    background: action.is_done ? 'rgba(37,211,102,0.06)' : 'rgba(255,255,255,0.03)',
+                    border: `1px solid ${action.is_done ? 'rgba(37,211,102,0.15)' : 'rgba(255,255,255,0.06)'}`,
+                    opacity: action.is_done ? 0.6 : 1,
+                  }}
+                >
+                  {/* Checkbox */}
+                  <div style={{
+                    width: 20, height: 20, borderRadius: '50%', flexShrink: 0, marginTop: 1,
+                    background: action.is_done ? '#25D366' : 'transparent',
+                    border: `2px solid ${action.is_done ? '#25D366' : 'rgba(255,255,255,0.2)'}`,
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    color: '#fff', fontSize: '0.6rem', transition: 'all 0.2s',
+                  }}>
+                    {action.is_done && '✓'}
                   </div>
-                ))}
-              </div>
-            )}
-
-            {/* Topik yang sudah dibahas */}
-            {profile?.topik_dibahas?.length > 0 && (
-              <div style={{ background: '#fff', borderRadius: '12px', padding: '16px', marginBottom: '12px' }}>
-                <div style={{ fontWeight: '700', marginBottom: '10px', color: 'var(--wa-dark)', fontSize: '0.9rem' }}>
-                  💬 Topik yang Sudah Dibahas
-                </div>
-                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
-                  {profile.topik_dibahas.map(t => (
-                    <span key={t} style={{
-                      background: 'var(--wa-gray-light)', color: 'var(--wa-dark)',
-                      padding: '4px 10px', borderRadius: '99px', fontSize: '0.75rem'
+                  <div style={{ flex: 1 }}>
+                    <div style={{
+                      color: 'rgba(255,255,255,0.82)', fontWeight: 500, fontSize: '0.83rem',
+                      textDecoration: action.is_done ? 'line-through' : 'none',
+                      marginBottom: action.description ? 3 : 0,
                     }}>
-                      {t}
-                    </span>
-                  ))}
+                      {action.title}
+                    </div>
+                    {action.description && (
+                      <div style={{ color: 'rgba(255,255,255,0.3)', fontSize: '0.72rem', lineHeight: 1.5 }}>
+                        {action.description}
+                      </div>
+                    )}
+                    {action.estimated_days && !action.is_done && (
+                      <div style={{ color: '#25D366', fontSize: '0.68rem', marginTop: 4 }}>
+                        ⏱ ~{action.estimated_days} hari
+                      </div>
+                    )}
+                  </div>
                 </div>
-              </div>
-            )}
-
-            {/* Streak */}
-            {(growth.streak_days || 0) > 0 && (
-              <div style={{ textAlign: 'center', padding: '12px', background: '#fff', borderRadius: '12px', marginBottom: '12px' }}>
-                <div style={{ fontSize: '1.4rem' }}>🔥</div>
-                <div style={{ fontWeight: '700', color: 'var(--wa-dark)' }}>{growth.streak_days} hari</div>
-                <div style={{ fontSize: '0.78rem', color: 'var(--wa-gray)' }}>streak aktif belajar</div>
-              </div>
-            )}
-
-            <button
-              onClick={() => navigate('/chat')}
-              style={{ width: '100%', background: 'var(--wa-green)', color: '#fff', padding: '12px', borderRadius: '10px', border: 'none', fontWeight: '700', fontSize: '0.9rem', cursor: 'pointer' }}
-            >
-              💬 Lanjut ngobrol dengan Diah Anna
-            </button>
-          </>
+              ))}
+            </div>
+          </div>
         )}
+
+        {/* ── ACTIVITY LOG ────────────────────────────────────────────────────── */}
+        {events.length > 0 && (
+          <div style={{
+            background: 'rgba(255,255,255,0.025)',
+            border: '1px solid rgba(255,255,255,0.06)',
+            borderRadius: 18, padding: '18px', marginBottom: 12,
+            opacity: visible ? 1 : 0,
+            transform: visible ? 'none' : 'translateY(14px)',
+            transition: 'opacity 0.45s ease 0.3s, transform 0.45s ease 0.3s',
+          }}>
+            <div style={{ color: '#fff', fontWeight: 700, fontSize: '0.88rem', marginBottom: 14 }}>
+              📅 Aktivitas Terakhir
+            </div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+              {events.map((ev, i) => (
+                <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                  <span style={{ color: '#25D366', fontSize: '0.78rem', flexShrink: 0 }}>✓</span>
+                  <span style={{ color: 'rgba(255,255,255,0.55)', fontSize: '0.8rem', flex: 1 }}>
+                    {ev.title || ev.description || 'Aktivitas karier'}
+                  </span>
+                  {ev.points && (
+                    <span style={{ color: '#25D366', fontSize: '0.7rem', fontWeight: 700, flexShrink: 0 }}>
+                      +{ev.points}%
+                    </span>
+                  )}
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* ── DIAH ANNA CTA ─────────────────────────────────────────────────── */}
+        <button
+          onClick={() => navigate('/chat')}
+          style={{
+            width: '100%', marginBottom: 12,
+            padding: '14px',
+            background: 'linear-gradient(135deg,#25D366,#128C7E)',
+            color: '#fff', fontWeight: 700, fontSize: '0.9rem',
+            borderRadius: 14, border: 'none', cursor: 'pointer',
+            boxShadow: '0 3px 16px rgba(37,211,102,0.3)',
+            opacity: visible ? 1 : 0,
+            transition: 'opacity 0.45s ease 0.35s',
+          }}
+        >
+          💬 Diskusikan Journey ini dengan Diah Anna
+        </button>
+
       </div>
+
       <BottomNav isPremium={isPremium} />
     </div>
   )
