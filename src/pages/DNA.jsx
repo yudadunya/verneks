@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
+import { useSubscription } from '../hooks/useSubscription'
 import BottomNav from '../components/BottomNav'
 
 const GENOME_MAP = [
@@ -34,6 +35,7 @@ function getDiahInsight(scores) {
 }
 
 export default function DNA({ user }) {
+  const { plan } = useSubscription(user?.id)
   const navigate = useNavigate()
   const [scores, setScores] = useState(null)
   const [loading, setLoading] = useState(true)
@@ -128,7 +130,7 @@ export default function DNA({ user }) {
           </>
         )}
       </div>
-      <BottomNav />
+      <BottomNav isPremium={plan === 'premium'} />
     </div>
   )
 }
