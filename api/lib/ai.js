@@ -123,13 +123,27 @@ export async function generateChat({ system, messages, maxTokens = 500, tier = '
     } else {
       const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY)
       const m = genAI.getGenerativeModel({ model, systemInstruction: system })
-      const history = messages.slice(0, -1).map(msg => ({
+      // Gemini: history harus mulai dari 'user' dan tidak boleh ada consecutive same role
+      const rawHistory = messages.slice(0, -1).map(msg => ({
         role: msg.role === 'assistant' ? 'model' : 'user',
-        parts: [{ text: msg.content }],
+        parts: [{ text: msg.content || '' }],
       }))
+      // Filter: skip leading 'model' messages, deduplicate consecutive roles
+      const history = []
+      for (const msg of rawHistory) {
+        if (history.length === 0 && msg.role === 'model') continue // Gemini wajib mulai dari user
+        const last = history[history.length - 1]
+        if (last && last.role === msg.role) {
+          // Gabungkan konten daripada dua pesan role sama berturutan
+          last.parts[0].text += '\n' + msg.parts[0].text
+        } else {
+          history.push(msg)
+        }
+      }
+      const lastMsg = messages[messages.length - 1]
       const chat = m.startChat({ history })
-      const result = await chat.sendMessage(messages[messages.length - 1].content)
-      return result.response.text()
+      const result = await chat.sendMessage(lastMsg.content || '')
+      return result.response.text() || ''
     }
   })
 }

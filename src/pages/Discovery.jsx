@@ -51,7 +51,7 @@ export default function Discovery() {
 
     const newMessages = [...messages, { role: 'user', text, id: Date.now() }]
     setMessages(newMessages)
-    localStorage.setItem('lc_discovery_messages', JSON.stringify(newMessages))
+    try { localStorage.setItem('lc_discovery_messages', JSON.stringify(newMessages)) } catch {}
     setLoading(true)
 
     try {
@@ -61,15 +61,22 @@ export default function Discovery() {
         body: JSON.stringify({ messages: newMessages })
       })
       const data = await res.json()
+      // Guard: kalau API error atau reply kosong, throw agar catch menangani
+      if (!res.ok || !data.reply) throw new Error(data.error || 'Reply kosong dari AI')
       const withReply = [...newMessages, { role: 'bot', text: data.reply, id: Date.now() + 1 }]
       setMessages(withReply)
-      localStorage.setItem('lc_discovery_messages', JSON.stringify(withReply))
+      try { localStorage.setItem('lc_discovery_messages', JSON.stringify(withReply)) } catch {}
       if (data.showResultButton) setShowResult(true)
       if (data.discoveryComplete) {
         setTimeout(() => inputRef.current?.blur(), 100)
       }
-    } catch {
-      setMessages(prev => [...prev, { role: 'bot', text: 'Koneksi bermasalah. Coba lagi ya! 🙏', id: Date.now() }])
+    } catch (err) {
+      console.error('[discovery]', err.message)
+      setMessages(prev => [...prev, {
+        role: 'bot',
+        text: 'Waduh, ada gangguan koneksi. 🙏\n\nSilakan ketik ulang pesanmu atau refresh halaman.',
+        id: Date.now()
+      }])
     }
     setLoading(false)
   }
@@ -146,7 +153,7 @@ export default function Discovery() {
               color: '#111', whiteSpace: 'pre-line',
               boxShadow: '0 1px 2px rgba(0,0,0,0.08)',
             }}
-              dangerouslySetInnerHTML={{ __html: m.text.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>') }}
+              dangerouslySetInnerHTML={{ __html: (m.text || '').replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>') }}
             />
           </div>
         ))}
