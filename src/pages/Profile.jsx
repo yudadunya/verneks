@@ -28,10 +28,15 @@ export default function Profile({ user }) {
 
   const handleLogout = async () => {
     setLogoutLoading(true)
+    // Bersihkan semua localStorage milik user ini
+    if (user?.id) {
+      localStorage.removeItem(`lc_chat_${user.id}`)
+      localStorage.removeItem(`lc_coach_${user.id}`)
+      localStorage.removeItem(`lc_discovery_greeted_${user.id}`)
+      localStorage.removeItem(`onboarded_${user.id}`)
+    }
     localStorage.removeItem('lc_discovery_messages')
     localStorage.removeItem('lc_discovery_result')
-    // lc_discovery_greeted_{userId} TIDAK dihapus — flag permanen
-    // supaya greeting Discovery tidak muncul ulang setiap login
     await supabase.auth.signOut()
     navigate('/')
   }
