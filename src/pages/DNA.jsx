@@ -145,7 +145,7 @@ export default function DNA({ user }) {
     Promise.all([
       supabase.from('user_genome_scores').select('*').eq('user_id', user.id).maybeSingle(),
       supabase.from('user_career_profiles')
-        .select('target_posisi, industri, skill_gaps, mentor_message, posisi_saat_ini')
+        .select('nama, target_posisi, posisi_saat_ini, industri, hambatan, skill_gaps, mentor_message')
         .eq('user_id', user.id).maybeSingle(),
     ]).then(async ([{ data: s }, { data: p }]) => {
       const genomeKosong = !s || !GENOME_MAP.some(g => (s[g.key] || 0) > 0)
