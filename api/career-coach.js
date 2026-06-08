@@ -265,6 +265,7 @@ Ingat: Kamu Diah Anna — career coach yang genuinely peduli, memori tajam, dan 
       messages,
       maxTokens: 180,
       tier: 'fast',
+      plan,
     })
 
     return res.status(200).json({ reply, stage: currentStage })
