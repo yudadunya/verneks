@@ -147,8 +147,49 @@ export default function DNA({ user }) {
       supabase.from('user_career_profiles')
         .select('target_posisi, industri, skill_gaps, mentor_message, posisi_saat_ini')
         .eq('user_id', user.id).maybeSingle(),
-    ]).then(([{ data: s }, { data: p }]) => {
-      setScores(s)
+    ]).then(async ([{ data: s }, { data: p }]) => {
+      const genomeKosong = !s || !GENOME_MAP.some(g => (s[g.key] || 0) > 0)
+      const adaProfil    = p && p.target_posisi
+
+      // Auto-compute genome dari profil yang ada — tanpa user perlu apa-apa
+      if (genomeKosong && adaProfil) {
+        try {
+          const coachKey = user.id ? `lc_coach_${user.id}` : null
+          const saved    = coachKey ? localStorage.getItem(coachKey) : null
+          const messages = saved ? JSON.parse(saved) : []
+
+          const res    = await fetch('/api/compute-genome', {
+            method:  'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body:    JSON.stringify({ messages, profile: p }),
+          })
+          const result = await res.json()
+
+          if (result.genome_scores) {
+            const gs = result.genome_scores
+            await supabase.from('user_genome_scores').upsert({
+              user_id:       user.id,
+              analytical:    gs.analytical    || 0,
+              leadership:    gs.leadership    || 0,
+              builder:       gs.builder       || 0,
+              creator:       gs.creator       || 0,
+              communication: gs.communication || 0,
+              risk_taking:   gs.risk_taking   || 0,
+              top_strength:  result.top_strength || null,
+              updated_at:    new Date().toISOString(),
+            }, { onConflict: 'user_id' })
+
+            // Fetch ulang genome yang baru disimpan
+            const { data: newScores } = await supabase
+              .from('user_genome_scores').select('*')
+              .eq('user_id', user.id).maybeSingle()
+            setScores(newScores)
+          }
+        } catch(e) { console.warn('[dna-autocompute]', e) }
+      } else {
+        setScores(s)
+      }
+
       setProfile(p)
       setLoading(false)
       setTimeout(() => setVisible(true), 80)
@@ -198,16 +239,16 @@ export default function DNA({ user }) {
             <div style={{ fontSize: '3.5rem', marginBottom: 14 }}>🧠</div>
             <div style={{ color: '#fff', fontWeight: 800, fontSize: '1.05rem', marginBottom: 10 }}>DNA-mu belum terbentuk</div>
             <div style={{ color: 'rgba(255,255,255,0.38)', fontSize: '0.83rem', lineHeight: 1.7, marginBottom: 28 }}>
-              Selesaikan Career Discovery agar Diah Anna bisa memetakan DNA karier kamu secara personal.
+              Ceritakan karier kamu ke Diah Anna agar DNA karier kamu bisa terbentuk.
             </div>
-            <button onClick={() => navigate('/discovery')} style={{
+            <button onClick={() => navigate('/chat')} style={{
               padding: '13px 30px',
               background: 'linear-gradient(135deg,#25D366,#128C7E)',
               color: '#fff', fontWeight: 700, borderRadius: 13,
               border: 'none', cursor: 'pointer',
               boxShadow: '0 4px 18px rgba(37,211,102,0.3)', fontSize: '0.9rem',
             }}>
-              🚀 Mulai Career Discovery
+              💬 Chat dengan Diah Anna
             </button>
           </div>
         )}
