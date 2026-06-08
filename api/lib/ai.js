@@ -1,13 +1,13 @@
 /**
  * ai.js — Universal AI wrapper untuk LamarCerdas
- * AI_PROVIDER=cerebras → Cerebras (default, cepat & murah)
- * AI_PROVIDER=gemini   → Google Gemini
- * AI_PROVIDER=claude   → Anthropic Claude
+ *
+ * Routing logic:
+ * - plan='premium' → Claude selalu (Sonnet untuk chat, Haiku untuk text)
+ * - plan='free'    → Cerebras utama, auto-fallback ke Gemini kalau error
+ *                    Gemini utama, auto-fallback ke Cerebras kalau error
  */
 import Anthropic from '@anthropic-ai/sdk'
 import { GoogleGenerativeAI } from '@google/generative-ai'
-
-const PROVIDER = process.env.AI_PROVIDER || 'cerebras'
 
 const MODELS = {
   cerebras: { fast: 'gpt-oss-120b', smart: 'gpt-oss-120b' },
@@ -99,61 +99,82 @@ async function withRetry(fn, maxRetries = 3) {
 }
 
 // ── Single-turn ───────────────────────────────────────────────────────────────
-export async function generateText({ system, prompt, maxTokens = 1000, tier = 'fast' }) {
-  const model = MODELS[PROVIDER][tier]
-
-  return withRetry(async () => {
-    if (PROVIDER === 'cerebras') {
-      return callCerebras({ system, messages: [{ role: 'user', content: prompt }], maxTokens, model })
-
-    } else if (PROVIDER === 'claude') {
-      return callClaude({ system, messages: [{ role: 'user', content: prompt }], maxTokens, model })
-
+// ── Gemini chat helper ────────────────────────────────────────────────────────
+async function callGemini({ system, messages, maxTokens, model }) {
+  const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY)
+  const m = genAI.getGenerativeModel({ model: model || MODELS.gemini.fast, systemInstruction: system })
+  const rawHistory = normalizeMessages(messages).slice(0, -1).map(msg => ({
+    role: msg.role === 'assistant' ? 'model' : 'user',
+    parts: [{ text: msg.content }],
+  }))
+  const history = []
+  for (const msg of rawHistory) {
+    if (history.length === 0 && msg.role === 'model') continue
+    const last = history[history.length - 1]
+    if (last && last.role === msg.role) {
+      last.parts[0].text += '\n' + msg.parts[0].text
     } else {
-      const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY)
-      const m = genAI.getGenerativeModel({ model, systemInstruction: system })
-      const result = await m.generateContent(prompt)
-      return result.response.text()
+      history.push(msg)
     }
+  }
+  const normAll  = normalizeMessages(messages)
+  const lastMsg  = normAll[normAll.length - 1]
+  const chat     = m.startChat({ history })
+  const result   = await chat.sendMessage(lastMsg?.content || '')
+  return result.response.text() || ''
+}
+
+async function callGeminiText({ system, prompt, model }) {
+  const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY)
+  const m = genAI.getGenerativeModel({ model: model || MODELS.gemini.fast, systemInstruction: system })
+  const result = await m.generateContent(prompt)
+  return result.response.text()
+}
+
+// ── Free tier: Cerebras → fallback Gemini (atau sebaliknya) ──────────────────
+async function callFreeChat({ system, messages, maxTokens, tier }) {
+  try {
+    return await callCerebras({ system, messages, maxTokens, model: MODELS.cerebras[tier] })
+  } catch (e1) {
+    console.warn('[ai] Cerebras gagal, fallback ke Gemini:', e1.message)
+    try {
+      return await callGemini({ system, messages, maxTokens, model: MODELS.gemini[tier] })
+    } catch (e2) {
+      console.warn('[ai] Gemini juga gagal:', e2.message)
+      throw new Error(`Semua provider free gagal. Cerebras: ${e1.message} | Gemini: ${e2.message}`)
+    }
+  }
+}
+
+async function callFreeText({ system, prompt, maxTokens, tier }) {
+  try {
+    return await callCerebras({ system, messages: [{ role: 'user', content: prompt }], maxTokens, model: MODELS.cerebras[tier] })
+  } catch (e1) {
+    console.warn('[ai] Cerebras gagal, fallback ke Gemini:', e1.message)
+    try {
+      return await callGeminiText({ system, prompt, model: MODELS.gemini[tier] })
+    } catch (e2) {
+      console.warn('[ai] Gemini juga gagal:', e2.message)
+      throw new Error(`Semua provider free gagal. Cerebras: ${e1.message} | Gemini: ${e2.message}`)
+    }
+  }
+}
+
+export async function generateText({ system, prompt, maxTokens = 1000, tier = 'fast', plan = 'free' }) {
+  return withRetry(async () => {
+    if (plan === 'premium') {
+      return callClaude({ system, messages: [{ role: 'user', content: prompt }], maxTokens, model: MODELS.claude[tier] })
+    }
+    return callFreeText({ system, prompt, maxTokens, tier })
   })
 }
 
 // ── Multi-turn ────────────────────────────────────────────────────────────────
-export async function generateChat({ system, messages, maxTokens = 500, tier = 'fast' }) {
-  const model = MODELS[PROVIDER][tier]
-
+export async function generateChat({ system, messages, maxTokens = 500, tier = 'fast', plan = 'free' }) {
   return withRetry(async () => {
-    if (PROVIDER === 'cerebras') {
-      return callCerebras({ system, messages, maxTokens, model })
-
-    } else if (PROVIDER === 'claude') {
-      return callClaude({ system, messages, maxTokens, model })
-
-    } else {
-      const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY)
-      const m = genAI.getGenerativeModel({ model, systemInstruction: system })
-      // Gemini: history harus mulai dari 'user' dan tidak boleh ada consecutive same role
-      const rawHistory = normalizeMessages(messages).slice(0, -1).map(msg => ({
-        role: msg.role === 'assistant' ? 'model' : 'user',
-        parts: [{ text: msg.content }],
-      }))
-      // Filter: skip leading 'model' messages, deduplicate consecutive roles
-      const history = []
-      for (const msg of rawHistory) {
-        if (history.length === 0 && msg.role === 'model') continue // Gemini wajib mulai dari user
-        const last = history[history.length - 1]
-        if (last && last.role === msg.role) {
-          // Gabungkan konten daripada dua pesan role sama berturutan
-          last.parts[0].text += '\n' + msg.parts[0].text
-        } else {
-          history.push(msg)
-        }
-      }
-      const normAll = normalizeMessages(messages)
-      const lastMsg = normAll[normAll.length - 1]
-      const chat = m.startChat({ history })
-      const result = await chat.sendMessage(lastMsg?.content || '')
-      return result.response.text() || ''
+    if (plan === 'premium') {
+      return callClaude({ system, messages, maxTokens, model: MODELS.claude.smart })
     }
+    return callFreeChat({ system, messages, maxTokens, tier })
   })
 }
