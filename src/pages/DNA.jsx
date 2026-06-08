@@ -152,6 +152,7 @@ export default function DNA({ user }) {
       const adaProfil    = p && p.target_posisi
 
       // Auto-compute genome dari profil yang ada — tanpa user perlu apa-apa
+      console.log('[DNA] genomeKosong:', genomeKosong, '| adaProfil:', adaProfil, '| p:', p, '| s:', s)
       if (genomeKosong && adaProfil) {
         try {
           const coachKey = user.id ? `lc_coach_${user.id}` : null
@@ -171,12 +172,15 @@ export default function DNA({ user }) {
           // Gabungkan dengan chat history yang ada (kalau ada)
           const messages = history.length >= 4 ? history : [...syntheticMessages, ...history]
 
+          console.log('[DNA] messages dikirim:', messages.length, messages)
           const res    = await fetch('/api/compute-genome', {
             method:  'POST',
             headers: { 'Content-Type': 'application/json' },
             body:    JSON.stringify({ messages, profile: p }),
           })
+          console.log('[DNA] compute-genome status:', res.status)
           const result = await res.json()
+          console.log('[DNA] compute-genome result:', result)
 
           if (result.genome_scores) {
             const gs = result.genome_scores
