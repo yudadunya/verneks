@@ -19,6 +19,16 @@ const MODELS = {
 const promptCache = new Map()
 function getCacheKey(system, tier) { return `${tier}:${system.slice(0, 80)}` }
 
+// ── Normalize messages (berlaku untuk semua provider) ────────────────────────
+function normalizeMessages(messages) {
+  return messages
+    .map(m => ({
+      role:    m.role === 'assistant' ? 'assistant' : 'user',
+      content: (m.content || m.text || '').trim(),
+    }))
+    .filter(m => m.content.length > 0)
+}
+
 // ── Cerebras (OpenAI-compatible) ─────────────────────────────────────────────
 async function callCerebras({ system, messages, maxTokens, model }) {
   const body = {
@@ -26,10 +36,7 @@ async function callCerebras({ system, messages, maxTokens, model }) {
     max_tokens: maxTokens,
     messages: [
       { role: 'system', content: system },
-      ...messages.map(m => ({
-        role: m.role === 'assistant' ? 'assistant' : 'user',
-        content: m.content,
-      })),
+      ...normalizeMessages(messages),
     ],
   }
 
@@ -54,6 +61,8 @@ async function callCerebras({ system, messages, maxTokens, model }) {
 async function callClaude({ system, messages, maxTokens, model }) {
   const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY })
 
+  const normalized = normalizeMessages(messages)
+
   // Cek apakah system prompt ini layak di-cache (> 1024 token ≈ > 4000 chars)
   const useCache = system.length > 4000
 
@@ -65,7 +74,7 @@ async function callClaude({ system, messages, maxTokens, model }) {
     model,
     max_tokens: maxTokens,
     system: systemContent,
-    messages,
+    messages: normalized,
   })
   return msg.content[0].text
 }
@@ -124,9 +133,9 @@ export async function generateChat({ system, messages, maxTokens = 500, tier = '
       const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY)
       const m = genAI.getGenerativeModel({ model, systemInstruction: system })
       // Gemini: history harus mulai dari 'user' dan tidak boleh ada consecutive same role
-      const rawHistory = messages.slice(0, -1).map(msg => ({
+      const rawHistory = normalizeMessages(messages).slice(0, -1).map(msg => ({
         role: msg.role === 'assistant' ? 'model' : 'user',
-        parts: [{ text: msg.content || '' }],
+        parts: [{ text: msg.content }],
       }))
       // Filter: skip leading 'model' messages, deduplicate consecutive roles
       const history = []
@@ -140,9 +149,10 @@ export async function generateChat({ system, messages, maxTokens = 500, tier = '
           history.push(msg)
         }
       }
-      const lastMsg = messages[messages.length - 1]
+      const normAll = normalizeMessages(messages)
+      const lastMsg = normAll[normAll.length - 1]
       const chat = m.startChat({ history })
-      const result = await chat.sendMessage(lastMsg.content || '')
+      const result = await chat.sendMessage(lastMsg?.content || '')
       return result.response.text() || ''
     }
   })
