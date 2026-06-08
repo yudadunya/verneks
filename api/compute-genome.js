@@ -9,7 +9,7 @@ export default async function handler(req, res) {
   if (!messages?.length) return res.status(400).json({ error: 'Missing messages' })
 
   const userCount = messages.filter(m => m.role === 'user').length
-  if (userCount < 4) return res.status(400).json({ error: 'Too few messages' })
+  if (userCount < 2) return res.status(400).json({ error: 'Too few messages' })
 
   const convoText = messages
     .map(m => `${m.role === 'user' ? 'User' : 'Diah Anna'}: ${m.text || m.content || ''}`)
