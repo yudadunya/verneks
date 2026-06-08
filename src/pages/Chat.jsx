@@ -179,7 +179,7 @@ export default function Chat({ user, chatMessages = [], setChatMessages }) {
     // Fetch growth_state + profil sekaligus untuk greeting & context injection
     Promise.all([
       supabase.from('user_growth_state').select('career_stage, progress_percent, current_focus, next_milestone, streak_days').eq('user_id', user.id).maybeSingle(),
-      supabase.from('user_career_profiles').select('nama, target_posisi, posisi_saat_ini, industri, tantangan_karir, career_readiness, skill_gaps, gps_steps, mentor_message, gap_skills').eq('user_id', user.id).maybeSingle(),
+      supabase.from('user_career_profiles').select('nama, target_posisi, posisi_saat_ini, industri, hambatan, career_readiness, skill_gaps, gps_steps, mentor_message').eq('user_id', user.id).maybeSingle(),
       supabase.from('user_genome_scores').select('analytical, leadership, builder, creator, communication, risk_taking, top_strength').eq('user_id', user.id).maybeSingle(),
     ]).then(([{ data: g }, { data: p }, { data: gs }]) => {
       // DEBUG — hapus setelah fix confirmed
@@ -207,9 +207,9 @@ export default function Chat({ user, chatMessages = [], setChatMessages }) {
           g?.career_stage       ? `Career Stage: ${g.career_stage} (progress ${g.progress_percent || 0}%)` : null,
           g?.current_focus      ? `Focus saat ini: ${g.current_focus}` : null,
           g?.next_milestone     ? `Next milestone: ${g.next_milestone}` : null,
-          p.tantangan_karir     ? `Tantangan utama: ${p.tantangan_karir}` : null,
+          p.hambatan     ? `Tantangan utama: ${p.hambatan}` : null,
           (() => {
-            const gaps = p.skill_gaps || p.gap_skills || []
+            const gaps = p.skill_gaps || []
             return gaps.length ? `Skill gaps yang perlu dikembangkan: ${gaps.slice(0, 5).join(', ')}` : null
           })(),
           (() => {
@@ -255,7 +255,7 @@ export default function Chat({ user, chatMessages = [], setChatMessages }) {
               const name = firstName || p?.nama?.split(' ')[0] || 'Kamu'
               const target = p.target_posisi || '—'
               const readiness = p.career_readiness || g?.progress_percent || 0
-              const gaps = (p.skill_gaps || p.gap_skills || []).slice(0, 3)
+              const gaps = (p.skill_gaps || []).slice(0, 3)
               const gapLine = gaps.length > 0 ? `
 ⚠ Gap Utama:${gaps.join(', ')}` : ''
               const summaryMsg =
@@ -768,7 +768,7 @@ Pilih yang sesuai buat kamu:`
     try {
       const [{ data: gs }, { data: cp }] = await Promise.all([
         supabase.from('user_genome_scores').select('*').eq('user_id', user.id).maybeSingle(),
-        supabase.from('user_career_profiles').select('target_posisi,career_readiness,skill_gaps,gap_skills').eq('user_id', user.id).maybeSingle(),
+        supabase.from('user_career_profiles').select('target_posisi,career_readiness,skill_gaps').eq('user_id', user.id).maybeSingle(),
       ])
 
       const GMAP = [
@@ -787,7 +787,7 @@ Pilih yang sesuai buat kamu:`
 
       const readiness = cp?.career_readiness || 0
       const target    = cp?.target_posisi || null
-      const gaps      = cp?.skill_gaps || cp?.gap_skills || []
+      const gaps      = cp?.skill_gaps || []
 
       // Bangun teks genome sebagai chat message
       let msg = '🧬 **Career Genome Kamu**\n\n'

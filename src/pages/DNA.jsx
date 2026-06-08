@@ -145,7 +145,7 @@ export default function DNA({ user }) {
     Promise.all([
       supabase.from('user_genome_scores').select('*').eq('user_id', user.id).maybeSingle(),
       supabase.from('user_career_profiles')
-        .select('target_posisi, industri, skill_gaps, gap_skills, mentor_message, posisi_saat_ini')
+        .select('target_posisi, industri, skill_gaps, mentor_message, posisi_saat_ini')
         .eq('user_id', user.id).maybeSingle(),
     ]).then(([{ data: s }, { data: p }]) => {
       setScores(s)

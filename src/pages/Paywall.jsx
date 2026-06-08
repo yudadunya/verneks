@@ -67,7 +67,7 @@ export default function Paywall() {
           gap_skills:       p?.skill_gaps || [],
           gps_steps:        gw?.gps_steps || p?.gps_steps || [],
           mentor_message:   p?.mentor_message,
-          gap_summary:      p?.tantangan_karir || '',
+          gap_summary:      p?.hambatan || '',
           growth_state:     { career_stage: gw?.career_stage, current_focus: gw?.current_focus },
           top_strength:     g?.top_strength,
         }

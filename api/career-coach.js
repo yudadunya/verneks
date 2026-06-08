@@ -25,7 +25,7 @@ FASE: DISCOVERY — Bangun koneksi, gali data natural.
 - Selipkan pertanyaan dalam konteks advice, bukan langsung nanya
 ${!profile?.posisi_saat_ini ? '- Belum tahu posisi saat ini — gali natural' : ''}
 ${!profile?.target_posisi   ? '- Belum tahu target karir — gali natural'    : ''}
-${!profile?.tantangan_karir ? '- Belum tahu tantangan utama — gali natural'  : ''}`,
+${!profile?.hambatan ? '- Belum tahu tantangan utama — gali natural'  : ''}`,
 
     insight: `
 FASE: INSIGHT — Berikan nilai lebih, insight mendalam dan personal.
@@ -159,7 +159,7 @@ export default async function handler(req, res) {
     if (careerProfile?.gaji_sekarang)      details.push(`Gaji saat ini: ${careerProfile.gaji_sekarang}`)
     if (careerProfile?.perusahaan_impian)  details.push(`Perusahaan impian: ${careerProfile.perusahaan_impian}`)
     if (careerProfile?.timeline_karir)     details.push(`Timeline: ${careerProfile.timeline_karir}`)
-    if (careerProfile?.tantangan_karir)    details.push(`Tantangan: ${careerProfile.tantangan_karir}`)
+    if (careerProfile?.hambatan)    details.push(`Tantangan: ${careerProfile.hambatan}`)
     if (careerProfile?.hambatan)           details.push(`Hambatan: ${careerProfile.hambatan}`)
     if (careerProfile?.motivasi)           details.push(`Motivasi: ${careerProfile.motivasi}`)
     if (careerProfile?.progress_lamaran)   details.push(`Progress lamaran: ${careerProfile.progress_lamaran}`)

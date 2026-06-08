@@ -168,7 +168,7 @@ ${existingContext}`
       target_gaji:       mergeVal(p.target_gaji, existingProfile?.target_gaji),
       perusahaan_impian: mergeVal(p.perusahaan_impian, existingProfile?.perusahaan_impian),
       timeline_karir:    mergeVal(p.timeline_karir, existingProfile?.timeline_karir),
-      tantangan_karir:   mergeVal(p.tantangan_karir, existingProfile?.tantangan_karir),
+      hambatan:          mergeVal(p.tantangan_karir, existingProfile?.hambatan),
       motivasi:          mergeVal(p.motivasi, existingProfile?.motivasi),
       progress_lamaran:  mergeVal(p.progress_lamaran, existingProfile?.progress_lamaran),
       hambatan:          mergeVal(p.hambatan, existingProfile?.hambatan),

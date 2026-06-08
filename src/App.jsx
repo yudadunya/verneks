@@ -87,7 +87,7 @@ export default function App() {
                 target_posisi:    p.target_posisi    || null,
                 posisi_saat_ini:  p.posisi_saat_ini  || null,
                 industri:         p.industri         || null,
-                tantangan_karir:  p.hambatan_utama   || null,
+                hambatan:         p.hambatan_utama   || null,
                 career_readiness: result.career_readiness || 0,
                 skill_gaps:       result.gap_skills  || [],
                 gps_steps:        result.gps_steps   || [],
