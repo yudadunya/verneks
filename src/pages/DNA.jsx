@@ -182,8 +182,9 @@ export default function DNA({ user }) {
           const result = await res.json()
           console.log('[DNA] compute-genome result:', result)
 
-          if (result.genome_scores) {
-            const gs = result.genome_scores
+          const parsed = result.result || result
+          if (parsed.genome_scores) {
+            const gs = parsed.genome_scores
             await supabase.from('user_genome_scores').upsert({
               user_id:       user.id,
               analytical:    gs.analytical    || 0,
@@ -192,7 +193,7 @@ export default function DNA({ user }) {
               creator:       gs.creator       || 0,
               communication: gs.communication || 0,
               risk_taking:   gs.risk_taking   || 0,
-              top_strength:  result.top_strength || null,
+              top_strength:  parsed.top_strength || null,
               updated_at:    new Date().toISOString(),
             }, { onConflict: 'user_id' })
 
