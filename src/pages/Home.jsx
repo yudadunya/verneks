@@ -29,22 +29,13 @@ const GoogleIcon = () => (
 )
 
 const VerneksLogo = ({ size = 32 }) => (
-  <svg width={size} height={size} viewBox="0 0 100 100">
-    <defs>
-      <linearGradient id="vg1" x1="0%" y1="0%" x2="100%" y2="100%">
-        <stop offset="0%" stopColor="#7C3AED"/>
-        <stop offset="100%" stopColor="#4F46E5"/>
-      </linearGradient>
-      <linearGradient id="vg2" x1="0%" y1="0%" x2="100%" y2="100%">
-        <stop offset="0%" stopColor="#06B6D4"/>
-        <stop offset="100%" stopColor="#4F46E5"/>
-      </linearGradient>
-    </defs>
-    {/* Purple triangle - back */}
-    <polygon points="8,12 8,88 62,50" fill="url(#vg1)" opacity="0.9"/>
-    {/* Cyan/blue triangle - front */}
-    <polygon points="28,8 92,50 28,75" fill="url(#vg2)" opacity="0.95"/>
-  </svg>
+  <img
+    src="/verneks_icon_1.png"
+    alt="Verneks"
+    width={size}
+    height={size}
+    style={{ objectFit: 'contain', display: 'block' }}
+  />
 )
 
 // ─── DATA ─────────────────────────────────────────────────────────────────────
@@ -186,6 +177,27 @@ export default function Home({ user }) {
         <div style={{ position: 'absolute', top: -120, left: -80,  width: 400, height: 400, borderRadius: '50%', background: 'radial-gradient(circle, rgba(124,58,237,0.15) 0%, transparent 70%)', filter: 'blur(60px)' }} />
         <div style={{ position: 'absolute', top: '35%', right: -80, width: 300, height: 300, borderRadius: '50%', background: 'radial-gradient(circle, rgba(6,182,212,0.1) 0%, transparent 70%)',   filter: 'blur(50px)' }} />
         <div style={{ position: 'absolute', bottom: '15%', left: '25%', width: 240, height: 240, borderRadius: '50%', background: 'radial-gradient(circle, rgba(79,70,229,0.1) 0%, transparent 70%)', filter: 'blur(40px)' }} />
+      </div>
+
+      {/* ══════════════════════════════════════════════════════════════════════
+          ANNOUNCEMENT BAR — LamarCerdas → Verneks
+      ══════════════════════════════════════════════════════════════════════ */}
+      <div style={{
+        position: 'relative', zIndex: 101,
+        background: 'linear-gradient(90deg, #7C3AED, #4F46E5, #06B6D4)',
+        padding: '9px 20px',
+        display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
+        textAlign: 'center',
+      }}>
+        <span style={{ fontSize: '0.75rem', color: '#fff', fontWeight: 400, opacity: 0.9 }}>
+          LamarCerdas kini hadir sebagai
+        </span>
+        <span style={{ fontSize: '0.78rem', color: '#fff', fontWeight: 800, letterSpacing: '0.5px' }}>
+          ✦ Verneks
+        </span>
+        <span style={{ fontSize: '0.75rem', color: '#fff', fontWeight: 400, opacity: 0.9 }}>
+          — AI Career Coach yang lebih personal, lebih cerdas.
+        </span>
       </div>
 
       {/* ══════════════════════════════════════════════════════════════════════
