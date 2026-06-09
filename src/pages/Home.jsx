@@ -211,10 +211,14 @@ export default function Home({ user }) {
             <div style={{ background: C.grad, WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', fontSize: '0.62rem', fontWeight: 700, letterSpacing: '1px', textTransform: 'uppercase' }}>Career GPS</div>
           </div>
         </div>
-        {/* Masuk — struktur tidak diubah */}
-        <button onClick={handleGoogle} style={{ background: C.surface, border: `1px solid ${C.border}`, color: '#fff', borderRadius: 20, padding: '7px 18px', fontSize: '0.8rem', fontWeight: 700, cursor: 'pointer' }}>
-          Masuk
-        </button>
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 3 }}>
+          <button onClick={handleGoogle} style={{ background: C.surface, border: `1px solid ${C.border}`, color: '#fff', borderRadius: 20, padding: '7px 18px', fontSize: '0.8rem', fontWeight: 700, cursor: 'pointer' }}>
+            Masuk
+          </button>
+          <span style={{ fontSize: '0.58rem', color: 'rgba(255,255,255,0.25)', whiteSpace: 'nowrap' }}>
+            Sudah punya akun? Masuk di sini
+          </span>
+        </div>
       </nav>
 
       {/* ══════════════════════════════════════════════════════════════════════
@@ -258,6 +262,15 @@ export default function Home({ user }) {
             <CTAButton />
             <p style={{ color: 'rgba(255,255,255,0.2)', fontSize: '0.72rem', margin: 0 }}>
               Gratis · Tidak perlu kartu kredit · Mulai dalam 2 menit
+            </p>
+            <p style={{ margin: 0, fontSize: '0.72rem', color: 'rgba(255,255,255,0.3)' }}>
+              Sudah punya akun?{' '}
+              <span
+                onClick={handleGoogle}
+                style={{ color: '#7C3AED', fontWeight: 700, cursor: 'pointer', textDecoration: 'underline' }}
+              >
+                Masuk di sini
+              </span>
             </p>
           </div>
         </div>
