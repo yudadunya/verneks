@@ -363,10 +363,19 @@ export default function Discovery() {
   const bottomRef = useRef(null)
   const inputRef  = useRef(null)
 
-  // Kalau sudah login, langsung ke dashboard
+  // Kalau sudah login DAN sudah punya data Discovery → ke /chat
+  // Kalau sudah login tapi belum punya data → tetap di /discovery
   useEffect(() => {
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      if (session?.user) navigate('/dashboard')
+    supabase.auth.getSession().then(async ({ data: { session } }) => {
+      if (session?.user) {
+        const { data: cp } = await supabase
+          .from('user_career_profiles')
+          .select('career_readiness')
+          .eq('user_id', session.user.id)
+          .maybeSingle()
+        if (cp?.career_readiness) navigate('/chat')
+        // kalau belum ada data — biarkan tetap di /discovery
+      }
     })
   }, [])
 
@@ -460,7 +469,7 @@ export default function Discovery() {
     try {
       await supabase.auth.signInWithOAuth({
         provider: 'google',
-        options: { redirectTo: `${window.location.origin}/dashboard` }
+        options: { redirectTo: `${window.location.origin}/discovery` }
       })
       // Setelah redirect balik, App.jsx akan sync discovery_result ke Supabase
     } catch {
