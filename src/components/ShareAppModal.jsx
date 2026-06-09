@@ -1,6 +1,6 @@
 import { useState } from "react"
-const APP_URL = 'https://lamarcerdas.my.id'
-const SHARE_TEXT = `Hei! Aku lagi pakai LamarCerdas — AI Career Coach gratis yang bisa bantu review CV, latihan interview, dan tanya karir sama Diah Anna kapan aja 💙
+const APP_URL = 'https://verneks.my.id'
+const SHARE_TEXT = `Hei! Aku lagi pakai Verneks — AI Career Coach gratis yang bisa bantu karir sama Diah Anna kapan aja 💙
 
 Coba gratis → ${APP_URL}`
 
@@ -9,7 +9,7 @@ export default function ShareAppModal({ onClose }) {
 
   const handleNative = () => {
     if (navigator?.share) {
-      navigator.share({ title: 'LamarCerdas — AI Career Coach', text: SHARE_TEXT, url: APP_URL }).catch(() => {})
+      navigator.share({ title: 'Verneks — AI Career Coach', text: SHARE_TEXT, url: APP_URL }).catch(() => {})
     }
   }
 
@@ -37,7 +37,7 @@ export default function ShareAppModal({ onClose }) {
         <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 20 }}>
           <img src="/diah-anna.png" alt="Diah Anna" style={{ width: 44, height: 44, borderRadius: '50%', objectFit: 'cover', border: '2px solid rgba(37,211,102,0.4)' }}/>
           <div>
-            <div style={{ color: '#fff', fontWeight: 800, fontSize: '0.95rem' }}>Ajak teman pakai LamarCerdas</div>
+            <div style={{ color: '#fff', fontWeight: 800, fontSize: '0.95rem' }}>Ajak teman pakai Verneks</div>
             <div style={{ color: 'rgba(255,255,255,0.4)', fontSize: '0.78rem' }}>Gratis — bantu teman kamu juga sukses karir</div>
           </div>
         </div>
