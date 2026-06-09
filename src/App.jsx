@@ -54,12 +54,14 @@ export default function App() {
   }, [])
 
   useEffect(() => {
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      const u = session?.user ?? null
-      setUser(u)
-      if (u) setChatMessages(loadMessages(u.id))
-      setLoading(false)
-    })
+    supabase.auth.getSession()
+      .then(({ data: { session } }) => {
+        const u = session?.user ?? null
+        setUser(u)
+        if (u) setChatMessages(loadMessages(u.id))
+        setLoading(false)
+      })
+      .catch(() => setLoading(false))
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
       if (_event === 'PASSWORD_RECOVERY') {
         window.location.href = '/reset-password'
@@ -182,8 +184,8 @@ export default function App() {
       justifyContent: 'center', height: '100vh', gap: '16px',
       background: 'var(--wa-header)'
     }}>
-      <div style={{ fontSize: '3rem' }}>💼</div>
-      <div style={{ color: '#fff', fontWeight: 700, fontSize: '1.4rem' }}>LamarCerdas</div>
+      <img src="/verneks_icon_1.png" alt="Verneks" style={{ width: 56, height: 56, objectFit: 'contain' }} />
+      <div style={{ color: '#fff', fontWeight: 700, fontSize: '1.4rem' }}>Verneks</div>
       <div style={{ color: 'rgba(255,255,255,0.7)', fontSize: '0.85rem' }}>Memuat...</div>
     </div>
   )
