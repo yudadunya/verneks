@@ -145,21 +145,31 @@ export default function App() {
             sessionStorage.removeItem(`lc_job_matches_${u.id}`)
           }
           // Redirect ke dashboard — kecuali user baru yang belum ada data Discovery
-          const shouldRedirect =
-            window.location.pathname === '/' ||
-            window.location.pathname === '/genome-result' ||
-            window.location.pathname === '/paywall' ||
-            window.location.hash.includes('access_token')
+          const path = window.location.pathname
+          const hash = window.location.hash
+          const search = window.location.search
 
-          const onDiscovery = window.location.pathname === '/discovery'
+          console.log('[App redirect] path:', path, '| hash:', hash, '| search:', search)
+
+          const shouldRedirect =
+            path === '/' ||
+            path === '/genome-result' ||
+            path === '/paywall' ||
+            hash.includes('access_token') ||
+            search.includes('access_token')
+
+          const onDiscovery = path === '/discovery'
+
+          console.log('[App redirect] shouldRedirect:', shouldRedirect, '| onDiscovery:', onDiscovery)
 
           if (shouldRedirect) {
-            // Cek apakah user sudah pernah Discovery
             const { data: cp } = await supabase
               .from('user_career_profiles')
               .select('career_readiness')
               .eq('user_id', u.id)
               .maybeSingle()
+
+            console.log('[App redirect] career_readiness:', cp?.career_readiness)
 
             if (cp?.career_readiness) {
               window.location.replace('/chat')
@@ -168,7 +178,6 @@ export default function App() {
             }
           } else if (onDiscovery) {
             // User baru setelah OAuth — biarkan tetap di /discovery
-            // tidak perlu redirect
           }
         }
       } else {
