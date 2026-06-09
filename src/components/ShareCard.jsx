@@ -25,8 +25,8 @@ export default function ShareCard({ resultText, type = 'cv-review', onClose }) {
 
   const score = parseScore(resultText)
   const shareText = score
-    ? `CV aku baru dicek sama Diah Anna — AI Career Coach di LamarCerdas, dapat skor ATS ${score}/100! 🎯\n\nDia langsung kasih tahu apa yang harus diperbaiki, gratis banget.\n\nKamu juga bisa coba → https://lamarcerdas.my.id`
-    : `Baru pakai Diah Anna AI Career Coach di LamarCerdas buat review CV — hasilnya detail banget dan gratis! 🙌\n\nCoba juga yuk → https://lamarcerdas.my.id`
+    ? `CV aku baru dicek sama Diah Anna — AI Career Coach di Verneks, dapat skor ATS ${score}/100! 🎯\n\nDia langsung kasih tahu apa yang harus diperbaiki, gratis banget.\n\nKamu juga bisa coba → https://verneks.my.id`
+    : `Baru pakai Diah Anna AI Career Coach di Verneks buat review CV — hasilnya detail banget dan gratis! 🙌\n\nCoba juga yuk → https://verneks.my.id`
 
   const handleCopy = async () => {
     try {
@@ -57,7 +57,7 @@ export default function ShareCard({ resultText, type = 'cv-review', onClose }) {
       const url = URL.createObjectURL(blob)
       const a = document.createElement('a')
       a.href = url
-      a.download = 'lamarcerdas-hasil.svg'
+      a.download = 'verneks-hasil.svg'
       a.click()
       URL.revokeObjectURL(url)
     } finally {
@@ -86,7 +86,7 @@ export default function ShareCard({ resultText, type = 'cv-review', onClose }) {
   <!-- Logo area -->
   <rect x="20" y="20" width="32" height="32" rx="8" fill="url(#gr)"/>
   <text x="36" y="41" text-anchor="middle" font-size="16" fill="white">✦</text>
-  <text x="62" y="40" font-family="Arial, sans-serif" font-weight="800" font-size="15" fill="white">LamarCerdas</text>
+  <text x="62" y="40" font-family="Arial, sans-serif" font-weight="800" font-size="15" fill="white">Verneks</text>
   <text x="62" y="54" font-family="Arial, sans-serif" font-size="10" fill="rgba(255,255,255,0.4)">${title}</text>
   ${score ? `
   <!-- Score circle -->
@@ -103,7 +103,7 @@ export default function ShareCard({ resultText, type = 'cv-review', onClose }) {
   <text x="200" y="148" text-anchor="middle" font-family="Arial, sans-serif" font-weight="700" font-size="16" fill="white">${label}</text>
   `}
   <!-- Bottom -->
-  <text x="200" y="192" text-anchor="middle" font-family="Arial, sans-serif" font-size="11" fill="rgba(255,255,255,0.3)">lamarcerdas.my.id · AI Career Coach Gratis</text>
+  <text x="200" y="192" text-anchor="middle" font-family="Arial, sans-serif" font-size="11" fill="rgba(255,255,255,0.3)">verneks.my.id · AI Career Coach Gratis</text>
 </svg>`
   }
 
@@ -145,9 +145,9 @@ export default function ShareCard({ resultText, type = 'cv-review', onClose }) {
           <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 16 }}>
             <img src="/diah-anna.png" alt="Diah Anna" style={{ width: 36, height: 36, borderRadius: '50%', objectFit: 'cover', border: '1.5px solid rgba(37,211,102,0.5)', flexShrink: 0 }}/>
             <div>
-              <div style={{ color: '#fff', fontWeight: 800, fontSize: '0.88rem' }}>Diah Anna · LamarCerdas</div>
+              <div style={{ color: '#fff', fontWeight: 800, fontSize: '0.88rem' }}>Diah Anna · Verneks</div>
               <div style={{ color: 'rgba(255,255,255,0.35)', fontSize: '0.7rem' }}>
-                {type === 'ats' ? 'ATS Score Checker' : 'CV Review'} · lamarcerdas.my.id
+                {type === 'ats' ? 'ATS Score Checker' : 'CV Review'} · verneks.my.id
               </div>
             </div>
           </div>
@@ -187,7 +187,7 @@ export default function ShareCard({ resultText, type = 'cv-review', onClose }) {
         {/* Share buttons */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
           {typeof navigator !== 'undefined' && navigator.share && (
-            <button onClick={() => navigator.share({ title: 'LamarCerdas', text: shareText }).catch(() => {})} style={{
+            <button onClick={() => navigator.share({ title: 'Verneks', text: shareText }).catch(() => {})} style={{
               display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10,
               background: 'linear-gradient(135deg, #25D366, #128C7E)', color: '#fff',
               fontWeight: 700, fontSize: '0.9rem',
