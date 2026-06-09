@@ -133,7 +133,21 @@ export default function Home({ user }) {
   const [barAnim, setBarAnim]         = useState(false)
 
   useEffect(() => {
-    if (user) { window.location.href = '/chat'; return }
+    if (user) {
+      // Cek apakah user sudah pernah Discovery — kalau sudah ke /chat, kalau belum ke /discovery
+      supabase.from('user_career_profiles')
+        .select('career_readiness')
+        .eq('user_id', user.id)
+        .maybeSingle()
+        .then(({ data }) => {
+          if (data?.career_readiness) {
+            window.location.href = '/chat'
+          } else {
+            window.location.href = '/discovery'
+          }
+        })
+      return
+    }
     setTimeout(() => setVisible(true), 100)
     setTimeout(() => setBarAnim(true), 800)
   }, [user])
@@ -147,14 +161,22 @@ export default function Home({ user }) {
   if (user) return null
 
   // ── CTA (struktur login tidak diubah) ─────────────────────────────────────
+  // Tombol Masuk (returning user) → /chat
   const handleGoogle = async () => {
     setAuthLoading(true)
     await supabase.auth.signInWithOAuth({ provider: 'google', options: { redirectTo: `${window.location.origin}/chat` } })
     setAuthLoading(false)
   }
 
+  // CTA utama (user baru) → /discovery setelah login
+  const handleCTA = async () => {
+    setAuthLoading(true)
+    await supabase.auth.signInWithOAuth({ provider: 'google', options: { redirectTo: `${window.location.origin}/discovery` } })
+    setAuthLoading(false)
+  }
+
   const CTAButton = ({ label = 'Temukan Career DNA Kamu — Gratis', style = {} }) => (
-    <button onClick={handleGoogle} disabled={authLoading} style={{
+    <button onClick={handleCTA} disabled={authLoading} style={{
       display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10,
       background: authLoading ? '#1a1a2e' : C.grad,
       color: '#fff', fontWeight: 800, fontSize: '0.95rem',
