@@ -211,7 +211,7 @@ export default function Blog({ user }) {
                 background: 'rgba(255,255,255,0.04)',
                 border: '1px solid rgba(255,255,255,0.08)',
                 borderRadius: 18, padding: '20px',
-                cursor: 'pointer', transition: 'all 0.2s ease',
+                cursor: 'pointer',
                 opacity: visible ? 1 : 0,
                 transform: visible ? 'none' : 'translateY(12px)',
                 transition: `opacity 0.5s ease ${0.05 * i}s, transform 0.5s ease ${0.05 * i}s, border-color 0.2s`,

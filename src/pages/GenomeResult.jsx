@@ -234,7 +234,7 @@ export default function GenomeResult() {
 
       {/* CTA — muncul hanya setelah GPS Preview terlihat */}
       <div style={{
-        position:'fixed', bottom:0, left:'50%', transform:'translateX(-50%)',
+        position:'fixed', bottom:0, left:'50%',
         width:'100%', maxWidth:480, padding:'16px 18px 32px',
         background:'linear-gradient(to top, #0a0f0d 80%, transparent)',
         opacity: ctaVisible ? 1 : 0,
