@@ -569,9 +569,9 @@ Pilih yang sesuai buat kamu:`
 
   const startInterviewSession = async (position, level) => {
     setMode('interview-active'); setLoading(true)
-    logUsage('interview')
     try {
       const data = await apiFetch('/api/mock-interview', { action: 'start', position, level, messages: [] })
+      logUsage('interview')
       setInterview(prev => ({ ...prev, messages: [{ role: 'assistant', content: data.reply }], qNum: data.questionNumber }))
       pushBot(data.reply)
     } catch (e) { pushBot(`Error: ${e.message}`); setMode('menu') }

@@ -9,12 +9,12 @@ const OPENING = {
 }
 
 const GENOME_MAP = [
-  { key: 'analytical',    label: 'Analytical',    emoji: '🧠', color: '#34B7F1' },
-  { key: 'leadership',    label: 'Leadership',    emoji: '👑', color: '#F48FB1' },
-  { key: 'builder',       label: 'Builder',       emoji: '⚙️', color: '#25D366' },
-  { key: 'creator',       label: 'Creator',       emoji: '🎨', color: '#FFB74D' },
-  { key: 'communication', label: 'Communication', emoji: '💬', color: '#CE93D8' },
-  { key: 'risk_taking',   label: 'Risk Taking',   emoji: '🚀', color: '#EF9A9A' },
+  { key: 'analytical',    label: 'Analytical',    emoji: '🧠', color: '#34B7F1', insight: 'Kamu cenderung berpikir sistematis, suka data, dan membuat keputusan berbasis fakta. Cocok untuk peran yang butuh analisis mendalam dan pemecahan masalah kompleks.' },
+  { key: 'leadership',    label: 'Leadership',    emoji: '👑', color: '#F48FB1', insight: 'Kamu punya dorongan alami untuk memimpin, mengarahkan, dan menginspirasi orang lain. Peran manajerial atau kepemimpinan tim adalah arena terbaikmu.' },
+  { key: 'builder',       label: 'Builder',       emoji: '⚙️', color: '#25D366', insight: 'Kamu senang membangun sesuatu dari nol — sistem, produk, atau proses. Kamu paling produktif ketika bisa melihat hasil nyata dari pekerjaanmu.' },
+  { key: 'creator',       label: 'Creator',       emoji: '🎨', color: '#FFB74D', insight: 'Kamu punya kemampuan berpikir orisinal dan ekspresif. Kamu berkembang di lingkungan yang menghargai inovasi, desain, dan ide-ide segar.' },
+  { key: 'communication', label: 'Communication', emoji: '💬', color: '#CE93D8', insight: 'Kamu pandai menyampaikan ide dengan jelas dan membangun hubungan. Peran yang melibatkan presentasi, negosiasi, atau kolaborasi lintas tim adalah kekuatanmu.' },
+  { key: 'risk_taking',   label: 'Risk Taking',   emoji: '🚀', color: '#EF9A9A', insight: 'Kamu nyaman dengan ketidakpastian dan berani mengambil langkah besar. Lingkungan startup, entrepreneurship, atau peran strategis sangat cocok untukmu.' },
 ]
 
 // Mapping posisi → roles yang cocok
@@ -373,7 +373,7 @@ export default function Discovery() {
           .select('career_readiness')
           .eq('user_id', session.user.id)
           .maybeSingle()
-        if (cp?.career_readiness) navigate('/chat')
+        if (cp?.career_readiness != null) navigate('/chat')
         // kalau belum ada data — biarkan tetap di /discovery
       }
     })
