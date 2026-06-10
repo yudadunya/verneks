@@ -72,16 +72,6 @@ export default function App() {
       .catch(() => { clearTimeout(loadingTimeout); setLoading(false) })
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
-      // INITIAL_SESSION: Supabase v2 fires ini saat init — safety net kalau getSession() hang
-      if (_event === 'INITIAL_SESSION') {
-        clearTimeout(loadingTimeout)
-        const u = session?.user ?? null
-        setUser(u)
-        if (u) setChatMessages(loadMessages(u.id))
-        setLoading(false)
-        return
-      }
-
       if (_event === 'PASSWORD_RECOVERY') {
         window.location.href = '/reset-password'
         return
