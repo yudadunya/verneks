@@ -1,25 +1,29 @@
-import { BrowserRouter, Routes, Route } from 'react-router-dom'
-import { useState, useEffect } from 'react'
+import { BrowserRouter, Routes, Route, } from 'react-router-dom'
+import { useState, useEffect, lazy, Suspense } from 'react'
 import { supabase } from './lib/supabase'
-import Home from './pages/Home'
-import Login from './pages/Login'
-import Register from './pages/Register'
-import ForgotPassword from './pages/ForgotPassword'
-import ResetPassword from './pages/ResetPassword'
-import Chat from './pages/Chat'
-import Pricing from './pages/Pricing'
-import Blog from './pages/Blog'
-import BlogPost from './pages/BlogPost'
-import Journey from './pages/Journey'
-import Discovery from './pages/Discovery'
+
+// Lazy load semua halaman — bundle dipecah per route, hanya dimuat saat dibutuhkan
+const Home         = lazy(() => import('./pages/Home'))
+const Login        = lazy(() => import('./pages/Login'))
+const Register     = lazy(() => import('./pages/Register'))
+const ForgotPassword = lazy(() => import('./pages/ForgotPassword'))
+const ResetPassword  = lazy(() => import('./pages/ResetPassword'))
+const Chat         = lazy(() => import('./pages/Chat'))
+const Pricing      = lazy(() => import('./pages/Pricing'))
+const Blog         = lazy(() => import('./pages/Blog'))
+const BlogPost     = lazy(() => import('./pages/BlogPost'))
+const Journey      = lazy(() => import('./pages/Journey'))
+const Discovery    = lazy(() => import('./pages/Discovery'))
+const Paywall      = lazy(() => import('./pages/Paywall'))
+const GenomeResult = lazy(() => import('./pages/GenomeResult'))
+const Dashboard    = lazy(() => import('./pages/Dashboard'))
+const DNA          = lazy(() => import('./pages/DNA'))
+const Opportunities = lazy(() => import('./pages/Opportunities'))
+const Profile      = lazy(() => import('./pages/Profile'))
+const AdminPanel   = lazy(() => import('./pages/AdminPanel'))
+
+// UpgradeModal tetap static — dipakai global di semua halaman
 import UpgradeModal from './components/UpgradeModal'
-import Paywall from './pages/Paywall'
-import GenomeResult from './pages/GenomeResult'
-import Dashboard from './pages/Dashboard'
-import DNA from './pages/DNA'
-import Opportunities from './pages/Opportunities'
-import Profile from './pages/Profile'
-import AdminPanel from './pages/AdminPanel'
 
 // Helper baca localStorage
 function loadMessages(userId) {
@@ -214,9 +218,23 @@ export default function App() {
     </div>
   )
 
+  // Fallback spinner saat lazy chunk loading
+  const PageLoader = (
+    <div style={{
+      display: 'flex', flexDirection: 'column', alignItems: 'center',
+      justifyContent: 'center', height: '100vh', gap: '16px',
+      background: 'var(--wa-header)'
+    }}>
+      <img src="/verneks_icon_1.png" alt="Verneks" style={{ width: 56, height: 56, objectFit: 'contain' }} />
+      <div style={{ color: '#fff', fontWeight: 700, fontSize: '1.4rem' }}>Verneks</div>
+      <div style={{ color: 'rgba(255,255,255,0.7)', fontSize: '0.85rem' }}>Memuat...</div>
+    </div>
+  )
+
   return (
     <>
     <BrowserRouter>
+      <Suspense fallback={PageLoader}>
       <Routes>
         <Route path="/"              element={<Home user={user} />} />
         <Route path="/login"         element={<Login />} />
@@ -244,6 +262,7 @@ export default function App() {
         <Route path="/career-coach"   element={<Chat user={user} chatMessages={chatMessages} setChatMessages={setChatMessages} />} />
         <Route path="/cv-maker"       element={<Chat user={user} chatMessages={chatMessages} setChatMessages={setChatMessages} />} />
       </Routes>
+      </Suspense>
     </BrowserRouter>
     {showUpgrade && user && (
       <UpgradeModal
