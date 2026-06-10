@@ -22,7 +22,7 @@ export default async function handler(req, res) {
 
     const results = []
 
-    for (const user of users) {
+    for (const user of (users ?? [])) {
       // 2. Minta AI (Hermes/Diah Anna) buat sapaan super personal
       const nudgeMessage = await generateText({
         system: `Kamu adalah Diah Anna, AI Career Coach. Tugasmu: sapa user yang sudah seminggu tidak chat.
