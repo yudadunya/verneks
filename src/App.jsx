@@ -171,7 +171,7 @@ export default function App() {
 
             console.log('[App redirect] career_readiness:', cp?.career_readiness)
 
-            if (cp?.career_readiness) {
+            if (cp?.career_readiness != null) {
               window.location.replace('/chat')
             } else {
               window.location.replace('/discovery')
