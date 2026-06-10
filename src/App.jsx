@@ -54,15 +54,30 @@ export default function App() {
   }, [])
 
   useEffect(() => {
+    // Failsafe: kalau getSession() hang (stale token setelah logout), paksa unblock setelah 8 detik
+    const loadingTimeout = setTimeout(() => setLoading(false), 8000)
+
     supabase.auth.getSession()
       .then(({ data: { session } }) => {
+        clearTimeout(loadingTimeout)
         const u = session?.user ?? null
         setUser(u)
         if (u) setChatMessages(loadMessages(u.id))
         setLoading(false)
       })
-      .catch(() => setLoading(false))
+      .catch(() => { clearTimeout(loadingTimeout); setLoading(false) })
+
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
+      // INITIAL_SESSION: Supabase v2 fires ini saat init — safety net kalau getSession() hang
+      if (_event === 'INITIAL_SESSION') {
+        clearTimeout(loadingTimeout)
+        const u = session?.user ?? null
+        setUser(u)
+        if (u) setChatMessages(loadMessages(u.id))
+        setLoading(false)
+        return
+      }
+
       if (_event === 'PASSWORD_RECOVERY') {
         window.location.href = '/reset-password'
         return
