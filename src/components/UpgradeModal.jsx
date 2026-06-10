@@ -310,7 +310,8 @@ export default function UpgradeModal({ user, onClose, initialData = null }) {
                           const data = await res.json()
                           if (data.success) {
                             setRedeemDone(true)
-                            setRedeemMsg({ type: 'ok', text: '🎉 Premium aktif 30 hari! Silakan refresh halaman.' })
+                            setRedeemMsg({ type: 'ok', text: '🎉 Premium aktif 30 hari! Halaman akan refresh otomatis...' })
+                            setTimeout(() => window.location.reload(), 1500)
                           } else {
                             setRedeemMsg({ type: 'err', text: data.error || 'Kode tidak valid' })
                           }
