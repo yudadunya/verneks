@@ -140,7 +140,7 @@ export default function Home({ user }) {
         .eq('user_id', user.id)
         .maybeSingle()
         .then(({ data }) => {
-          if (data?.career_readiness) {
+          if (data?.career_readiness != null) {
             window.location.href = '/chat'
           } else {
             window.location.href = '/discovery'
