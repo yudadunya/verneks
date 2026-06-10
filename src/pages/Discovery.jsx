@@ -373,8 +373,22 @@ export default function Discovery() {
           .select('career_readiness')
           .eq('user_id', session.user.id)
           .maybeSingle()
-        if (cp?.career_readiness != null) navigate('/chat')
-        // kalau belum ada data — biarkan tetap di /discovery
+        // Sudah punya data → ke /chat
+        // Belum ada data tapi sudah login → tetap di /discovery (bisa re-do onboarding)
+        // Tapi kalau premium dan tidak sengaja masuk sini → langsung balik
+        if (cp?.career_readiness != null) {
+          navigate('/chat')
+        } else if (cp !== null) {
+          // Profile ada tapi career_readiness belum → tetap di discovery
+        } else {
+          // Cek plan — kalau premium, berarti lewat jalur lain, balik ke chat
+          const { data: sub } = await supabase
+            .from('subscriptions')
+            .select('plan')
+            .eq('user_id', session.user.id)
+            .maybeSingle()
+          if (sub?.plan === 'premium') navigate('/chat')
+        }
       }
     })
   }, [])
