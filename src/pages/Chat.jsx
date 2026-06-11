@@ -67,6 +67,7 @@ export default function Chat({ user, chatMessages = [], setChatMessages }) {
   const [interview, setInterview]       = useState({ position: '', level: '', messages: [], qNum: 0 })
   // coachHistory persistent — baca dari localStorage agar Diah Anna ingat konteks lintas sesi
   const coachKey = user?.id ? `lc_coach_${user.id}` : null
+  const greetingFiredRef = useRef(false) // guard: greeting hanya sekali per sesi
   const [coachHistory, setCoachHistoryRaw] = useState(() => {
     if (!coachKey) return []
     try {
@@ -173,8 +174,9 @@ export default function Chat({ user, chatMessages = [], setChatMessages }) {
   useEffect(() => {
     if (!user) return
     if (subLoading) return // tunggu plan terload dulu
-    if (messages.length > 0) return
     if (plan !== 'free') return // greeting Discovery hanya untuk user free
+    if (greetingFiredRef.current) return // sudah jalan di sesi ini
+    greetingFiredRef.current = true
 
     const firstName = (user.user_metadata?.name || user.user_metadata?.full_name || '').split(' ')[0]
 
@@ -298,7 +300,8 @@ export default function Chat({ user, chatMessages = [], setChatMessages }) {
     if (subLoading) return
     if (plan !== 'premium') return
     if (isExpired) return
-    if (messages.length > 0) return
+    if (greetingFiredRef.current) return // sudah jalan di sesi ini
+    greetingFiredRef.current = true
 
     const firstName = (user?.user_metadata?.name || user?.user_metadata?.full_name || '').split(' ')[0]
 
@@ -357,7 +360,6 @@ Mau mulai dari mana?`
   // ── Persuasi Diah Anna saat premium expired ──────────────────────────────
   useEffect(() => {
     if (!isExpired) return
-    if (messages.length > 0) return   // hanya di sesi baru
 
     const firstName = (user?.user_metadata?.name || user?.user_metadata?.full_name || '').split(' ')[0]
     const name = firstName ? ` ${firstName}` : ''
