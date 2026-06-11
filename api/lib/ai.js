@@ -2,16 +2,23 @@
  * _lib/ai.js — Universal AI wrapper untuk Verneks
  *
  * Routing:
- * - plan='premium' → Claude (Sonnet) utama, fallback ke Cerebras/Gemini
- * - plan='free'    → Cerebras utama, fallback ke Gemini, fallback ke Cerebras lagi
+ * - plan='premium' → Claude (Sonnet) utama, fallback ke DeepSeek → Cerebras
+ * - plan='free'    → Cerebras utama, fallback ke DeepSeek → Gemini
+ *
+ * Models (Juni 2026):
+ * - Cerebras  : gpt-oss-120b         (free, cepat, 1M token/hari)
+ * - DeepSeek  : deepseek-v4-flash     (murah $0.14/1M, setara Claude Haiku)
+ * - Gemini    : gemini-1.5-flash      (free tier masih ada, fallback terakhir)
+ * - Claude    : claude-sonnet-4-6     (premium, paling pintar)
  */
 import Anthropic from '@anthropic-ai/sdk'
 import { GoogleGenerativeAI } from '@google/generative-ai'
 
 const MODELS = {
-  cerebras: { fast: 'gpt-oss-120b', smart: 'gpt-oss-120b' },
+  cerebras: { fast: 'gpt-oss-120b',          smart: 'gpt-oss-120b' },
+  deepseek: { fast: 'deepseek-v4-flash',       smart: 'deepseek-v4-flash' },
   claude:   { fast: 'claude-haiku-4-5-20251001', smart: 'claude-sonnet-4-6' },
-  gemini:   { fast: 'gemini-2.0-flash', smart: 'gemini-2.0-flash' },
+  gemini:   { fast: 'gemini-1.5-flash',        smart: 'gemini-1.5-flash' },
 }
 
 // ── Normalize messages untuk semua provider ──────────────────────────────────
@@ -41,31 +48,49 @@ async function callClaude({ system, messages, maxTokens, model }) {
   return msg.content[0].text
 }
 
-// ── Cerebras (OpenAI-compatible) ─────────────────────────────────────────────
-async function callCerebras({ system, messages, maxTokens, model }) {
+// ── OpenAI-compatible (Cerebras & DeepSeek) ──────────────────────────────────
+async function callOpenAICompat({ system, messages, maxTokens, model, baseUrl, apiKey }) {
   const normalized = normalizeMessages(messages)
   const body = {
-    model: model || MODELS.cerebras.fast,
+    model,
     max_tokens: maxTokens,
     messages: [
       { role: 'system', content: system },
       ...normalized,
     ],
   }
-  const res = await fetch('https://api.cerebras.ai/v1/chat/completions', {
+  const res = await fetch(`${baseUrl}/chat/completions`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
-      'Authorization': `Bearer ${process.env.CEREBRAS_API_KEY}`,
+      'Authorization': `Bearer ${apiKey}`,
     },
     body: JSON.stringify(body),
   })
   if (!res.ok) {
     const err = await res.text()
-    throw new Error(`Cerebras ${res.status}: ${err}`)
+    throw new Error(`[${baseUrl}] ${res.status}: ${err.slice(0, 300)}`)
   }
   const data = await res.json()
   return data.choices[0].message.content
+}
+
+function callCerebras({ system, messages, maxTokens, model }) {
+  return callOpenAICompat({
+    system, messages, maxTokens,
+    model:   model || MODELS.cerebras.fast,
+    baseUrl: 'https://api.cerebras.ai/v1',
+    apiKey:  process.env.CEREBRAS_API_KEY,
+  })
+}
+
+function callDeepSeek({ system, messages, maxTokens, model }) {
+  return callOpenAICompat({
+    system, messages, maxTokens,
+    model:   model || MODELS.deepseek.fast,
+    baseUrl: 'https://api.deepseek.com/v1',
+    apiKey:  process.env.DEEPSEEK_API_KEY,
+  })
 }
 
 // ── Gemini ───────────────────────────────────────────────────────────────────
@@ -112,60 +137,71 @@ async function withRetry(fn, maxRetries = 2) {
   throw lastErr
 }
 
-// ── Free tier: Cerebras → Gemini → Cerebras ──────────────────────────────────
+// ── Free tier: Cerebras → DeepSeek → Gemini ──────────────────────────────────
 async function callFreeChat({ system, messages, maxTokens, tier }) {
   try {
     return await callCerebras({ system, messages, maxTokens, model: MODELS.cerebras[tier] })
   } catch (e1) {
-    console.warn('[ai] Cerebras error, fallback ke Gemini:', e1.message)
+    console.warn('[ai] Cerebras gagal, fallback ke DeepSeek:', e1.message)
     try {
-      return await callGemini({ system, messages, maxTokens, model: MODELS.gemini[tier] })
+      return await callDeepSeek({ system, messages, maxTokens, model: MODELS.deepseek[tier] })
     } catch (e2) {
-      console.warn('[ai] Gemini error, retry Cerebras:', e2.message)
+      console.warn('[ai] DeepSeek gagal, fallback ke Gemini:', e2.message)
       try {
-        return await callCerebras({ system, messages, maxTokens, model: MODELS.cerebras[tier] })
+        return await callGemini({ system, messages, maxTokens, model: MODELS.gemini[tier] })
       } catch (e3) {
-        throw new Error(`Semua provider gagal. Cerebras: ${e1.message} | Gemini: ${e2.message}`)
+        throw new Error(`Semua provider gagal. Cerebras: ${e1.message} | DeepSeek: ${e2.message} | Gemini: ${e3.message}`)
       }
     }
   }
 }
 
 async function callFreeText({ system, prompt, maxTokens, tier }) {
+  const messages = [{ role: 'user', content: prompt }]
   try {
-    return await callCerebras({ system, messages: [{ role: 'user', content: prompt }], maxTokens, model: MODELS.cerebras[tier] })
+    return await callCerebras({ system, messages, maxTokens, model: MODELS.cerebras[tier] })
   } catch (e1) {
-    console.warn('[ai] Cerebras error, fallback ke Gemini:', e1.message)
+    console.warn('[ai] Cerebras gagal, fallback ke DeepSeek:', e1.message)
     try {
-      return await callGeminiText({ system, prompt, model: MODELS.gemini[tier] })
+      return await callDeepSeek({ system, messages, maxTokens, model: MODELS.deepseek[tier] })
     } catch (e2) {
-      console.warn('[ai] Gemini error, retry Cerebras:', e2.message)
+      console.warn('[ai] DeepSeek gagal, fallback ke Gemini:', e2.message)
       try {
-        return await callCerebras({ system, messages: [{ role: 'user', content: prompt }], maxTokens, model: MODELS.cerebras[tier] })
+        return await callGeminiText({ system, prompt, model: MODELS.gemini[tier] })
       } catch (e3) {
-        throw new Error(`Semua provider gagal. Cerebras: ${e1.message} | Gemini: ${e2.message}`)
+        throw new Error(`Semua provider gagal. Cerebras: ${e1.message} | DeepSeek: ${e2.message} | Gemini: ${e3.message}`)
       }
     }
   }
 }
 
-// ── Premium tier: Claude → Cerebras/Gemini fallback ──────────────────────────
+// ── Premium tier: Claude → DeepSeek → Cerebras ───────────────────────────────
 async function callPremiumChat({ system, messages, maxTokens, tier }) {
   try {
     return await callClaude({ system, messages, maxTokens, model: MODELS.claude.smart })
   } catch (e1) {
-    console.warn('[ai] Claude error, fallback ke Cerebras:', e1.message)
-    // Fallback ke free tier otomatis
-    return callFreeChat({ system, messages, maxTokens, tier })
+    console.warn('[ai] Claude gagal, fallback ke DeepSeek:', e1.message)
+    try {
+      return await callDeepSeek({ system, messages, maxTokens, model: MODELS.deepseek.smart })
+    } catch (e2) {
+      console.warn('[ai] DeepSeek gagal, fallback ke Cerebras:', e2.message)
+      return callCerebras({ system, messages, maxTokens, model: MODELS.cerebras[tier] })
+    }
   }
 }
 
 async function callPremiumText({ system, prompt, maxTokens, tier }) {
+  const messages = [{ role: 'user', content: prompt }]
   try {
-    return await callClaude({ system, messages: [{ role: 'user', content: prompt }], maxTokens, model: MODELS.claude.fast })
+    return await callClaude({ system, messages, maxTokens, model: MODELS.claude.fast })
   } catch (e1) {
-    console.warn('[ai] Claude error, fallback ke Cerebras:', e1.message)
-    return callFreeText({ system, prompt, maxTokens, tier })
+    console.warn('[ai] Claude gagal, fallback ke DeepSeek:', e1.message)
+    try {
+      return await callDeepSeek({ system, messages, maxTokens, model: MODELS.deepseek.fast })
+    } catch (e2) {
+      console.warn('[ai] DeepSeek gagal, fallback ke Cerebras:', e2.message)
+      return callCerebras({ system, messages, maxTokens, model: MODELS.cerebras[tier] })
+    }
   }
 }
 
