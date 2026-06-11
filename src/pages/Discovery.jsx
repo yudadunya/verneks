@@ -377,18 +377,10 @@ export default function Discovery() {
         // Belum ada data tapi sudah login → tetap di /discovery (bisa re-do onboarding)
         // Tapi kalau premium dan tidak sengaja masuk sini → langsung balik
         if (cp?.career_readiness != null) {
+          // Sudah punya data Discovery → ke /chat
           navigate('/chat')
-        } else if (cp !== null) {
-          // Profile ada tapi career_readiness belum → tetap di discovery
-        } else {
-          // Cek plan — kalau premium, berarti lewat jalur lain, balik ke chat
-          const { data: sub } = await supabase
-            .from('subscriptions')
-            .select('plan')
-            .eq('user_id', session.user.id)
-            .maybeSingle()
-          if (sub?.plan === 'premium') navigate('/chat')
         }
+        // Belum ada data (cp null atau career_readiness null) → tetap di /discovery
       }
     })
   }, [])

@@ -180,7 +180,7 @@ export default function Chat({ user, chatMessages = [], setChatMessages }) {
     // Fetch growth_state + profil sekaligus untuk greeting & context injection
     Promise.all([
       supabase.from('user_growth_state').select('career_stage, progress_percent, current_focus, next_milestone, streak_days').eq('user_id', user.id).maybeSingle(),
-      supabase.from('user_career_profiles').select('nama, target_posisi, posisi_saat_ini, industri, hambatan, career_readiness, skill_gaps, gps_steps, mentor_message').eq('user_id', user.id).maybeSingle(),
+      supabase.from('user_career_profiles').select('nama, target_posisi, posisi_saat_ini, industri, hambatan, career_readiness, skill_gaps, gps_steps, mentor_message, greeted_at').eq('user_id', user.id).maybeSingle(),
       supabase.from('user_genome_scores').select('analytical, leadership, builder, creator, communication, risk_taking, top_strength').eq('user_id', user.id).maybeSingle(),
     ]).then(([{ data: g }, { data: p }, { data: gs }]) => {
       // DEBUG — hapus setelah fix confirmed

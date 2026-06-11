@@ -165,7 +165,11 @@ export default function DNA({ user }) {
             { role: 'assistant', text: 'Halo! Ceritakan lebih lanjut tentang karier kamu.' },
             { role: 'user', text: `Saya saat ini bekerja sebagai ${p.posisi_saat_ini || 'profesional'} di industri ${p.industri || 'umum'}. Target saya adalah menjadi ${p.target_posisi}.` },
             { role: 'assistant', text: 'Menarik! Apa hambatan terbesar yang kamu hadapi?' },
-            { role: 'user', text: p.hambatan || `Saya ingin mencapai ${p.target_posisi} tapi masih perlu banyak belajar. Skill gap saya antara lain ${(p.skill_gaps || []).join(', ') || 'beberapa skill teknis'}.` },
+            { role: 'user', text: (() => {
+              const rawG = p.skill_gaps
+              const gArr = Array.isArray(rawG) ? rawG : (rawG && typeof rawG === 'object' ? Object.values(rawG) : [])
+              return p.hambatan || `Saya ingin mencapai ${p.target_posisi} tapi masih perlu banyak belajar. Skill gap saya antara lain ${gArr.join(', ') || 'beberapa skill teknis'}.`
+            })() },
             { role: 'assistant', text: 'Baik, saya mengerti situasimu.' },
           ]
 
