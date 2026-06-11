@@ -1,5 +1,5 @@
-import { BrowserRouter, Routes, Route, } from 'react-router-dom'
-import { useState, useEffect, lazy, Suspense } from 'react'
+import { BrowserRouter, Routes, Route, Navigate, useNavigate } from 'react-router-dom'
+import { useState, useEffect, useRef, lazy, Suspense } from 'react'
 import { supabase } from './lib/supabase'
 
 // Lazy load semua halaman — bundle dipecah per route, hanya dimuat saat dibutuhkan
@@ -38,9 +38,18 @@ function loadMessages(userId) {
   return []
 }
 
+// Expose navigate() ke luar BrowserRouter via ref
+function NavigateSetter({ navigateRef }) {
+  const nav = useNavigate()
+  useEffect(() => { navigateRef.current = nav }, [nav])
+  return null
+}
+
 export default function App() {
   const [user, setUser]             = useState(null)
   const [loading, setLoading]       = useState(true)
+  const [redirectTo, setRedirectTo] = useState(null)
+  const navigateRef = useRef(null)
   const [chatMessages, setChatMessages] = useState([])
   const [showUpgrade, setShowUpgrade] = useState(false)
   const [upgradeData, setUpgradeData] = useState(null)
@@ -192,15 +201,19 @@ export default function App() {
 
               console.log('[App redirect] career_readiness:', cp?.career_readiness, 'error:', error)
 
-              if (cp?.career_readiness != null) {
-                window.location.replace('/chat')
+              const target = cp?.career_readiness != null ? '/chat' : '/discovery'
+              if (navigateRef.current) {
+                navigateRef.current(target, { replace: true })
               } else {
-                window.location.replace('/discovery')
+                setRedirectTo(target)
               }
             } catch (err) {
-              // Fallback: kalau query gagal, tetap arahkan ke /discovery
-              console.error('[App redirect] query failed, fallback to /discovery', err)
-              window.location.replace('/discovery')
+              console.error('[App redirect] fallback to /discovery', err)
+              if (navigateRef.current) {
+                navigateRef.current('/discovery', { replace: true })
+              } else {
+                setRedirectTo('/discovery')
+              }
             }
           } else if (onDiscovery) {
             // User baru setelah OAuth — biarkan tetap di /discovery
@@ -241,6 +254,8 @@ export default function App() {
   return (
     <>
     <BrowserRouter>
+      <NavigateSetter navigateRef={navigateRef} />
+      {redirectTo && <Navigate to={redirectTo} replace />}
       <Suspense fallback={PageLoader}>
       <Routes>
         <Route path="/"              element={<Home user={user} />} />
