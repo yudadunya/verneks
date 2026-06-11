@@ -38,7 +38,18 @@ export default function Profile({ user }) {
     localStorage.removeItem('lc_discovery_messages')
     localStorage.removeItem('lc_discovery_result')
     await supabase.auth.signOut()
-    navigate('/')
+
+    // Clear SW cache supaya tidak stuck loading setelah logout
+    if ('caches' in window) {
+      const keys = await caches.keys()
+      await Promise.all(keys.map(k => caches.delete(k)))
+    }
+    if ('serviceWorker' in navigator) {
+      const regs = await navigator.serviceWorker.getRegistrations()
+      await Promise.all(regs.map(r => r.unregister()))
+    }
+
+    window.location.replace('/')
   }
 
   const displayName = profile?.nama
