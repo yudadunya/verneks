@@ -1,4 +1,4 @@
-import { generateText } from '../lib/ai.js'
+import { generateText } from '../_lib/ai.js'
 import { createClient } from '@supabase/supabase-js'
 
 const supabase = createClient(
@@ -7,49 +7,94 @@ const supabase = createClient(
 )
 
 export default async function handler(req, res) {
-  // Hanya izinkan pemicu dari Vercel Cron atau auth token tertentu
-  if (req.headers['authorization'] !== `Bearer ${process.env.CRON_SECRET}`) {
+  // Hanya izinkan dari Vercel Cron (header otomatis) atau CRON_SECRET manual
+  const authHeader = req.headers['authorization']
+  const isVercelCron = req.headers['x-vercel-cron'] === '1'
+  if (!isVercelCron && authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
     return res.status(401).json({ error: 'Unauthorized' })
   }
 
   try {
-    // 1. Ambil user yang aktif dan punya profil (limit 10 untuk demo/batching)
-    const { data: users } = await supabase
+    // 1. Ambil user yang TIDAK aktif 7 hari terakhir dan punya nomor WA
+    const sevenDaysAgo = new Date()
+    sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7)
+
+    const { data: users, error } = await supabase
       .from('user_career_profiles')
-      .select('user_id, nama, summary, career_dna, last_updated, user_profiles(phone_wa, push_token)')
-      .order('last_updated', { ascending: true })
-      .limit(10)
+      .select(`
+        user_id,
+        nama,
+        summary,
+        career_dna,
+        last_updated
+      `)
+      .lt('last_updated', sevenDaysAgo.toISOString())
+      .not('nama', 'is', null)
+      .limit(20)
+
+    if (error) throw error
+    if (!users?.length) {
+      return res.status(200).json({ success: true, processed: 0, message: 'Tidak ada user yang perlu di-nudge' })
+    }
+
+    // 2. Ambil nomor WA dari tabel terpisah
+    const userIds = users.map(u => u.user_id)
+    const { data: profiles } = await supabase
+      .from('user_profiles')
+      .select('user_id, phone_wa')
+      .in('user_id', userIds)
+      .not('phone_wa', 'is', null)
+
+    // Map phone_wa ke user_id
+    const phoneMap = {}
+    for (const p of (profiles ?? [])) {
+      phoneMap[p.user_id] = p.phone_wa
+    }
 
     const results = []
 
-    for (const user of (users ?? [])) {
-      // 2. Minta AI (Hermes/Diah Anna) buat sapaan super personal
+    for (const user of users) {
+      const phone = phoneMap[user.user_id]
+      if (!phone) continue // Skip kalau tidak ada nomor WA
+
+      // 3. Generate sapaan personal dari Diah Anna
       const nudgeMessage = await generateText({
-        system: `Kamu adalah Diah Anna, AI Career Coach. Tugasmu: sapa user yang sudah seminggu tidak chat.
-        Gunakan data profil mereka agar sapaan terasa sangat personal dan peduli.
-        Jangan jualan, fokus pada progres karir mereka.
-        
-        Data User:
-        Nama: ${user.nama}
-        Summary: ${user.summary}
-        DNA: ${JSON.stringify(user.career_dna)}`,
-        prompt: `Buat sapaan WhatsApp singkat (maks 2 kalimat) untuk menanyakan kabar progres karir mereka. Pakai bahasa Indonesia yang hangat.`,
+        system: `Kamu adalah Diah Anna, AI Career Coach di Verneks.
+Tugasmu: sapa user yang sudah seminggu tidak chat dengan hangat dan personal.
+Jangan jualan, fokus tanya kabar progres karir mereka.
+Maksimal 2 kalimat. Bahasa Indonesia yang santai dan peduli.
+
+Data user:
+Nama: ${user.nama}
+Summary: ${user.summary || '-'}
+DNA Karir: ${user.career_dna ? JSON.stringify(user.career_dna) : '-'}`,
+        prompt: `Tulis sapaan WhatsApp untuk ${user.nama} yang sudah seminggu tidak chat.`,
         tier: 'smart'
       })
 
-      // 3. Kirim via WhatsApp (Fonnte) jika ada nomornya
-      const phone = user.user_profiles?.phone_wa
-      if (phone) {
-        await fetch('https://api.fonnte.com/send', {
-          method: 'POST',
-          headers: { 'Authorization': process.env.FONNTE_TOKEN },
-          body: new URLSearchParams({ target: phone, message: nudgeMessage }),
-        })
-        results.push({ userId: user.user_id, status: 'sent_wa' })
-      }
+      // 4. Kirim via Fonnte
+      const fonnteRes = await fetch('https://api.fonnte.com/send', {
+        method: 'POST',
+        headers: { 'Authorization': process.env.FONNTE_TOKEN },
+        body: new URLSearchParams({ target: phone, message: nudgeMessage }),
+      })
+      const fonnteData = await fonnteRes.json()
+
+      results.push({
+        userId: user.user_id,
+        nama: user.nama,
+        status: fonnteData.status ? 'sent' : 'failed',
+        response: fonnteData
+      })
     }
 
-    return res.status(200).json({ success: true, processed: results.length, results })
+    return res.status(200).json({
+      success: true,
+      processed: results.length,
+      sent: results.filter(r => r.status === 'sent').length,
+      results
+    })
+
   } catch (error) {
     console.error('[weekly-nudge] error:', error)
     return res.status(500).json({ error: error.message })
