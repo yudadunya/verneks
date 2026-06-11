@@ -91,78 +91,75 @@ export default function App() {
               // Cek dulu — kalau user sudah punya data, jangan overwrite
               const { data: existing } = await supabase
                 .from('user_career_profiles')
-                .select('career_readiness, last_updated')
+                .select('career_readiness')
                 .eq('user_id', u.id)
                 .maybeSingle()
 
-              const hasExistingData = existing?.career_readiness != null
+              if (existing?.career_readiness == null) {
+                // User baru — simpan data Discovery ke Supabase
+                const p  = result.profile_preview || {}
+                const gs = result.genome_scores   || {}
+                const gw = result.growth_state    || {}
 
-              if (!hasExistingData) {
-              // Data baru — simpan ke Supabase
-              const p  = result.profile_preview || {}
-              const gs = result.genome_scores   || {}
-              const gw = result.growth_state    || {}
-
-              // 1. Simpan profil + genome data langsung (tidak lewat extract-profile)
-              supabase.from('user_career_profiles').upsert({
-                user_id:          u.id,
-                nama:             p.nama             || null,
-                target_posisi:    p.target_posisi    || null,
-                posisi_saat_ini:  p.posisi_saat_ini  || null,
-                industri:         p.industri         || null,
-                hambatan:         p.hambatan_utama   || null,
-                career_readiness: result.career_readiness || 0,
-                skill_gaps:       result.gap_skills  || [],
-                gps_steps:        result.gps_steps   || [],
-                mentor_message:   result.mentor_message || null,
-                summary:          result.mentor_message || null,
-                last_updated:     new Date().toISOString(),
-              }, { onConflict: 'user_id' }).then(({ error }) => {
-                if (error) console.warn('[discovery-save] profile error:', error.message)
-              })
-
-              // 2. Simpan genome scores
-              if (Object.values(gs).some(v => v > 0)) {
-                supabase.from('user_genome_scores').upsert({
-                  user_id:      u.id,
-                  ...gs,
-                  top_strength: result.top_strength || null,
-                  updated_at:   new Date().toISOString(),
-                }, { onConflict: 'user_id' }).catch(e => console.warn('[genome-save]', e.message))
-              }
-
-              // 3. Simpan growth state
-              if (gw.career_stage) {
-                supabase.from('user_growth_state').upsert({
+                // 1. Simpan profil
+                supabase.from('user_career_profiles').upsert({
                   user_id:          u.id,
-                  career_stage:     gw.career_stage,
-                  progress_percent: gw.progress_percent || result.career_readiness || 0,
-                  current_focus:    gw.current_focus || null,
-                  updated_at:       new Date().toISOString(),
-                }, { onConflict: 'user_id' }).catch(e => console.warn('[growth-save]', e.message))
-              }
+                  nama:             p.nama             || null,
+                  target_posisi:    p.target_posisi    || null,
+                  posisi_saat_ini:  p.posisi_saat_ini  || null,
+                  industri:         p.industri         || null,
+                  hambatan:         p.hambatan_utama   || null,
+                  career_readiness: result.career_readiness || 0,
+                  skill_gaps:       result.gap_skills  || [],
+                  gps_steps:        result.gps_steps   || [],
+                  mentor_message:   result.mentor_message || null,
+                  summary:          result.mentor_message || null,
+                  last_updated:     new Date().toISOString(),
+                }, { onConflict: 'user_id' }).then(({ error }) => {
+                  if (error) console.warn('[discovery-save] profile error:', error.message)
+                })
 
-              // 4. Juga kirim messages ke extract-profile untuk profil teks (nama, domisili, dll)
-              if (discoveryMessages) {
-                try {
-                  const msgs = JSON.parse(discoveryMessages)
-                  const apiMsgs = msgs
-                    .filter(m => m.role === 'user' || m.role === 'bot')
-                    .map(m => ({ role: m.role === 'bot' ? 'assistant' : 'user', content: m.text || '' }))
-                    .filter(m => m.content)
-                  fetch('/api/extract-profile', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ userId: u.id, messages: apiMsgs })
-                  }).catch(e => console.warn('[extract-profile]', e))
-                } catch {}
-              }
+                // 2. Simpan genome scores
+                if (Object.values(gs).some(v => v > 0)) {
+                  supabase.from('user_genome_scores').upsert({
+                    user_id:      u.id,
+                    ...gs,
+                    top_strength: result.top_strength || null,
+                    updated_at:   new Date().toISOString(),
+                  }, { onConflict: 'user_id' }).catch(e => console.warn('[genome-save]', e.message))
+                }
+
+                // 3. Simpan growth state
+                if (gw.career_stage) {
+                  supabase.from('user_growth_state').upsert({
+                    user_id:          u.id,
+                    career_stage:     gw.career_stage,
+                    progress_percent: gw.progress_percent || result.career_readiness || 0,
+                    current_focus:    gw.current_focus || null,
+                    updated_at:       new Date().toISOString(),
+                  }, { onConflict: 'user_id' }).catch(e => console.warn('[growth-save]', e.message))
+                }
+
+                // 4. Kirim messages ke extract-profile
+                if (discoveryMessages) {
+                  try {
+                    const msgs = JSON.parse(discoveryMessages)
+                    const apiMsgs = msgs
+                      .filter(m => m.role === 'user' || m.role === 'bot')
+                      .map(m => ({ role: m.role === 'bot' ? 'assistant' : 'user', content: m.text || '' }))
+                      .filter(m => m.content)
+                    fetch('/api/extract-profile', {
+                      method: 'POST',
+                      headers: { 'Content-Type': 'application/json' },
+                      body: JSON.stringify({ userId: u.id, messages: apiMsgs })
+                    }).catch(e => console.warn('[extract-profile]', e))
+                  } catch {}
+                }
+              } // end if no existing data
 
             } catch (e) {
               console.warn('[discovery-save] error:', e.message)
             }
-              } // end if (!hasExistingData)
-
             localStorage.removeItem('lc_discovery_result')
             localStorage.removeItem('lc_discovery_messages')
             sessionStorage.removeItem(`lc_job_matches_${u.id}`)
