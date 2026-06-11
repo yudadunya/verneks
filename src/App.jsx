@@ -87,6 +87,18 @@ export default function App() {
           if (discoveryResult) {
             try {
               const result = JSON.parse(discoveryResult)
+
+              // Cek dulu — kalau user sudah punya data, jangan overwrite
+              const { data: existing } = await supabase
+                .from('user_career_profiles')
+                .select('career_readiness, last_updated')
+                .eq('user_id', u.id)
+                .maybeSingle()
+
+              const hasExistingData = existing?.career_readiness != null
+
+              if (!hasExistingData) {
+              // Data baru — simpan ke Supabase
               const p  = result.profile_preview || {}
               const gs = result.genome_scores   || {}
               const gw = result.growth_state    || {}
@@ -149,6 +161,8 @@ export default function App() {
             } catch (e) {
               console.warn('[discovery-save] error:', e.message)
             }
+              } // end if (!hasExistingData)
+
             localStorage.removeItem('lc_discovery_result')
             localStorage.removeItem('lc_discovery_messages')
             sessionStorage.removeItem(`lc_job_matches_${u.id}`)
@@ -172,17 +186,23 @@ export default function App() {
           console.log('[App redirect] shouldRedirect:', shouldRedirect, '| onDiscovery:', onDiscovery)
 
           if (shouldRedirect) {
-            const { data: cp } = await supabase
-              .from('user_career_profiles')
-              .select('career_readiness')
-              .eq('user_id', u.id)
-              .maybeSingle()
+            try {
+              const { data: cp, error } = await supabase
+                .from('user_career_profiles')
+                .select('career_readiness')
+                .eq('user_id', u.id)
+                .maybeSingle()
 
-            console.log('[App redirect] career_readiness:', cp?.career_readiness)
+              console.log('[App redirect] career_readiness:', cp?.career_readiness, 'error:', error)
 
-            if (cp?.career_readiness != null) {
-              window.location.replace('/chat')
-            } else {
+              if (cp?.career_readiness != null) {
+                window.location.replace('/chat')
+              } else {
+                window.location.replace('/discovery')
+              }
+            } catch (err) {
+              // Fallback: kalau query gagal, tetap arahkan ke /discovery
+              console.error('[App redirect] query failed, fallback to /discovery', err)
               window.location.replace('/discovery')
             }
           } else if (onDiscovery) {
