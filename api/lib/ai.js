@@ -9,7 +9,7 @@ import Anthropic from '@anthropic-ai/sdk'
 import { GoogleGenerativeAI } from '@google/generative-ai'
 
 const MODELS = {
-  cerebras: { fast: 'llama-3.3-70b', smart: 'llama-3.3-70b' },
+  cerebras: { fast: 'gpt-oss-120b', smart: 'gpt-oss-120b' },
   claude:   { fast: 'claude-haiku-4-5-20251001', smart: 'claude-sonnet-4-6' },
   gemini:   { fast: 'gemini-2.0-flash', smart: 'gemini-2.0-flash' },
 }
