@@ -167,11 +167,12 @@ export default function Chat({ user, chatMessages = [], setChatMessages }) {
   // ── Auth guard + greeting ────────────────────────────────────────────────
   useEffect(() => {
     if (!user) { navigate('/'); return }
-  }, [user?.id])
+  }, [user?.id, plan, subLoading])
 
   // ── Dynamic Greeting dari user_growth_state ──────────────────────────────
   useEffect(() => {
     if (!user) return
+    if (subLoading) return // tunggu plan terload dulu
     if (messages.length > 0) return
     if (plan !== 'free') return // greeting Discovery hanya untuk user free
 
@@ -183,10 +184,6 @@ export default function Chat({ user, chatMessages = [], setChatMessages }) {
       supabase.from('user_career_profiles').select('nama, target_posisi, posisi_saat_ini, industri, hambatan, career_readiness, skill_gaps, gps_steps, mentor_message, greeted_at').eq('user_id', user.id).maybeSingle(),
       supabase.from('user_genome_scores').select('analytical, leadership, builder, creator, communication, risk_taking, top_strength').eq('user_id', user.id).maybeSingle(),
     ]).then(([{ data: g }, { data: p }, { data: gs }]) => {
-      // DEBUG — hapus setelah fix confirmed
-      console.log("[Chat greeting] profiles:", JSON.stringify(p))
-      console.log("[Chat greeting] growth:", JSON.stringify(g))
-      console.log("[Chat greeting] hasDiscovery:", !!(p && (p.target_posisi || p.career_readiness)))
       // ── Inject context ke coachHistory kalau kosong (device baru) ──
       if (coachHistory.length === 0 && p && (p.target_posisi || p.posisi_saat_ini)) {
         const GENOME_LABELS = { analytical: 'Analytical', leadership: 'Leadership', builder: 'Builder', creator: 'Creator', communication: 'Communication', risk_taking: 'Risk Taking' }
@@ -210,7 +207,8 @@ export default function Chat({ user, chatMessages = [], setChatMessages }) {
           g?.next_milestone     ? `Next milestone: ${g.next_milestone}` : null,
           p.hambatan     ? `Tantangan utama: ${p.hambatan}` : null,
           (() => {
-            const gaps = p.skill_gaps || []
+            const rawG = p.skill_gaps
+            const gaps = Array.isArray(rawG) ? rawG : (rawG && typeof rawG === 'object' ? Object.values(rawG) : [])
             return gaps.length ? `Skill gaps yang perlu dikembangkan: ${gaps.slice(0, 5).join(', ')}` : null
           })(),
           (() => {
@@ -293,6 +291,68 @@ export default function Chat({ user, chatMessages = [], setChatMessages }) {
       pushBot(`Halo${firstName2 ? ` ${firstName2}` : ''}! 👋 Aku Diah Anna, AI Career Coach kamu.\n\nAda yang bisa aku bantu hari ini?`)
     })
   }, [user?.id])
+
+  // ── Greeting untuk user premium aktif ───────────────────────────────────
+  useEffect(() => {
+    if (!user) return
+    if (subLoading) return
+    if (plan !== 'premium') return
+    if (isExpired) return
+    if (messages.length > 0) return
+
+    const firstName = (user?.user_metadata?.name || user?.user_metadata?.full_name || '').split(' ')[0]
+
+    Promise.all([
+      supabase.from('user_career_profiles').select('nama, target_posisi, career_readiness, skill_gaps, greeted_at').eq('user_id', user.id).maybeSingle(),
+      supabase.from('user_growth_state').select('career_stage, progress_percent, current_focus, next_milestone, streak_days').eq('user_id', user.id).maybeSingle(),
+    ]).then(([{ data: p }, { data: g }]) => {
+      const name = firstName || p?.nama?.split(' ')[0] || ''
+      const nameStr = name ? ` ${name}` : ''
+      const target = p?.target_posisi || null
+      const progress = g?.progress_percent || p?.career_readiness || 0
+      const stage = g?.career_stage || null
+      const focus = g?.current_focus || null
+      const streak = g?.streak_days || 0
+
+      let greeting = ''
+
+      if (!p?.greeted_at) {
+        // Premium baru pertama kali — greeting khusus
+        greeting = `Halo${nameStr}! 👋 Selamat datang di Verneks Premium.
+
+` +
+          (target ? `Saya sudah melihat target kamu: **${target}** dengan readiness ${progress}%.
+
+` : '') +
+          `Sebagai mentor AI premium kamu, saya siap membantu lebih dalam — roadmap personal, strategi karier, dan coaching intensif.
+
+Mau mulai dari mana?`
+
+        supabase.from('user_career_profiles')
+          .update({ greeted_at: new Date().toISOString() })
+          .eq('user_id', user.id)
+          .then()
+
+      } else if (stage) {
+        // Returning premium — greeting by stage
+        const stageGreet = {
+          'Career Explorer':    `Halo${nameStr}! 🌱 Progress ${progress}%.${focus ? ` Fokus: **${focus}**.` : ''} Mau kita bahas strategi hari ini?`,
+          'Career Builder':     `Halo${nameStr}! 🔰 Progress ${progress}%.${focus ? ` Next step: **${focus}**.` : ''} Siap lanjut?`,
+          'Career Professional':`Halo${nameStr}! ⭐ Progress ${progress}%. ${focus ? `Fokus sekarang: **${focus}**.` : ''} Ada yang ingin kita tackle?`,
+          'Career Expert':      `Halo${nameStr}! 🏆 Progress ${progress}%. Sudah dekat ke puncak — mau kita strategi untuk **${g?.next_milestone || 'milestone berikutnya'}**?`,
+          'Career Leader':      `Halo${nameStr}! 👑 Progress ${progress}%. Bagaimana aku bisa bantu kamu hari ini?`,
+        }
+        greeting = stageGreet[stage] || `Halo${nameStr}! 👋 Progress ${progress}%. Ada yang bisa aku bantu?`
+        if (streak >= 3) greeting += `
+
+🔥 Streak ${streak} hari — luar biasa!`
+      } else {
+        greeting = `Halo${nameStr}! 👋 Senang bertemu lagi. Ada yang ingin kita bahas hari ini?`
+      }
+
+      pushBot(greeting)
+    })
+  }, [user?.id, plan, subLoading, isExpired])
 
   // ── Persuasi Diah Anna saat premium expired ──────────────────────────────
   useEffect(() => {
