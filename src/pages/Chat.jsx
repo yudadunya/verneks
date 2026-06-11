@@ -176,10 +176,11 @@ export default function Chat({ user, chatMessages = [], setChatMessages }) {
     if (subLoading) return // tunggu plan terload dulu
     if (plan !== 'free') return // greeting Discovery hanya untuk user free
     if (greetingFiredRef.current) return // sudah jalan di sesi ini
+
+    // Set ref SETELAH semua guard lolos — bukan sebelumnya
     greetingFiredRef.current = true
 
     const firstName = (user.user_metadata?.name || user.user_metadata?.full_name || '').split(' ')[0]
-    console.log('[Greeting] user:', user.id, '| plan:', plan, '| subLoading:', subLoading)
 
     // Fetch growth_state + profil sekaligus untuk greeting & context injection
     Promise.all([
@@ -302,6 +303,8 @@ export default function Chat({ user, chatMessages = [], setChatMessages }) {
     if (plan !== 'premium') return
     if (isExpired) return
     if (greetingFiredRef.current) return // sudah jalan di sesi ini
+
+    // Set ref SETELAH semua guard lolos
     greetingFiredRef.current = true
 
     const firstName = (user?.user_metadata?.name || user?.user_metadata?.full_name || '').split(' ')[0]
