@@ -1,4 +1,4 @@
-import { generateChat } from '../lib/ai.js'
+import { generateChat } from './_lib/ai.js'
 import { createClient } from '@supabase/supabase-js'
 
 const supabase = createClient(
