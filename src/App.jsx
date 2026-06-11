@@ -202,18 +202,10 @@ export default function App() {
               console.log('[App redirect] career_readiness:', cp?.career_readiness, 'error:', error)
 
               const target = cp?.career_readiness != null ? '/chat' : '/discovery'
-              if (navigateRef.current) {
-                navigateRef.current(target, { replace: true })
-              } else {
-                setRedirectTo(target)
-              }
+              window.location.replace(target)
             } catch (err) {
               console.error('[App redirect] fallback to /discovery', err)
-              if (navigateRef.current) {
-                navigateRef.current('/discovery', { replace: true })
-              } else {
-                setRedirectTo('/discovery')
-              }
+              window.location.replace('/discovery')
             }
           } else if (onDiscovery) {
             // User baru setelah OAuth — biarkan tetap di /discovery
