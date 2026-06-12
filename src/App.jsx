@@ -1,5 +1,5 @@
-import { BrowserRouter, Routes, Route, useNavigate } from 'react-router-dom'
-import { useState, useEffect, lazy, Suspense } from 'react'
+import { BrowserRouter, Routes, Route, Navigate, useNavigate } from 'react-router-dom'
+import { useState, useEffect, useRef, lazy, Suspense } from 'react'
 import { supabase } from './lib/supabase'
 
 // Lazy load semua halaman — bundle dipecah per route, hanya dimuat saat dibutuhkan
@@ -38,15 +38,10 @@ function loadMessages(userId) {
   return []
 }
 
-// Handle auth redirect dari dalam BrowserRouter (punya akses useNavigate)
-function AuthHandler({ targetPath, onNavigated }) {
+// Expose navigate() ke luar BrowserRouter via ref
+function NavigateSetter({ navigateRef }) {
   const nav = useNavigate()
-  useEffect(() => {
-    if (targetPath) {
-      nav(targetPath, { replace: true })
-      onNavigated() // langsung clear supaya tidak loop
-    }
-  }, [targetPath])
+  useEffect(() => { navigateRef.current = nav }, [nav])
   return null
 }
 
@@ -54,6 +49,7 @@ export default function App() {
   const [user, setUser]             = useState(null)
   const [loading, setLoading]       = useState(true)
   const [redirectTo, setRedirectTo] = useState(null)
+  const navigateRef = useRef(null)
   const [chatMessages, setChatMessages] = useState([])
   const [showUpgrade, setShowUpgrade] = useState(false)
   const [upgradeData, setUpgradeData] = useState(null)
@@ -206,10 +202,10 @@ export default function App() {
               console.log('[App redirect] career_readiness:', cp?.career_readiness, 'error:', error)
 
               const target = cp?.career_readiness != null ? '/chat' : '/discovery'
-              setRedirectTo(target)
+              window.location.replace(target)
             } catch (err) {
               console.error('[App redirect] fallback to /discovery', err)
-              setRedirectTo('/discovery')
+              window.location.replace('/discovery')
             }
           } else if (onDiscovery) {
             // User baru setelah OAuth — biarkan tetap di /discovery
@@ -217,6 +213,10 @@ export default function App() {
         }
       } else {
         setChatMessages([])
+        // Hapus greeting flags agar greeting muncul lagi saat login berikutnya
+        Object.keys(sessionStorage)
+          .filter(k => k.startsWith('lc_greeted_'))
+          .forEach(k => sessionStorage.removeItem(k))
       }
     })
     return () => subscription.unsubscribe()
@@ -250,7 +250,8 @@ export default function App() {
   return (
     <>
     <BrowserRouter>
-      <AuthHandler targetPath={redirectTo} onNavigated={() => setRedirectTo(null)} />
+      <NavigateSetter navigateRef={navigateRef} />
+      {redirectTo && <Navigate to={redirectTo} replace />}
       <Suspense fallback={PageLoader}>
       <Routes>
         <Route path="/"              element={<Home user={user} />} />
