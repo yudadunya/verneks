@@ -213,6 +213,10 @@ export default function App() {
         }
       } else {
         setChatMessages([])
+        // Hapus greeting flags agar greeting muncul lagi saat login berikutnya
+        Object.keys(sessionStorage)
+          .filter(k => k.startsWith('lc_greeted_'))
+          .forEach(k => sessionStorage.removeItem(k))
       }
     })
     return () => subscription.unsubscribe()
