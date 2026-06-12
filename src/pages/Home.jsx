@@ -228,21 +228,7 @@ export default function Home({ user }) {
       ══════════════════════════════════════════════════════════════════════ */}
       <section style={{ position: 'relative', zIndex: 5, padding: '48px 20px 32px' }}>
 
-        {/* Journey bar */}
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 0, marginBottom: 36, overflowX: 'auto', opacity: visible ? 1 : 0, transition: 'opacity 0.8s ease 0.2s' }}>
-          {['Bingung','Paham Diri','Temukan Potensi','Tahu Gap','Dapat GPS','Karier Berkembang'].map((s, i) => (
-            <div key={s} style={{ display: 'flex', alignItems: 'center', flexShrink: 0 }}>
-              <div style={{
-                background: i < 2 ? C.primary : i < 4 ? C.purple : C.surface,
-                border: `1px solid ${i < 4 ? 'transparent' : C.border}`,
-                color: i < 4 ? '#fff' : C.muted,
-                borderRadius: 20, padding: '4px 10px', fontSize: '0.65rem', fontWeight: 700, whiteSpace: 'nowrap',
-              }}>{s}</div>
-              {i < 5 && <div style={{ width: 12, height: 1, background: i < 3 ? C.primary : C.border, flexShrink: 0 }} />}
-            </div>
-          ))}
-        </div>
-
+        
         {/* Headline */}
         <div style={{ opacity: visible ? 1 : 0, transform: visible ? 'none' : 'translateY(20px)', transition: 'opacity 0.7s ease 0.1s, transform 0.7s ease 0.1s', textAlign: 'center' }}>
           <div style={{ display: 'inline-flex', alignItems: 'center', gap: 6, background: 'rgba(79,70,229,0.12)', border: `1px solid ${C.border}`, borderRadius: 20, padding: '5px 14px', marginBottom: 20 }}>
