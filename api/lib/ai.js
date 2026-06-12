@@ -72,7 +72,9 @@ async function callOpenAICompat({ system, messages, maxTokens, model, baseUrl, a
     throw new Error(`[${baseUrl}] ${res.status}: ${err.slice(0, 300)}`)
   }
   const data = await res.json()
-  return data.choices[0].message.content
+  const text = data.choices?.[0]?.message?.content
+  if (!text) throw new Error(`Empty response from ${baseUrl} (model: ${model})`)
+  return text
 }
 
 function callCerebras({ system, messages, maxTokens, model }) {
