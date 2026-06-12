@@ -1,5 +1,5 @@
-import { BrowserRouter, Routes, Route, Navigate, useNavigate } from 'react-router-dom'
-import { useState, useEffect, useRef, lazy, Suspense } from 'react'
+import { BrowserRouter, Routes, Route } from 'react-router-dom'
+import { useState, useEffect, lazy, Suspense } from 'react'
 import { supabase } from './lib/supabase'
 
 // Lazy load semua halaman — bundle dipecah per route, hanya dimuat saat dibutuhkan
@@ -38,18 +38,9 @@ function loadMessages(userId) {
   return []
 }
 
-// Expose navigate() ke luar BrowserRouter via ref
-function NavigateSetter({ navigateRef }) {
-  const nav = useNavigate()
-  useEffect(() => { navigateRef.current = nav }, [nav])
-  return null
-}
-
 export default function App() {
   const [user, setUser]             = useState(null)
   const [loading, setLoading]       = useState(true)
-  const [redirectTo, setRedirectTo] = useState(null)
-  const navigateRef = useRef(null)
   const [chatMessages, setChatMessages] = useState([])
   const [showUpgrade, setShowUpgrade] = useState(false)
   const [upgradeData, setUpgradeData] = useState(null)
@@ -93,6 +84,8 @@ export default function App() {
           // Sync discovery result ke Supabase
           const discoveryResult = localStorage.getItem('lc_discovery_result')
           const discoveryMessages = localStorage.getItem('lc_discovery_messages')
+          let hasCareerData = false
+
           if (discoveryResult) {
             try {
               const result = JSON.parse(discoveryResult)
@@ -166,6 +159,9 @@ export default function App() {
                 }
               } // end if no existing data
 
+              // Data baru disimpan ATAU sudah ada sebelumnya — user kini punya career data
+              hasCareerData = true
+
             } catch (e) {
               console.warn('[discovery-save] error:', e.message)
             }
@@ -173,42 +169,27 @@ export default function App() {
             localStorage.removeItem('lc_discovery_messages')
             sessionStorage.removeItem(`lc_job_matches_${u.id}`)
           }
-          // Redirect ke dashboard — kecuali user baru yang belum ada data Discovery
-          const path = window.location.pathname
-          const hash = window.location.hash
-          const search = window.location.search
 
-          console.log('[App redirect] path:', path, '| hash:', hash, '| search:', search)
-
-          const shouldRedirect =
-            path === '/' ||
-            path === '/genome-result' ||
-            path === '/paywall' ||
-            hash.includes('access_token') ||
-            search.includes('access_token')
-
-          const onDiscovery = path === '/discovery'
-
-          console.log('[App redirect] shouldRedirect:', shouldRedirect, '| onDiscovery:', onDiscovery)
-
-          if (shouldRedirect) {
+          // Returning user tanpa discoveryResult — cek langsung ke Supabase
+          if (!hasCareerData) {
             try {
-              const { data: cp, error } = await supabase
+              const { data: cp } = await supabase
                 .from('user_career_profiles')
                 .select('career_readiness')
                 .eq('user_id', u.id)
                 .maybeSingle()
-
-              console.log('[App redirect] career_readiness:', cp?.career_readiness, 'error:', error)
-
-              const target = cp?.career_readiness != null ? '/chat' : '/discovery'
-              window.location.replace(target)
+              hasCareerData = cp?.career_readiness != null
             } catch (err) {
-              console.error('[App redirect] fallback to /discovery', err)
-              window.location.replace('/discovery')
+              console.warn('[App redirect] cek career_readiness gagal:', err.message)
             }
-          } else if (onDiscovery) {
-            // User baru setelah OAuth — biarkan tetap di /discovery
+          }
+
+          // Redirect deterministik — selalu arahkan ke halaman yang benar.
+          // Tidak lagi bergantung pada path/hash/search dari URL OAuth callback,
+          // jadi tidak ada lagi kondisi "stuck di /discovery setelah login".
+          const target = hasCareerData ? '/chat' : '/discovery'
+          if (window.location.pathname !== target) {
+            window.location.replace(target)
           }
         }
       } else {
@@ -250,8 +231,6 @@ export default function App() {
   return (
     <>
     <BrowserRouter>
-      <NavigateSetter navigateRef={navigateRef} />
-      {redirectTo && <Navigate to={redirectTo} replace />}
       <Suspense fallback={PageLoader}>
       <Routes>
         <Route path="/"              element={<Home user={user} />} />
