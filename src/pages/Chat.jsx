@@ -294,7 +294,7 @@ export default function Chat({ user, chatMessages = [], setChatMessages }) {
       const firstName2 = (user.user_metadata?.name || user.user_metadata?.full_name || '').split(' ')[0]
       pushBot(`Halo${firstName2 ? ` ${firstName2}` : ''}! 👋 Aku Diah Anna, AI Career Coach kamu.\n\nAda yang bisa aku bantu hari ini?`)
     })
-  }, [user?.id])
+  }, [user?.id, plan, subLoading]) // eslint-disable-line react-hooks/exhaustive-deps
 
   // ── Greeting untuk user premium aktif ───────────────────────────────────
   useEffect(() => {
@@ -922,18 +922,24 @@ Pilih yang sesuai buat kamu:`
   const callCoachApi = async (history) => {
     try {
       const data = await apiFetch('/api/career-coach', { messages: history, userId: user?.id || null, plan: plan || 'free' })
-      const fullHistory = [...history, { role: 'assistant', content: data.reply }]
+
+      const reply = data.reply
+      if (!reply) {
+        pushBot('Koneksi bermasalah, coba kirim lagi ya! 🙏')
+        return
+      }
+
+      const fullHistory = [...history, { role: 'assistant', content: reply }]
       setCoachHistory(fullHistory)
 
       // Untuk free user: tambahkan persuasi halus + tombol upgrade di setiap reply
-      let upgradeQr = null
       if (plan === 'free') {
         const nudge = UPGRADE_NUDGES[nudgeIndexRef.current % UPGRADE_NUDGES.length]
         nudgeIndexRef.current += 1
-        const replyWithNudge = `${data.reply}\n\n_${nudge}_`
+        const replyWithNudge = `${reply}\n\n_${nudge}_`
         pushBot(replyWithNudge, [{ id: '__open_upgrade', label: '🚀 Buka Career GPS Premium' }])
       } else {
-        pushBot(data.reply, null)
+        pushBot(reply, null)
       }
 
       if (user?.id && fullHistory.filter(m => m.role === 'user').length >= 3) {
