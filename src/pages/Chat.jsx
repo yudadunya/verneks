@@ -206,7 +206,7 @@ export default function Chat({ user, chatMessages = [], setChatMessages }) {
           p.target_posisi       ? `Target posisi: ${p.target_posisi}` : null,
           p.industri            ? `Industri: ${p.industri}` : null,
           p.career_readiness != null ? `Career Readiness: ${p.career_readiness}%` : null,
-          g?.career_stage       ? `Career Stage: ${g.career_stage} (progress ${g.progress_percent || 0}%)` : null,
+          g?.career_stage       ? `Career Stage: ${g.career_stage} (progress ${g.progress_percent || p?.career_readiness || 0}%)` : null,
           g?.current_focus      ? `Focus saat ini: ${g.current_focus}` : null,
           g?.next_milestone     ? `Next milestone: ${g.next_milestone}` : null,
           p.hambatan     ? `Tantangan utama: ${p.hambatan}` : null,
@@ -269,7 +269,7 @@ export default function Chat({ user, chatMessages = [], setChatMessages }) {
             greeting = 'Halo' + (firstName ? (' ' + firstName) : '') + '! \ud83d\udc4b Ada yang bisa aku bantu hari ini?'
           } else {
             const stage = g.career_stage
-            const progress = g.progress_percent || 0
+            const progress = g?.progress_percent || p?.career_readiness || 0
             const focus = g.current_focus
             const milestone = g.next_milestone
             const streak = g.streak_days || 0
@@ -526,8 +526,14 @@ Pilih yang sesuai buat kamu:`
         // Kalau sedang dalam flow cv-maker, jangan masuk coach
         if (mode.startsWith('cv-maker')) return
 
-        setMode('coach'); setCoachHistory([{ role: 'user', content: id }])
-        setLoading(true); await callCoachApi([{ role: 'user', content: id }]); setLoading(false)
+        // Gunakan coachHistory yang sudah ada (context injection dari greeting)
+        // jangan overwrite dengan array baru — itu buang konteks profil user
+        setMode('coach')
+        const startHistory = coachHistory.length > 0
+          ? [...coachHistory, { role: 'user', content: id }]
+          : [{ role: 'user', content: id }]
+        setCoachHistory(startHistory)
+        setLoading(true); await callCoachApi(startHistory); setLoading(false)
       }
     }
   }
@@ -932,12 +938,15 @@ Pilih yang sesuai buat kamu:`
       const fullHistory = [...history, { role: 'assistant', content: reply }]
       setCoachHistory(fullHistory)
 
-      // Untuk free user: tambahkan persuasi halus + tombol upgrade di setiap reply
+      // Untuk free user: nudge setiap 5 pesan — tidak setiap reply (spec V2)
       if (plan === 'free') {
-        const nudge = UPGRADE_NUDGES[nudgeIndexRef.current % UPGRADE_NUDGES.length]
         nudgeIndexRef.current += 1
-        const replyWithNudge = `${reply}\n\n_${nudge}_`
-        pushBot(replyWithNudge, [{ id: '__open_upgrade', label: '🚀 Buka Career GPS Premium' }])
+        if (nudgeIndexRef.current % 5 === 0) {
+          const nudge = UPGRADE_NUDGES[Math.floor(nudgeIndexRef.current / 5 - 1) % UPGRADE_NUDGES.length]
+          pushBot(`${reply}\n\n_${nudge}_`, [{ id: '__open_upgrade', label: '🚀 Buka Career GPS Premium' }])
+        } else {
+          pushBot(reply, null)
+        }
       } else {
         pushBot(reply, null)
       }
