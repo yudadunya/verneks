@@ -340,51 +340,86 @@ export default function Chat({ user, chatMessages = [], setChatMessages }) {
     const firstName = (user?.user_metadata?.name || user?.user_metadata?.full_name || '').split(' ')[0]
 
     Promise.all([
-      supabase.from('user_career_profiles').select('nama, target_posisi, career_readiness, skill_gaps, greeted_at').eq('user_id', user.id).maybeSingle(),
+      supabase.from('user_career_profiles').select('nama, target_posisi, posisi_saat_ini, career_readiness, skill_gaps, hambatan, mentor_message, greeted_at').eq('user_id', user.id).maybeSingle(),
       supabase.from('user_growth_state').select('career_stage, progress_percent, current_focus, next_milestone, streak_days').eq('user_id', user.id).maybeSingle(),
-    ]).then(([{ data: p }, { data: g }]) => {
-      const name = firstName || p?.nama?.split(' ')[0] || ''
-      const nameStr = name ? ` ${name}` : ''
-      const target = p?.target_posisi || null
+      supabase.from('user_genome_scores').select('top_strength').eq('user_id', user.id).maybeSingle(),
+    ]).then(([{ data: p }, { data: g }, { data: gs }]) => {
+      const name     = firstName || p?.nama?.split(' ')[0] || ''
+      const nameStr  = name ? ` ${name}` : ''
+      const target   = p?.target_posisi || null
       const progress = g?.progress_percent || p?.career_readiness || 0
-      const stage = g?.career_stage || null
-      const focus = g?.current_focus || null
-      const streak = g?.streak_days || 0
+      const stage    = g?.career_stage || null
+      const focus    = g?.current_focus || null
+      const streak   = g?.streak_days || 0
 
       let greeting = ''
 
       if (!p?.greeted_at) {
-        // Premium baru pertama kali — greeting khusus
-        greeting = `Halo${nameStr}! 👋 Selamat datang di Verneks Premium.
-
-` +
-          (target ? `Saya sudah melihat target kamu: **${target}** dengan readiness ${progress}%.
-
-` : '') +
-          `Sebagai mentor AI premium kamu, saya siap membantu lebih dalam — roadmap personal, strategi karier, dan coaching intensif.
-
-Mau mulai dari mana?`
+        // Premium pertama kali — personal dari data discovery
+        const hambatan = p?.hambatan
+        const rawGaps  = p?.skill_gaps
+        const gaps     = Array.isArray(rawGaps) ? rawGaps
+                        : (rawGaps && typeof rawGaps === 'object' ? Object.values(rawGaps) : [])
+        const topGap   = gaps[0]
+        const fLines   = [`Halo${nameStr}! ⭐ Selamat datang di Premium.`]
+        if (target) fLines.push(`\nAku sudah baca semua data kariermu.\nTarget kamu: **${target}** — readiness ${progress}%.`)
+        if (hambatan) {
+          fLines.push(`\nAku tahu tantangan terbesarmu:\n${hambatan}`)
+          fLines.push(`\nSekarang kita bisa kerja lebih dalam dan personal untuk mengatasinya.`)
+        } else if (topGap) {
+          fLines.push(`\nKita akan fokus menutup gap **${topGap}** yang paling krusial.`)
+        }
+        fLines.push(`\nMau mulai dari mana?`)
+        greeting = fLines.join('\n')
 
         supabase.from('user_career_profiles')
           .update({ greeted_at: new Date().toISOString() })
           .eq('user_id', user.id)
           .then()
 
-      } else if (stage) {
-        // Returning premium — greeting by stage
-        const stageGreet = {
-          'Career Explorer':    `Halo${nameStr}! 🌱 Progress ${progress}%.${focus ? ` Fokus: **${focus}**.` : ''} Mau kita bahas strategi hari ini?`,
-          'Career Builder':     `Halo${nameStr}! 🔰 Progress ${progress}%.${focus ? ` Next step: **${focus}**.` : ''} Siap lanjut?`,
-          'Career Professional':`Halo${nameStr}! ⭐ Progress ${progress}%. ${focus ? `Fokus sekarang: **${focus}**.` : ''} Ada yang ingin kita tackle?`,
-          'Career Expert':      `Halo${nameStr}! 🏆 Progress ${progress}%. Sudah dekat ke puncak — mau kita strategi untuk **${g?.next_milestone || 'milestone berikutnya'}**?`,
-          'Career Leader':      `Halo${nameStr}! 👑 Progress ${progress}%. Bagaimana aku bisa bantu kamu hari ini?`,
-        }
-        greeting = stageGreet[stage] || `Halo${nameStr}! 👋 Progress ${progress}%. Ada yang bisa aku bantu?`
-        if (streak >= 3) greeting += `
-
-🔥 Streak ${streak} hari — luar biasa!`
       } else {
-        greeting = `Halo${nameStr}! 👋 Senang bertemu lagi. Ada yang ingin kita bahas hari ini?`
+        // Returning premium — WOW MOMENT (sama seperti free, data lebih kaya)
+        const hambatan = p?.hambatan
+        const rawGaps  = p?.skill_gaps
+        const gaps     = Array.isArray(rawGaps) ? rawGaps
+                        : (rawGaps && typeof rawGaps === 'object' ? Object.values(rawGaps) : [])
+
+        const lines = []
+
+        // Sapaan
+        lines.push(`Halo${nameStr} 👋`)
+
+        // Target karier — inti wow moment
+        if (target) {
+          lines.push(`\nTerakhir kita berbicara,\nkamu ingin menjadi **${target}**.`)
+        }
+
+        // Tantangan spesifik dari data discovery
+        if (hambatan) {
+          lines.push(`\nTantangan terbesarmu saat ini:\n${hambatan}`)
+        } else if (gaps.length >= 2) {
+          lines.push(`\nKamu masih perlu mengembangkan\n**${gaps[0]}** dan **${gaps[1]}**.`)
+        } else if (gaps.length === 1) {
+          lines.push(`\nFokus pengembanganmu saat ini:\n**${gaps[0]}**.`)
+        }
+
+        // Progress / streak / fokus
+        if (streak >= 3) {
+          lines.push(`\n🔥 Streak **${streak} hari** — konsistensimu luar biasa!`)
+        } else if (focus && focus !== gaps[0]) {
+          lines.push(`\nKamu sedang mengerjakan **${focus}** — terus ya!`)
+        } else if (progress > 0 && progress < 80) {
+          const progressMsg = progress < 30 ? 'baru mulai, pantang menyerah!'
+                             : progress < 60 ? 'sudah cukup jauh, jangan berhenti!'
+                             : 'hampir sampai, sedikit lagi!'
+          lines.push(`\nProgress kariermu **${progress}%** — ${progressMsg}`)
+        }
+
+        // Penutup premium — sedikit berbeda dari free
+        lines.push(`\nSebagai mentor premium-mu, aku siap membantu lebih dalam. ⭐`)
+        lines.push(`\nMau kita mulai dari mana hari ini?`)
+
+        greeting = lines.join('\n')
       }
 
       pushBot(greeting)
