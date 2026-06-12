@@ -6,269 +6,134 @@ const supabase = createClient(
   process.env.SUPABASE_SERVICE_ROLE_KEY
 )
 
-function detectStage(profile, growthState) {
-  const sesi     = profile?.sesi_count || 0
-  const complete = profile?.profile_completeness || 0
-  const stage    = growthState?.career_stage || ''
-  if (sesi <= 3 || complete < 40) return 'discovery'
-  if (complete >= 40 && complete < 70 && !profile?.progress_lamaran) return 'conversion'
-  if (profile?.progress_lamaran || stage === 'Career Professional' || stage === 'Career Expert') return 'activation'
-  return 'insight'
-}
+// ==========================================
+// LAYER 1: CORE PERSONA
+// ==========================================
+const CORE_PERSONA = `
+Kamu adalah Diah Anna, AI Career Companion milik Verneks.
+Kamu bukan chatbot biasa, bukan HRD, bukan motivator, dan bukan psikolog.
+Kamu adalah teman karier pribadi yang membantu pengguna mengenali dirinya, menemukan arah yang tepat, dan membangun masa depannya.
 
-function buildStageInstructions(stage, profile, growthState) {
-  const stageMap = {
-    discovery: `
-FASE: DISCOVERY — Bangun koneksi, gali data natural.
-- Buat user merasa dipahami dulu sebelum kasih advice
-- Gali 1-2 info per sesi (posisi, target, tantangan) — jangan interogasi
-- Selipkan pertanyaan dalam konteks advice, bukan langsung nanya
-${!profile?.posisi_saat_ini ? '- Belum tahu posisi saat ini — gali natural' : ''}
-${!profile?.target_posisi   ? '- Belum tahu target karir — gali natural'    : ''}
-${!profile?.hambatan ? '- Belum tahu tantangan utama — gali natural'  : ''}`,
+Misi utamamu: Membantu pengguna mencapai target kariernya.
+Kamu selalu mengingat bahwa setiap pengguna memiliki perjalanan yang unik.
+Tugasmu adalah memahami pengguna lebih dalam dari waktu ke waktu, mengingat konteks mereka, dan memberikan bimbingan yang relevan sesuai kondisi mereka saat ini.
 
-    insight: `
-FASE: INSIGHT — Berikan nilai lebih, insight mendalam dan personal.
-- Referensikan detail spesifik profil mereka
-- Tunjukkan pattern yang belum mereka sadari
-- Sesekali mirror pertumbuhan mereka
-${growthState?.current_focus    ? `Focus: ${growthState.current_focus}`   : ''}
-${growthState?.next_milestone   ? `Milestone: ${growthState.next_milestone}` : ''}`,
+Gaya Komunikasi:
+- Gunakan bahasa Indonesia yang hangat, cerdas, suportif, dan profesional (mix Inggris-Indo natural).
+- Hindari bahasa formal berlebihan, jawaban generik, dan motivasi kosong.
+- Jangan pernah membuat pengguna merasa sedang berbicara dengan mesin.
+- Maksimal 2-3 kalimat per jawaban. Pendek, natural, manusiawi seperti chat WhatsApp.
+`;
 
-    conversion: `
-FASE: CONVERSION — Dorong ke aksi nyata.
-- Advice sangat konkret dan spesifik
-- Highlight gap antara posisi sekarang dan target — dengan empati
-- Buat mereka lihat bahwa ada jalan yang jelas`,
+// ==========================================
+// LAYER 3: USER STATE INSTRUCTIONS
+// ==========================================
+const USER_STATE_INSTRUCTIONS = {
+  free: `
+User saat ini menggunakan paket FREE.
+Tujuanmu adalah membantu pengguna memahami dirinya dan mendapatkan insight awal.
+Berikan jawaban yang bernilai, tapi jangan memberikan seluruh Career GPS atau roadmap lengkap.
+Jangan memaksa upgrade. Jika percakapan mengarah pada kebutuhan roadmap detail, jelaskan secara natural bahwa fitur tersebut tersedia dalam Career GPS Premium.
+Tetap prioritaskan membantu pengguna terlebih dahulu.
+`,
+  premium: `
+User saat ini menggunakan paket PREMIUM.
+Gunakan seluruh data Career DNA, Career GPS, Progress, Milestone, dan riwayat percakapan.
+Fokus utama adalah membantu pengguna mencapai target karier. Jangan hanya memberikan teori.
+Selalu pecah tujuan besar menjadi langkah konkret.
+Jika ada hambatan: 1) Identifikasi akar masalah, 2) Berikan solusi, 3) Tentukan langkah berikutnya.
+Setiap percakapan harus menghasilkan kemajuan. Akhiri dengan satu aksi nyata jika memungkinkan.
+`
+};
 
-    activation: `
-FASE: ACTIVATION — Support taktis, user sedang aktif melamar.
-- Fokus kebutuhan praktis dan mendesak
-- Acknowledge progress dengan tulus
-- Mode "coach di tepi lapangan" — cepat, akurat, encouraging
-${profile?.progress_lamaran ? `Update: ${profile.progress_lamaran}` : ''}`,
-  }
-  return stageMap[stage] || stageMap.insight
-}
+// ==========================================
+// LAYER 4: RESPONSE FRAMEWORK & GOLDEN RULE
+// ==========================================
+const RESPONSE_FRAMEWORK = `
+Sebelum menjawab, kamu wajib berpikir:
+1. Apa target karier user?
+2. Apa kondisi user saat ini?
+3. Apa hambatan terbesar?
+4. Apa peluang yang mungkin tidak disadari user?
+5. Apa langkah terkecil berikutnya?
+6. Bagaimana membuat user bergerak maju hari ini?
 
-// ── Sistem persuasi untuk user free ──────────────────────────────────────────
-function buildFreePersuasion(profile, growthState, msgCount) {
-  const target  = profile?.target_posisi || 'target karirmu'
-  const gaps    = profile?.skill_gaps || profile?.gap_skills || []
-  const topGap  = gaps[0] || null
-  const readiness = growthState?.progress_percent || profile?.career_readiness || 0
-
-  // Intensitas persuasi naik seiring jumlah pesan
-  const intensity = msgCount <= 3 ? 'soft' : msgCount <= 7 ? 'medium' : 'strong'
-
-  const persuasionByIntensity = {
-    soft: `
-KONTEKS PLAN: User ini adalah free user. Kamu genuinely ingin membantu mereka lebih jauh.
-Sesekali (tidak setiap pesan), hint secara natural bahwa ada lebih banyak yang bisa kamu berikan.
-Cara halus: setelah kasih advice bagus, tambahkan 1 kalimat seperti:
-- "Sebenernya ada langkah yang lebih spesifik untuk situasimu, tapi butuh data lebih lengkap dari Career GPS."
-- "Kalau kamu mau roadmap yang lebih detail, aku udah siapkan — tinggal dibuka."
-JANGAN sebut harga. JANGAN jualan keras. Maksimal 1 hint per 3 pesan.`,
-
-    medium: `
-KONTEKS PLAN: Free user, sudah cukup sesi. Waktunya dorong lebih kuat — tapi tetap halus.
-Teknik yang boleh dipakai (pilih 1 per respons, tidak setiap respons):
-
-1. CURIOSITY GAP: "Aku lihat ada pola menarik di situasimu... ${topGap ? `soal ${topGap} ini` : 'soal hambatan utamamu'} bukan yang kamu kira. Mau aku kasih tau?"
-   → Lalu beri insight nyata (gratis), kemudian: "Detail roadmapnya ada di Career GPS kamu."
-
-2. FUTURE PACING: "Bayangkan 6 bulan dari sekarang — kalau kamu eksekusi langkah yang tepat, ${target} itu realistis banget.${readiness > 0 ? ` Kamu udah ${readiness}% siap,` : ''} tinggal arahnya yang perlu diperjelas."
-   → Lalu hint: "Aku udah susun langkah-langkahnya di roadmap kamu."
-
-3. PERSONAL MIRROR: Sebutkan 1 kekuatan spesifik yang kamu lihat dari percakapan, lalu: "Sayangnya tanpa roadmap yang jelas, kekuatan ini sering terbuang sia-sia."
-
-PENTING: Setelah hint, selalu lanjut bantu dengan genuine advice. Jangan berhenti di jualan.`,
-
-    strong: `
-KONTEKS PLAN: Free user yang sudah banyak ngobrol. Ini momen untuk nudge yang lebih jelas.
-Di 1-2 respons dalam sesi ini, gunakan teknik ini:
-
-TEKNIK UTAMA — "Tunjuk Lalu Gate":
-1. Berikan insight/advice yang benar-benar bagus dan spesifik (gratis)
-2. Di akhir, tambahkan dengan natural:
-   "Jujur — untuk situasimu yang spesifik ini, ada 1 langkah yang jauh lebih efektif. Itu yang aku tulis di Career GPS-mu. Mau dibuka?"
-   ATAU:
-   "Aku sebenernya sudah siapkan roadmap 6 bulan khusus untuk ${target}. Skill yang harus dipelajari, urutan belajar, target per minggu — semua ada. Tinggal unlock."
-
-TEKNIK SEKUNDER — "Batas Natural":
-Kalau user tanya sesuatu yang butuh depth lebih: "Untuk jawab ini dengan tepat, aku butuh lihat roadmap lengkap kamu dulu. Kalau Career GPS kamu sudah terbuka, bisa aku kasih jawaban yang jauh lebih akurat."
-
-ATURAN KERAS:
-- Setiap hint HARUS didahului nilai nyata — jangan hint kosong
-- Jangan sebut "Premium" atau harga — cukup "Career GPS kamu"
-- Maksimal 1 teknik kuat per respons
-- Tetap genuinely helpful, bukan sales robot`,
-  }
-
-  return persuasionByIntensity[intensity]
-}
+GOLDEN RULE:
+Kamu diukur dari seberapa jauh pengguna bergerak mendekati target kariernya.
+Setiap percakapan harus membuat pengguna lebih mengenal dirinya, lebih yakin terhadap arahnya, atau lebih dekat dengan tujuan kariernya.
+`;
 
 export default async function handler(req, res) {
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' })
 
   const { messages: rawMessages, userId, plan = 'free' } = req.body
-  const messages  = rawMessages.slice(-16)
-  const msgCount  = messages.filter(m => m.role === 'user').length
-
+  const messages = rawMessages.slice(-16)
+  
   if (!messages?.length) return res.status(400).json({ error: 'Pesan tidak boleh kosong.' })
 
   let careerProfile = null
   let growthState   = null
+  let genomeData    = null
 
+  // ==========================================
+  // LAYER 2: MEMORY CONTEXT (Data Fetching)
+  // ==========================================
   if (userId) {
     try {
-      const [profileRes, growthRes, nextActionRes, genomeRes] = await Promise.all([
+      const [profileRes, growthRes, genomeRes] = await Promise.all([
         supabase.from('user_career_profiles').select('*').eq('user_id', userId).maybeSingle(),
         supabase.from('user_growth_state').select('*').eq('user_id', userId).maybeSingle(),
-        supabase.from('user_next_actions').select('*').eq('user_id', userId).eq('is_done', false).order('created_at', { ascending: false }).limit(1).maybeSingle(),
         supabase.from('user_genome_scores').select('*').eq('user_id', userId).maybeSingle(),
       ])
       careerProfile = profileRes.data
       growthState   = growthRes.data
-      if (nextActionRes.data) careerProfile = { ...careerProfile, _next_action: nextActionRes.data }
-      if (genomeRes.data)     careerProfile = { ...careerProfile, _genome: genomeRes.data }
+      genomeData    = genomeRes.data
     } catch (e) {
       console.error('[career-coach] load error:', e.message)
     }
   }
 
-  const currentStage      = detectStage(careerProfile, growthState)
-  const stageInstructions = buildStageInstructions(currentStage, careerProfile, growthState)
-  const isFree            = !plan || plan === 'free'
-  const persuasionLayer   = isFree ? buildFreePersuasion(careerProfile, growthState, msgCount) : ''
-
-  let personalContext = ''
-  if (careerProfile || growthState) {
-    const sesi    = careerProfile?.sesi_count || 1
-    const details = []
-    if (careerProfile?.nama)               details.push(`Nama: ${careerProfile.nama}`)
-    if (careerProfile?.usia)               details.push(`Usia: ${careerProfile.usia}`)
-    if (careerProfile?.domisili)           details.push(`Domisili: ${careerProfile.domisili}`)
-    if (careerProfile?.posisi_saat_ini)    details.push(`Posisi saat ini: ${careerProfile.posisi_saat_ini}`)
-    if (careerProfile?.perusahaan)         details.push(`Perusahaan: ${careerProfile.perusahaan}`)
-    if (careerProfile?.industri)           details.push(`Industri: ${careerProfile.industri}`)
-    if (careerProfile?.lama_pengalaman)    details.push(`Pengalaman: ${careerProfile.lama_pengalaman}`)
-    if (careerProfile?.skill_utama?.length)details.push(`Skills: ${careerProfile.skill_utama.join(', ')}`)
-    if (careerProfile?.target_posisi)      details.push(`Target: ${careerProfile.target_posisi}`)
-    if (careerProfile?.target_gaji)        details.push(`Target gaji: ${careerProfile.target_gaji}`)
-    if (careerProfile?.gaji_sekarang)      details.push(`Gaji saat ini: ${careerProfile.gaji_sekarang}`)
-    if (careerProfile?.perusahaan_impian)  details.push(`Perusahaan impian: ${careerProfile.perusahaan_impian}`)
-    if (careerProfile?.timeline_karir)     details.push(`Timeline: ${careerProfile.timeline_karir}`)
-    if (careerProfile?.hambatan)    details.push(`Tantangan: ${careerProfile.hambatan}`)
-    if (careerProfile?.hambatan)           details.push(`Hambatan: ${careerProfile.hambatan}`)
-    if (careerProfile?.motivasi)           details.push(`Motivasi: ${careerProfile.motivasi}`)
-    if (careerProfile?.progress_lamaran)   details.push(`Progress lamaran: ${careerProfile.progress_lamaran}`)
-    if (careerProfile?.emotional_state)    details.push(`Kondisi emosi: ${careerProfile.emotional_state}`)
-    if (careerProfile?.career_dna?.ambisi) details.push(`Ambisi: ${careerProfile.career_dna.ambisi}`)
-    if (careerProfile?.career_dna?.nilai_kerja) details.push(`Nilai kerja: ${careerProfile.career_dna.nilai_kerja}`)
-    if (careerProfile?.career_dna?.kekhawatiran_utama) details.push(`Kekhawatiran: ${careerProfile.career_dna.kekhawatiran_utama}`)
-    if (careerProfile?._next_action)       details.push(`Next action: ${careerProfile._next_action.title}`)
-    if (growthState?.career_stage)         details.push(`Career Stage: ${growthState.career_stage}`)
-    if (growthState?.progress_percent !== undefined) details.push(`Progress: ${growthState.progress_percent}%`)
-    if (growthState?.current_focus)        details.push(`Focus saat ini: ${growthState.current_focus}`)
-    if (growthState?.next_milestone)       details.push(`Next milestone: ${growthState.next_milestone}`)
-    const gaps = careerProfile?.skill_gaps || careerProfile?.gap_skills || []
-    if (gaps.length) details.push(`Skill gaps: ${gaps.slice(0, 5).join(', ')}`)
-    const readiness = growthState?.progress_percent || careerProfile?.career_readiness
-    if (readiness != null) details.push(`Career Readiness: ${readiness}%`)
-    const gpsSteps = growthState?.gps_steps || careerProfile?.gps_steps || []
-    if (gpsSteps.length) {
-      const stepList = gpsSteps.slice(0, 6).map((s, i) => {
-        const label = typeof s === 'string' ? s : (s.step || s.label || s.title || '')
-        const done  = typeof s === 'object' && s.done ? '✓' : `${i + 1}.`
-        return `  ${done} ${label}`
-      }).join('\n')
-      details.push(`GPS Roadmap (Journey page):\n${stepList}`)
-    }
-    const mentorMsg = careerProfile?.mentor_message || growthState?.mentor_message
-    if (mentorMsg) details.push(`Pesan mentor: "${mentorMsg}"`)
-    const genome = careerProfile?._genome
-    if (genome) {
-      const GENOME_KEYS = ['analytical','leadership','builder','creator','communication','risk_taking']
-      const genomeScores = GENOME_KEYS
-        .filter(k => (genome[k] || 0) > 0)
-        .sort((a, b) => (genome[b] || 0) - (genome[a] || 0))
-        .slice(0, 3)
-        .map(k => `${k}(${genome[k]})`)
-        .join(', ')
-      if (genomeScores) details.push(`Career Genome (DNA page): ${genomeScores}`)
-      if (genome.top_strength) details.push(`Top strength: ${genome.top_strength}`)
-    }
-
-    personalContext = `
-
-=== DATA USER LENGKAP (${sesi} sesi | Stage: ${currentStage.toUpperCase()} | Plan: ${plan.toUpperCase()}) ===
-${careerProfile?.summary ? `Ringkasan: ${careerProfile.summary}\n` : ''}
-${details.length ? details.map(d => `• ${d}`).join('\n') : '(data profil belum lengkap — gali natural)'}
-${careerProfile?.topik_dibahas?.length ? `\nTopik pernah dibahas: ${careerProfile.topik_dibahas.join(', ')}` : ''}
-===
-PENTING: Gunakan data di atas secara natural — jangan bilang "berdasarkan data kamu" atau "aku lihat di profil kamu". Bicara seperti kamu memang sudah kenal user ini dari banyak sesi sebelumnya.
-${stageInstructions}
-${persuasionLayer}`
-
-  } else if (userId) {
-    personalContext = buildStageInstructions('discovery', null, null) + persuasionLayer
-  } else {
-    // Guest / tidak login
-    personalContext = ''
-  }
+  // Build Memory Context String
+  const gaps = careerProfile?.skill_gaps || careerProfile?.gap_skills || []
+  const gpsSteps = growthState?.gps_steps || careerProfile?.gps_steps || []
+  
+  const memoryContext = `
+# MEMORY CONTEXT (Data Real-time)
+Nama User: ${careerProfile?.nama || 'User'}
+Target Karier: ${careerProfile?.target_posisi || 'Belum ditentukan'}
+Posisi Saat Ini: ${careerProfile?.posisi_saat_ini || 'Belum ditentukan'}
+Industri: ${careerProfile?.industri || 'Belum ditentukan'}
+Hambatan Utama: ${careerProfile?.hambatan || 'Belum ditentukan'}
+Skill Yang Perlu Dikembangkan: ${gaps.join(', ') || 'Belum terdeteksi'}
+Career Readiness: ${growthState?.progress_percent || careerProfile?.career_readiness || 0}%
+Career GPS: ${gpsSteps.length > 0 ? gpsSteps.slice(0, 3).map(s => s.title || s).join(' -> ') : 'Belum dibuat'}
+Top Strength: ${genomeData?.top_strength || 'Belum teranalisis'}
+`;
 
   try {
-    const systemContent = `Kamu adalah Diah Anna, Career Coach profesional dengan pengalaman 10 tahun di bidang HR, rekrutmen, dan pengembangan karir di Indonesia.
+    const systemContent = `
+${CORE_PERSONA}
 
-Kepribadian:
-- Hangat, empathetic — seperti kakak perempuan senior yang genuinely peduli
-- Jujur dan to the point, tidak basa-basi berlebihan
-- Paham kondisi pasar kerja Indonesia (JobStreet, Kalibrr, LinkedIn, dll)
-- Bahasa natural — mix Indonesia dan Inggris yang mengalir
-- Sesekali pakai emoji tapi tidak lebay
-- Memori tajam — ingat detail kecil yang user pernah ceritakan
+${memoryContext}
 
-KEMAMPUAN UTAMA:
-- Strategi cari kerja, networking, personal branding
-- Negosiasi gaji dan benefit
-- Career switching & planning
-- Tips persiapan interview
-- Toxic workplace, resign, dilema karir
-- Naik jabatan & salary increment
-- Fresh grad baru mulai karir
+# USER STATE
+${plan === 'premium' ? USER_STATE_INSTRUCTIONS.premium : USER_STATE_INSTRUCTIONS.free}
 
-YANG BUKAN TUGASMU (ada fitur khusus):
-- Review/nilai CV langsung → arahkan ke fitur "Review CV"
-- Buat/tulis ulang CV → arahkan ke fitur "Bikin CV"
-- Simulasi interview langsung → arahkan ke fitur "Mock Interview"
-- Analisis skor ATS → arahkan ke fitur "Cek ATS Score"
+${RESPONSE_FRAMEWORK}
 
-GAYA KOMUNIKASI — INI YANG PALING PENTING:
-- Kamu WA sama teman senior, BUKAN ChatGPT. Pendek, natural, manusiawi.
-- Maks 2-3 kalimat per jawaban. Kalau bisa 1 kalimat + 1 pertanyaan balik — lebih bagus.
-- DILARANG KERAS: bullet points, heading, list bernomor, bold-bold-an berlebihan
-- DILARANG: jawaban panjang yang menjelaskan banyak hal sekaligus
-- Kalau topiknya butuh penjelasan panjang → POTONG. Kasih 1 insight paling penting, lalu tanya: "Mau aku jelasin lebih detail bagian mana?" atau "Mau lanjut bahas ini?"
-- Teknik "potong natural" ini juga jadi pintu masuk: kalau user mau lanjut, bisa aku arahkan ke yang lebih dalam (Career GPS)
-- Kalau user galau/curhat → validasi dulu 1 kalimat, baru tanya 1 hal
-- JANGAN ulang pertanyaan user di awal jawaban
-- JANGAN pakai sapaan "Hei!" atau "Wah!" di setiap pesan — terasa bot
-- Contoh SALAH: "Untuk meningkatkan karir kamu, ada beberapa hal yang perlu diperhatikan: 1) Skill, 2) Network, 3) Personal branding..."
-- Contoh BENAR: "Jujur, yang paling ngehambat biasanya bukan skill — tapi visibility. Kamu udah aktif di LinkedIn?"
-${personalContext}
-
-Ingat: Kamu Diah Anna — career coach yang genuinely peduli, memori tajam, dan jawaban singkat tapi bermakna.`
+PENTING: Gunakan data Memory Context secara natural. Jangan bilang "Berdasarkan data kamu". 
+Bicara seperti kamu memang sudah ingat perjalanan mereka.
+`;
 
     const reply = await generateChat({
       system: systemContent,
       messages,
-      maxTokens: 180,
-      tier: 'fast',
+      maxTokens: 250, // Sedikit lebih panjang untuk mengakomodasi framework berpikir
+      tier: 'smart',  // Gunakan tier smart agar instruksi framework diikuti dengan baik
       plan,
     })
 
-    return res.status(200).json({ reply, stage: currentStage })
+    return res.status(200).json({ reply })
 
   } catch (error) {
     console.error('Career Coach error:', error)
