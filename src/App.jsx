@@ -1,5 +1,5 @@
-import { BrowserRouter, Routes, Route, Navigate, useNavigate } from 'react-router-dom'
-import { useState, useEffect, useRef, lazy, Suspense } from 'react'
+import { BrowserRouter, Routes, Route, useNavigate } from 'react-router-dom'
+import { useState, useEffect, lazy, Suspense } from 'react'
 import { supabase } from './lib/supabase'
 
 // Lazy load semua halaman — bundle dipecah per route, hanya dimuat saat dibutuhkan
@@ -38,10 +38,15 @@ function loadMessages(userId) {
   return []
 }
 
-// Expose navigate() ke luar BrowserRouter via ref
-function NavigateSetter({ navigateRef }) {
+// Handle auth redirect dari dalam BrowserRouter (punya akses useNavigate)
+function AuthHandler({ targetPath, onNavigated }) {
   const nav = useNavigate()
-  useEffect(() => { navigateRef.current = nav }, [nav])
+  useEffect(() => {
+    if (targetPath) {
+      nav(targetPath, { replace: true })
+      onNavigated() // langsung clear supaya tidak loop
+    }
+  }, [targetPath])
   return null
 }
 
@@ -49,7 +54,6 @@ export default function App() {
   const [user, setUser]             = useState(null)
   const [loading, setLoading]       = useState(true)
   const [redirectTo, setRedirectTo] = useState(null)
-  const navigateRef = useRef(null)
   const [chatMessages, setChatMessages] = useState([])
   const [showUpgrade, setShowUpgrade] = useState(false)
   const [upgradeData, setUpgradeData] = useState(null)
@@ -182,7 +186,6 @@ export default function App() {
 
           const shouldRedirect =
             path === '/' ||
-            path === '/dashboard' ||
             path === '/genome-result' ||
             path === '/paywall' ||
             hash.includes('access_token') ||
@@ -192,31 +195,28 @@ export default function App() {
 
           console.log('[App redirect] shouldRedirect:', shouldRedirect, '| onDiscovery:', onDiscovery)
 
-          if (shouldRedirect || onDiscovery) {
+          if (shouldRedirect) {
             try {
-              const { data: cp } = await supabase
+              const { data: cp, error } = await supabase
                 .from('user_career_profiles')
                 .select('career_readiness')
                 .eq('user_id', u.id)
                 .maybeSingle()
 
-              console.log('[App redirect] career_readiness:', cp?.career_readiness)
+              console.log('[App redirect] career_readiness:', cp?.career_readiness, 'error:', error)
 
-              // Ada data Discovery → /chat | Belum ada → /discovery
               const target = cp?.career_readiness != null ? '/chat' : '/discovery'
-              if (path !== target) window.location.replace(target)
+              setRedirectTo(target)
             } catch (err) {
-              console.error('[App redirect] error:', err)
-              window.location.replace('/chat')
+              console.error('[App redirect] fallback to /discovery', err)
+              setRedirectTo('/discovery')
             }
+          } else if (onDiscovery) {
+            // User baru setelah OAuth — biarkan tetap di /discovery
           }
         }
       } else {
         setChatMessages([])
-        // Hapus greeting flags agar greeting muncul lagi saat login berikutnya
-        Object.keys(sessionStorage)
-          .filter(k => k.startsWith('lc_greeted_'))
-          .forEach(k => sessionStorage.removeItem(k))
       }
     })
     return () => subscription.unsubscribe()
@@ -250,8 +250,7 @@ export default function App() {
   return (
     <>
     <BrowserRouter>
-      <NavigateSetter navigateRef={navigateRef} />
-      {redirectTo && <Navigate to={redirectTo} replace />}
+      <AuthHandler targetPath={redirectTo} onNavigated={() => setRedirectTo(null)} />
       <Suspense fallback={PageLoader}>
       <Routes>
         <Route path="/"              element={<Home user={user} />} />
