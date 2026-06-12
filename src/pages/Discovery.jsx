@@ -475,9 +475,9 @@ export default function Discovery() {
     try {
       await supabase.auth.signInWithOAuth({
         provider: 'google',
-        options: { redirectTo: `${window.location.origin}/discovery` }
+        options: { redirectTo: `${window.location.origin}/dashboard` }
       })
-      // Setelah redirect balik, App.jsx akan sync discovery_result ke Supabase
+      // Setelah redirect balik ke /dashboard, App.jsx akan sync discovery_result ke Supabase
     } catch {
       alert('Gagal login. Coba lagi!')
       setSaving(false)
