@@ -182,6 +182,7 @@ export default function App() {
 
           const shouldRedirect =
             path === '/' ||
+            path === '/dashboard' ||
             path === '/genome-result' ||
             path === '/paywall' ||
             hash.includes('access_token') ||
@@ -191,24 +192,23 @@ export default function App() {
 
           console.log('[App redirect] shouldRedirect:', shouldRedirect, '| onDiscovery:', onDiscovery)
 
-          if (shouldRedirect) {
+          if (shouldRedirect || onDiscovery) {
             try {
-              const { data: cp, error } = await supabase
+              const { data: cp } = await supabase
                 .from('user_career_profiles')
                 .select('career_readiness')
                 .eq('user_id', u.id)
                 .maybeSingle()
 
-              console.log('[App redirect] career_readiness:', cp?.career_readiness, 'error:', error)
+              console.log('[App redirect] career_readiness:', cp?.career_readiness)
 
+              // Ada data Discovery → /chat | Belum ada → /discovery
               const target = cp?.career_readiness != null ? '/chat' : '/discovery'
-              window.location.replace(target)
+              if (path !== target) window.location.replace(target)
             } catch (err) {
-              console.error('[App redirect] fallback to /discovery', err)
-              window.location.replace('/discovery')
+              console.error('[App redirect] error:', err)
+              window.location.replace('/chat')
             }
-          } else if (onDiscovery) {
-            // User baru setelah OAuth — biarkan tetap di /discovery
           }
         }
       } else {
