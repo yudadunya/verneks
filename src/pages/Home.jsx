@@ -201,27 +201,7 @@ export default function Home({ user }) {
         <div style={{ position: 'absolute', bottom: '15%', left: '25%', width: 240, height: 240, borderRadius: '50%', background: 'radial-gradient(circle, rgba(79,70,229,0.1) 0%, transparent 70%)', filter: 'blur(40px)' }} />
       </div>
 
-      {/* ══════════════════════════════════════════════════════════════════════
-          ANNOUNCEMENT BAR — LamarCerdas → Verneks
-      ══════════════════════════════════════════════════════════════════════ */}
-      <div style={{
-        position: 'relative', zIndex: 101,
-        background: 'linear-gradient(90deg, #7C3AED, #4F46E5, #06B6D4)',
-        padding: '9px 20px',
-        display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
-        textAlign: 'center',
-      }}>
-        <span style={{ fontSize: '0.75rem', color: '#fff', fontWeight: 400, opacity: 0.9 }}>
-          LamarCerdas kini hadir sebagai
-        </span>
-        <span style={{ fontSize: '0.78rem', color: '#fff', fontWeight: 800, letterSpacing: '0.5px' }}>
-          ✦ Verneks
-        </span>
-        <span style={{ fontSize: '0.75rem', color: '#fff', fontWeight: 400, opacity: 0.9 }}>
-          — AI Career Coach yang lebih personal, lebih cerdas.
-        </span>
-      </div>
-
+      
       {/* ══════════════════════════════════════════════════════════════════════
           NAVBAR
       ══════════════════════════════════════════════════════════════════════ */}
