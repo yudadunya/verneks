@@ -67,7 +67,10 @@ export default function Chat({ user, chatMessages = [], setChatMessages }) {
   const [interview, setInterview]       = useState({ position: '', level: '', messages: [], qNum: 0 })
   // coachHistory persistent — baca dari localStorage agar Diah Anna ingat konteks lintas sesi
   const coachKey = user?.id ? `lc_coach_${user.id}` : null
-  const greetingFiredRef = useRef(false) // guard: greeting hanya sekali per sesi
+  // Guard greeting: pakai sessionStorage agar persisten lintas navigasi (remount)
+  // useRef reset tiap remount → greeting muncul lagi setiap balik ke /chat
+  const greetingKey     = user?.id ? `lc_greeted_${user.id}` : null
+  const greetingFiredRef = useRef(false) // secondary guard untuk race condition
   const [coachHistory, setCoachHistoryRaw] = useState(() => {
     if (!coachKey) return []
     try {
@@ -175,10 +178,12 @@ export default function Chat({ user, chatMessages = [], setChatMessages }) {
     if (!user) return
     if (subLoading) return // tunggu plan terload dulu
     if (plan !== 'free') return // greeting Discovery hanya untuk user free
-    if (greetingFiredRef.current) return // sudah jalan di sesi ini
+    if (greetingFiredRef.current) return // race condition guard
+    if (greetingKey && sessionStorage.getItem(greetingKey)) return // sudah greeting di sesi ini
 
-    // Set ref SETELAH semua guard lolos — bukan sebelumnya
+    // Set KEDUA guard sebelum async fetch
     greetingFiredRef.current = true
+    if (greetingKey) sessionStorage.setItem(greetingKey, '1')
 
     const firstName = (user.user_metadata?.name || user.user_metadata?.full_name || '').split(' ')[0]
 
@@ -332,10 +337,12 @@ export default function Chat({ user, chatMessages = [], setChatMessages }) {
     if (subLoading) return
     if (plan !== 'premium') return
     if (isExpired) return
-    if (greetingFiredRef.current) return // sudah jalan di sesi ini
+    if (greetingFiredRef.current) return // race condition guard
+    if (greetingKey && sessionStorage.getItem(greetingKey)) return // sudah greeting di sesi ini
 
-    // Set ref SETELAH semua guard lolos
+    // Set KEDUA guard sebelum async fetch
     greetingFiredRef.current = true
+    if (greetingKey) sessionStorage.setItem(greetingKey, '1')
 
     const firstName = (user?.user_metadata?.name || user?.user_metadata?.full_name || '').split(' ')[0]
 
