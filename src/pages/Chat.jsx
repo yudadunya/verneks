@@ -263,26 +263,56 @@ export default function Chat({ user, chatMessages = [], setChatMessages }) {
             .eq('user_id', user.id)
             .then()
         } else {
-          // ── Greeting returning user ──
-          let greeting
-          if (!g || !g.career_stage) {
-            greeting = 'Halo' + (firstName ? (' ' + firstName) : '') + '! \ud83d\udc4b Ada yang bisa aku bantu hari ini?'
-          } else {
-            const stage = g.career_stage
-            const progress = g?.progress_percent || p?.career_readiness || 0
-            const focus = g.current_focus
-            const milestone = g.next_milestone
-            const streak = g.streak_days || 0
-            const greetingByStage = {
-              'Career Explorer':    ('Halo' + (firstName ? (' ' + firstName) : '') + '! \ud83c\udf31 Progress ' + progress + '%.' + (focus ? (' Fokus sekarang: **' + focus + '**.') : '') + ' Mau bahas apa hari ini?'),
-              'Career Builder':     ('Halo' + (firstName ? (' ' + firstName) : '') + '! \ud83d\udd30 Progress ' + progress + '%.' + (milestone ? (' Next: **' + milestone + '**.') : '') + ' Ada yang bisa aku bantu?'),
-              'Career Professional':('Halo' + (firstName ? (' ' + firstName) : '') + '! \u2b50 Progress ' + progress + '%.' + (focus ? (' Fokus: **' + focus + '**.') : '') + ' Mau naik level?'),
-              'Career Expert':      ('Halo' + (firstName ? (' ' + firstName) : '') + '! \ud83c\udfc6 Progress ' + progress + '%.' + (milestone ? (' Target: **' + milestone + '**.') : '') + ' Apa yang mau kita capai?'),
-              'Career Leader':      ('Halo' + (firstName ? (' ' + firstName) : '') + '! \ud83d\udc51 Progress ' + progress + '%. Bagaimana aku bisa bantu lebih jauh?'),
-            }
-            greeting = greetingByStage[stage] || ('Halo' + (firstName ? (' ' + firstName) : '') + '! \ud83d\udc4b Progress karirmu: ' + progress + '%. Ada yang bisa aku bantu?')
-            if (streak >= 3) greeting += ('\n\n\ud83d\udd25 Streak ' + streak + ' hari - mantap!')
+          // ── Greeting returning user — WOW MOMENT ──
+          // Semua data dari Discovery sudah ada di p & g — tampilkan fakta spesifik
+          const name      = firstName || p?.nama?.split(' ')[0] || ''
+          const target    = p?.target_posisi
+          const hambatan  = p?.hambatan
+          const rawGaps   = p?.skill_gaps
+          const gaps      = Array.isArray(rawGaps) ? rawGaps
+                           : (rawGaps && typeof rawGaps === 'object' ? Object.values(rawGaps) : [])
+          const focus     = g?.current_focus
+          const progress  = g?.progress_percent || p?.career_readiness || 0
+          const streak    = g?.streak_days || 0
+          const topStr    = gs?.top_strength
+
+          // Build greeting line by line berdasarkan data yang tersedia
+          const lines = []
+
+          // Baris 1: Sapaan
+          lines.push(`Halo${name ? ` ${name}` : ''} 👋`)
+
+          // Baris 2: Target karier — inti dari "Diah Anna ingat kamu"
+          if (target) {
+            lines.push(`\nTerakhir kita berbicara,\nkamu ingin menjadi **${target}**.`)
           }
+
+          // Baris 3: Tantangan spesifik (hambatan > skill gaps > current focus)
+          if (hambatan) {
+            lines.push(`\nTantangan terbesarmu saat ini:\n${hambatan}`)
+          } else if (gaps.length >= 2) {
+            lines.push(`\nKamu masih perlu mengembangkan\n**${gaps[0]}** dan **${gaps[1]}**.`)
+          } else if (gaps.length === 1) {
+            lines.push(`\nFokus pengembanganmu saat ini:\n**${gaps[0]}**.`)
+          }
+
+          // Baris 4 (opsional): Progress atau streak — tambah nuansa personal
+          if (streak >= 3) {
+            lines.push(`\n🔥 Streak **${streak} hari** — konsistensimu luar biasa!`)
+          } else if (focus && focus !== gaps[0]) {
+            lines.push(`\nKamu sedang mengerjakan **${focus}** — terus ya!`)
+          } else if (progress > 0 && progress < 80) {
+            const progressMsg = progress < 30 ? 'baru mulai, pantang menyerah!'
+                               : progress < 60 ? 'sudah cukup jauh, jangan berhenti!'
+                               : 'hampir sampai, sedikit lagi!'
+            lines.push(`\nProgress kariermu **${progress}%** — ${progressMsg}`)
+          }
+
+          // Penutup + pertanyaan terbuka
+          lines.push(`\nAku siap membantu kapan saja. 💪`)
+          lines.push(`\nApa yang ingin kamu bahas hari ini?`)
+
+          const greeting = lines.join('\n')
           pushBot(greeting)
         }
         return
