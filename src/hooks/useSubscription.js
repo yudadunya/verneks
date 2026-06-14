@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
 import { supabase } from '../lib/supabase'
+import { getActiveSubscription } from '../lib/subscription'
 
 // Free = 15 chat/hari + fitur masing-masing 1x/bulan, Premium = unlimited semua
 export const LIMITS = {
@@ -31,33 +32,23 @@ export function useSubscription(userId) {
   const fetchPlan = async () => {
     setLoading(true)
     try {
-      // Ambil subscription terbaru — aktif atau tidak
-      const { data, error } = await supabase
-        .from('subscriptions')
-        .select('plan, status, expires_at')
-        .eq('user_id', userId)
-        .order('created_at', { ascending: false })
-        .limit(1)
-        .maybeSingle()
-
-      if (error) console.error('[useSubscription] fetchPlan error:', error.message)
-
+      const data = await getActiveSubscription(userId)
       if (data?.plan && LIMITS[data.plan]) {
-        const expired = data.expires_at && new Date(data.expires_at) < new Date()
-        if (!expired && data.status === 'active') {
-          setPlan(data.plan)
-          setIsExpired(false)
-        } else if (expired && data.plan === 'premium') {
-          // Pernah premium tapi sudah habis
-          setPlan('free')
-          setIsExpired(true)
-        } else {
-          setPlan('free')
-          setIsExpired(false)
-        }
-      } else {
-        setPlan('free')
+        setPlan(data.plan)
         setIsExpired(false)
+      } else {
+        const { data: latest, error } = await supabase
+          .from('subscriptions')
+          .select('plan, expires_at, created_at')
+          .eq('user_id', userId)
+          .order('created_at', { ascending: false })
+          .limit(1)
+          .maybeSingle()
+
+        if (error) console.error('[useSubscription] fetchPlan error:', error.message)
+
+        setPlan('free')
+        setIsExpired(latest?.plan === 'premium' && !!latest?.expires_at && new Date(latest.expires_at) < new Date())
       }
     } catch (e) {
       console.error('[useSubscription] fetchPlan exception:', e)

@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
+import { getActiveSubscription, isPremiumSubscription } from '../lib/subscription'
 import BottomNav from '../components/BottomNav'
 
 // ─── CONSTANTS ────────────────────────────────────────────────────────────────
@@ -540,14 +541,14 @@ export default function Dashboard({ user }) {
       supabase.from('user_career_profiles').select('*').eq('user_id', user.id).maybeSingle(),
       supabase.from('user_genome_scores').select('*').eq('user_id', user.id).maybeSingle(),
       supabase.from('user_growth_state').select('*').eq('user_id', user.id).maybeSingle(),
-      supabase.from('subscriptions').select('plan').eq('user_id', user.id).eq('status', 'active').gte('expires_at', new Date().toISOString()).limit(1).maybeSingle(),
+      getActiveSubscription(user.id),
       supabase.from('user_next_actions').select('*').eq('user_id', user.id).order('created_at', { ascending: false }).limit(3),
       supabase.from('career_events').select('*').eq('user_id', user.id).order('created_at', { ascending: false }).limit(5),
-    ]).then(([{ data: p }, { data: g }, { data: gw }, { data: sub }, { data: acts }, { data: evs }]) => {
+    ]).then(([{ data: p }, { data: g }, { data: gw }, sub, { data: acts }, { data: evs }]) => {
       setProfile(p)
       setGenome(g)
       setGrowth(gw)
-      setIsPremium(!!sub?.plan && sub.plan !== 'free')
+      setIsPremium(isPremiumSubscription(sub))
       setActions(acts || [])
       setEvents(evs || [])
       setLoading(false)

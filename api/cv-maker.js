@@ -1,4 +1,5 @@
 import { generateText } from './lib/ai.js'
+import { ensureFeatureAccess, recordFeatureUsage } from './lib/access.js'
 
 const FORMAT_PROMPTS = {
   ats: {
@@ -67,6 +68,9 @@ Output dalam Markdown dengan label jelas tiap section. Langsung tulis tanpa intr
 
 export default async function handler(req, res) {
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' })
+  const access = await ensureFeatureAccess(req, 'cv-maker')
+  if (access.error) return res.status(access.status || 500).json({ error: access.error })
+
   const { mode, format, cvText, formData, jobTarget } = req.body
 
   if (!format || !FORMAT_PROMPTS[format]) return res.status(400).json({ error: 'Format tidak valid.' })
@@ -108,7 +112,9 @@ Jika ada informasi yang kurang, buat yang masuk akal dan realistis, tandai denga
       prompt,
       maxTokens: 1500,
       tier: 'smart',
+      plan: access.plan,
     })
+    await recordFeatureUsage(access.userId, 'cv-maker')
     return res.status(200).json({ result })
   } catch (error) {
     console.error('CV Maker error:', error)

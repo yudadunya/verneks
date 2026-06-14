@@ -1,10 +1,17 @@
 import { generateText, generateChat } from './lib/ai.js'
+import { ensureFeatureAccess, getAccessContext, recordFeatureUsage } from './lib/access.js'
 
 export default async function handler(req, res) {
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' })
   const { action, position, level, messages } = req.body
 
   try {
+    const access = action === 'start'
+      ? await ensureFeatureAccess(req, 'interview')
+      : await getAccessContext(req)
+
+    if (access.error) return res.status(access.status || 500).json({ error: access.error })
+
     if (action === 'start') {
       const reply = await generateText({
         system: `Kamu adalah Diah Anna, career coach yang sedang melakukan mock interview.
@@ -16,7 +23,9 @@ Format: sapa + penjelasan singkat + "Pertanyaan 1: [pertanyaan]"
 Jangan terlalu panjang.`,
         maxTokens: 300,
         tier: 'fast',
+        plan: access.plan,
       })
+      await recordFeatureUsage(access.userId, 'interview')
       return res.status(200).json({ reply, questionNumber: 1 })
     }
 
@@ -33,6 +42,7 @@ Gaya kamu hangat, jujur, dan konstruktif. Bahasa Indonesia natural.`,
         messages: [...messages, { role: 'user', content: nextAction }],
         maxTokens: 350,
         tier: 'fast',
+        plan: access.plan,
       })
       return res.status(200).json({ reply, questionNumber: questionNumber + 1, isComplete: isLastQuestion })
     }
@@ -67,6 +77,7 @@ Jujur tapi tetap supportif ya!`
         ],
         maxTokens: 2000,
         tier: 'smart',
+        plan: access.plan,
       })
       return res.status(200).json({ feedback })
     }

@@ -1,6 +1,7 @@
 // src/components/UpgradeModal.jsx
 import { useState, useEffect } from 'react'
 import { supabase } from '../lib/supabase'
+import { postJson } from '../lib/api'
 
 const PAYMENT_URL = 'http://lynk.id/yudadunya/r3o5ldq5qkex/checkout'
 
@@ -302,12 +303,7 @@ export default function UpgradeModal({ user, onClose, initialData = null }) {
                         if (!user?.id) return
                         setRedeemLoading(true); setRedeemMsg(null)
                         try {
-                          const res  = await fetch('/api/redeem-code', {
-                            method: 'POST',
-                            headers: { 'Content-Type': 'application/json' },
-                            body: JSON.stringify({ code: redeemCode, userId: user.id }),
-                          })
-                          const data = await res.json()
+                          const data = await postJson('/api/redeem-code', { code: redeemCode })
                           if (data.success) {
                             setRedeemDone(true)
                             setRedeemMsg({ type: 'ok', text: '🎉 Premium aktif 30 hari! Halaman akan refresh otomatis...' })

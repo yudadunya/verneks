@@ -1,10 +1,5 @@
 import { generateChat } from './lib/ai.js'
-import { createClient } from '@supabase/supabase-js'
-
-const supabase = createClient(
-  process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL,
-  process.env.SUPABASE_SERVICE_ROLE_KEY
-)
+import { ensureFeatureAccess, recordFeatureUsage, supabaseAdmin } from './lib/access.js'
 
 // ==========================================
 // LAYER 1: CORE PERSONA
@@ -66,9 +61,13 @@ Setiap percakapan harus membuat pengguna lebih mengenal dirinya, lebih yakin ter
 export default async function handler(req, res) {
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' })
 
-  const { messages: rawMessages, userId, plan = 'free' } = req.body
+  const access = await ensureFeatureAccess(req, 'chat')
+  if (access.error) return res.status(access.status || 500).json({ error: access.error })
+
+  const { messages: rawMessages = [] } = req.body
   const messages = rawMessages.slice(-16)
-  
+  const { userId, plan } = access
+
   if (!messages?.length) return res.status(400).json({ error: 'Pesan tidak boleh kosong.' })
 
   let careerProfile = null
@@ -81,9 +80,9 @@ export default async function handler(req, res) {
   if (userId) {
     try {
       const [profileRes, growthRes, genomeRes] = await Promise.all([
-        supabase.from('user_career_profiles').select('*').eq('user_id', userId).maybeSingle(),
-        supabase.from('user_growth_state').select('*').eq('user_id', userId).maybeSingle(),
-        supabase.from('user_genome_scores').select('*').eq('user_id', userId).maybeSingle(),
+        supabaseAdmin.from('user_career_profiles').select('*').eq('user_id', userId).maybeSingle(),
+        supabaseAdmin.from('user_growth_state').select('*').eq('user_id', userId).maybeSingle(),
+        supabaseAdmin.from('user_genome_scores').select('*').eq('user_id', userId).maybeSingle(),
       ])
       careerProfile = profileRes.data
       growthState   = growthRes.data
@@ -133,6 +132,7 @@ Bicara seperti kamu memang sudah ingat perjalanan mereka.
       plan,
     })
 
+    await recordFeatureUsage(userId, 'chat')
     return res.status(200).json({ reply })
 
   } catch (error) {

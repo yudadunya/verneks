@@ -1,7 +1,11 @@
 import { generateText } from './lib/ai.js'
+import { ensureFeatureAccess, recordFeatureUsage } from './lib/access.js'
 
 export default async function handler(req, res) {
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' })
+  const access = await ensureFeatureAccess(req, 'cv-review')
+  if (access.error) return res.status(access.status || 500).json({ error: access.error })
+
   const { cvText, jobTarget } = req.body
   if (!cvText || cvText.trim().length < 50) return res.status(400).json({ error: 'CV terlalu pendek atau kosong.' })
 
@@ -30,7 +34,9 @@ Jangan tambah seksi lain. Langsung mulai dari "Kesan Pertama", tanpa kalimat pem
       prompt: `${jobTarget ? `Target posisi: ${jobTarget}\n\n` : ''}Ini CV saya:\n\n${cvText.slice(0, 4000)}`,
       maxTokens: 700,
       tier: 'smart',
+      plan: access.plan,
     })
+    await recordFeatureUsage(access.userId, 'cv-review')
     return res.status(200).json({ review })
   } catch (error) {
     console.error('CV Review error:', error)

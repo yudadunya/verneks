@@ -1,16 +1,11 @@
-import { createClient } from '@supabase/supabase-js'
 import { generateText } from './lib/ai.js'
-
-const supabaseAdmin = createClient(
-  process.env.SUPABASE_URL,
-  process.env.SUPABASE_SERVICE_KEY
-)
+import { ensureFeatureAccess, supabaseAdmin } from './lib/access.js'
 
 export default async function handler(req, res) {
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' })
-
-  const { userId } = req.body
-  if (!userId) return res.status(400).json({ error: 'Missing userId' })
+  const access = await ensureFeatureAccess(req, 'chat', { premiumOnly: true })
+  if (access.error) return res.status(access.status || 500).json({ error: access.error })
+  const { userId, plan } = access
 
   // Ambil profil + genome user
   const [{ data: profile }, { data: genome }] = await Promise.all([
@@ -54,6 +49,7 @@ Balas HANYA dengan JSON array, tanpa teks lain:
     prompt,
     maxTokens: 800,
     tier: 'fast',
+    plan,
   })
 
   // Parse JSON — strip markdown fence kalau ada

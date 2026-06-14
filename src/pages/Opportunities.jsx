@@ -1,6 +1,7 @@
 import { useNavigate } from 'react-router-dom'
 import { useEffect, useState } from 'react'
-import { supabase } from '../lib/supabase'
+import { postJson } from '../lib/api'
+import { getActiveSubscription, isPremiumSubscription } from '../lib/subscription'
 import BottomNav from '../components/BottomNav'
 
 const CACHE_KEY  = 'lc_job_matches'
@@ -36,16 +37,9 @@ export default function Opportunities({ user }) {
   useEffect(() => {
     if (!user) { navigate('/'); return }
 
-    supabase
-      .from('subscriptions')
-      .select('plan')
-      .eq('user_id', user.id)
-      .eq('status', 'active')
-      .gte('expires_at', new Date().toISOString())
-      .limit(1)
-      .maybeSingle()
-      .then(({ data }) => {
-        const premium = !!data?.plan && data.plan !== 'free'
+    getActiveSubscription(user.id)
+      .then((data) => {
+        const premium = isPremiumSubscription(data)
         setIsPremium(premium)
         if (!premium) return
 
@@ -62,13 +56,7 @@ export default function Opportunities({ user }) {
     setLoading(true)
     setError(null)
     try {
-      const res  = await fetch('/api/job-match', {
-        method:  'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body:    JSON.stringify({ userId: user.id }),
-      })
-      const data = await res.json()
-      if (!res.ok) throw new Error(data.error)
+      const data = await postJson('/api/job-match', {})
       setJobs(data.jobs)
       saveCache(user.id, data.jobs)
     } catch (e) {

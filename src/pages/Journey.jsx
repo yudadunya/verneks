@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import BottomNav from '../components/BottomNav'
+import { getActiveSubscription, isPremiumSubscription } from '../lib/subscription'
 
 // ─── HELPERS ──────────────────────────────────────────────────────────────────
 
@@ -255,12 +256,8 @@ export default function Journey({ user }) {
   useEffect(() => {
     if (!user) { navigate('/'); return }
 
-    supabase
-      .from('subscriptions').select('plan')
-      .eq('user_id', user.id).eq('status', 'active')
-      .gte('expires_at', new Date().toISOString())
-      .limit(1).maybeSingle()
-      .then(({ data }) => setIsPremium(!!data?.plan && data.plan !== 'free'))
+    getActiveSubscription(user.id)
+      .then((data) => setIsPremium(isPremiumSubscription(data)))
 
     Promise.all([
       supabase.from('user_career_profiles')
