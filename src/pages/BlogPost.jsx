@@ -109,7 +109,7 @@ export default function BlogPost({ user }) {
     if (!post) return
 
     // ── Basic meta ──
-    document.title = `${post.title} | LamarCerdas Blog`
+    document.title = `${post.title} | Verneks Blog`
 
     const setMeta = (name, content) => {
       let el = document.querySelector(`meta[name="${name}"]`)
@@ -124,13 +124,13 @@ export default function BlogPost({ user }) {
 
     setMeta('description', post.excerpt)
     setMeta('keywords', post.keywords.join(', '))
-    setMeta('author', 'LamarCerdas')
+    setMeta('author', 'Verneks')
     setMeta('robots', 'index, follow')
     setOg('og:title', post.title)
     setOg('og:description', post.excerpt)
     setOg('og:type', 'article')
     setOg('og:url', window.location.href)
-    setOg('og:site_name', 'LamarCerdas')
+    setOg('og:site_name', 'Verneks')
 
     // ── Canonical ──
     let canonical = document.querySelector('link[rel="canonical"]')
@@ -145,8 +145,8 @@ export default function BlogPost({ user }) {
       description: post.excerpt,
       datePublished: post.date,
       dateModified: post.date,
-      author: { '@type': 'Organization', name: 'LamarCerdas', url: window.location.origin },
-      publisher: { '@type': 'Organization', name: 'LamarCerdas', url: window.location.origin },
+      author: { '@type': 'Organization', name: 'Verneks', url: window.location.origin },
+      publisher: { '@type': 'Organization', name: 'Verneks', url: window.location.origin },
       mainEntityOfPage: { '@type': 'WebPage', '@id': window.location.href },
       keywords: post.keywords.join(', '),
       inLanguage: 'id-ID',

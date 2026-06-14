@@ -14,7 +14,7 @@ export default function ForgotPassword() {
     setError(null)
 
     const { error } = await supabase.auth.resetPasswordForEmail(email, {
-      redirectTo: 'https://lamarcerdas.vercel.app/reset-password',
+      redirectTo: `${window.location.origin}/reset-password`,
     })
 
     if (error) {
@@ -37,7 +37,7 @@ export default function ForgotPassword() {
         <p style={{ color: 'var(--gray)', fontSize: '0.9rem', marginTop: '8px', lineHeight: 1.6 }}>
           Kami kirim link reset password ke <strong>{email}</strong>.
           Klik link-nya untuk buat password baru.
-          Kalau tidak ada email masuk dalam 5 menit, pastikan email kamu sudah terdaftar di LamarCerdas.
+          Kalau tidak ada email masuk dalam 5 menit, pastikan email kamu sudah terdaftar di Verneks.
         </p>
         <Link to="/login" style={{ ...styles.btn, display: 'block', textAlign: 'center', marginTop: '24px' }}>
           Kembali ke Login

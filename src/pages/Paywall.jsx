@@ -162,7 +162,7 @@ export default function Paywall() {
             <img src="/diah-anna.png" alt="Diah Anna" style={{ width:44, height:44, borderRadius:'50%', objectFit:'cover', border:'2px solid rgba(37,211,102,0.35)', flexShrink:0 }} />
             <div>
               <div style={{ color:'#25D366', fontWeight:700, fontSize:'0.85rem' }}>Diah Anna</div>
-              <div style={{ color:'rgba(255,255,255,0.3)', fontSize:'0.68rem' }}>AI Career Mentor · LamarCerdas</div>
+              <div style={{ color:'rgba(255,255,255,0.3)', fontSize:'0.68rem' }}>AI Career Mentor · Verneks</div>
             </div>
           </div>
 

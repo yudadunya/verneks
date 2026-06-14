@@ -28,12 +28,12 @@ export default function Login() {
         padding: '60px 24px 80px',
         textAlign: 'center'
       }}>
-        <div style={{ fontSize: '3.5rem', marginBottom: '12px' }}>💼</div>
+        <img src="/verneks_icon_1.png" alt="Verneks" style={{ width: 56, height: 56, objectFit: 'contain', marginBottom: '12px' }} />
         <div style={{ color: '#fff', fontWeight: 700, fontSize: '1.5rem', letterSpacing: '-0.3px' }}>
-          LamarCerdas
+          Verneks
         </div>
         <div style={{ color: 'rgba(255,255,255,0.7)', fontSize: '0.9rem', marginTop: '6px' }}>
-          Karir lebih cerdas bareng AI
+          Your AI Career Coach
         </div>
       </div>
 

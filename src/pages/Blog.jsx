@@ -3,21 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { BLOG_POSTS } from '../data/blogPosts'
 
 const Logo = () => (
-  <svg width="28" height="28" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg" style={{ flexShrink: 0 }}>
-    <defs>
-      <linearGradient id="lgBlog" x1="0%" y1="0%" x2="100%" y2="100%">
-        <stop offset="0%" stopColor="#25D366"/><stop offset="100%" stopColor="#128C7E"/>
-      </linearGradient>
-    </defs>
-    <rect width="100" height="100" rx="22" fill="url(#lgBlog)"/>
-    <rect x="27" y="18" width="36" height="50" rx="4" fill="none" stroke="rgba(255,255,255,0.95)" strokeWidth="3"/>
-    <line x1="34" y1="32" x2="56" y2="32" stroke="rgba(255,255,255,0.95)" strokeWidth="2.5" strokeLinecap="round"/>
-    <line x1="34" y1="41" x2="56" y2="41" stroke="rgba(255,255,255,0.75)" strokeWidth="2" strokeLinecap="round"/>
-    <line x1="34" y1="50" x2="50" y2="50" stroke="rgba(255,255,255,0.75)" strokeWidth="2" strokeLinecap="round"/>
-    <circle cx="68" cy="72" r="12" fill="#25D366"/>
-    <path d="M62 72 L66 76 L75 65" fill="none" stroke="#fff" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"/>
-    <path d="M72,22 L73.4,25.6 L77,27 L73.4,28.4 L72,32 L70.6,28.4 L67,27 L70.6,25.6 Z" fill="rgba(255,255,255,0.85)"/>
-  </svg>
+  <img src="/verneks_icon_1.png" alt="Verneks" width="28" height="28" style={{ objectFit: 'contain', flexShrink: 0 }} />
 )
 
 const CATEGORIES = ['Semua', 'Tips CV', 'Interview', 'Karir', 'LinkedIn']
@@ -42,7 +28,7 @@ export default function Blog({ user }) {
 
   useEffect(() => {
     // SEO meta tags
-    document.title = 'Blog Karir — Tips CV, Interview & Pengembangan Karir | LamarCerdas'
+    document.title = 'Blog Karir — Tips CV, Interview & Pengembangan Karir | Verneks'
     const metaDesc = document.querySelector('meta[name="description"]')
     if (metaDesc) {
       metaDesc.setAttribute('content', 'Tips dan panduan praktis seputar CV, interview kerja, negosiasi gaji, dan pengembangan karir untuk profesional Indonesia.')
@@ -59,7 +45,7 @@ export default function Blog({ user }) {
       if (!el) { el = document.createElement('meta'); el.setAttribute('property', property); document.head.appendChild(el) }
       el.setAttribute('content', content)
     }
-    setOg('og:title', 'Blog Karir LamarCerdas — Tips CV, Interview & Pengembangan Karir')
+    setOg('og:title', 'Blog Karir Verneks — Tips CV, Interview & Pengembangan Karir')
     setOg('og:description', 'Tips dan panduan praktis seputar CV, interview kerja, negosiasi gaji, dan pengembangan karir untuk profesional Indonesia.')
     setOg('og:type', 'website')
     setOg('og:url', window.location.href)
@@ -98,7 +84,7 @@ export default function Blog({ user }) {
           style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer' }}
         >
           <Logo />
-          <span style={{ color: '#fff', fontWeight: 800, fontSize: '1.1rem', letterSpacing: '-0.3px' }}>LamarCerdas</span>
+          <span style={{ color: '#fff', fontWeight: 800, fontSize: '1.1rem', letterSpacing: '-0.3px' }}>Verneks</span>
         </div>
         <button
           onClick={() => navigate(user ? '/chat' : '/login')}
@@ -292,7 +278,7 @@ export default function Blog({ user }) {
               letterSpacing: '-0.2px',
             }}
           >
-            {user ? 'Buka LamarCerdas →' : 'Coba Gratis Sekarang →'}
+            {user ? 'Buka Verneks →' : 'Coba Gratis Sekarang →'}
           </button>
         </div>
       </div>

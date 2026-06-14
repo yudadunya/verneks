@@ -93,7 +93,7 @@ export default function AdminPanel() {
   if (!authed) return (
     <div style={s.page}>
       <div style={s.card}>
-        <div style={s.title}>🔐 LamarCerdas Admin</div>
+        <div style={s.title}>🔐 Verneks Admin</div>
         <div style={s.sub}>Masukkan password admin untuk melanjutkan</div>
         <input
           style={{ ...s.input, borderColor: passErr ? '#EF5350' : 'rgba(255,255,255,0.1)' }}

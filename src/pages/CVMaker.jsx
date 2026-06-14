@@ -126,7 +126,7 @@ export default function CVMaker({ user }) {
       const html2pdf = (await import('html2pdf.js')).default
       await html2pdf().set({
         margin: 16,
-        filename: `LamarCerdas-${format.toUpperCase()}-${new Date().toLocaleDateString('id-ID')}.pdf`,
+        filename: `Verneks-${format.toUpperCase()}-${new Date().toLocaleDateString('id-ID')}.pdf`,
         image: { type: 'jpeg', quality: 0.98 },
         html2canvas: { scale: 2 },
         jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' },
@@ -335,7 +335,7 @@ export default function CVMaker({ user }) {
                 </div>
                 <div ref={resultRef} style={s.resultBody}>
                   <div style={s.resultMeta}>
-                    <strong>LamarCerdas — CV {selectedFmt.label}</strong>
+                    <strong>Verneks — CV {selectedFmt.label}</strong>
                     <span style={s.resultDate}>
                       {jobTarget && `${jobTarget} · `}
                       {new Date().toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' })}

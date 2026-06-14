@@ -54,7 +54,7 @@ export default function CVReview({ user }) {
     setSavingPdf(true)
     try {
       const html2pdf = (await import('html2pdf.js')).default
-      await html2pdf().set({ margin: 16, filename: `LamarCerdas-CV-Review-${new Date().toLocaleDateString('id-ID')}.pdf`, image: { type: 'jpeg', quality: 0.98 }, html2canvas: { scale: 2 }, jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' } }).from(resultRef.current).save()
+      await html2pdf().set({ margin: 16, filename: `Verneks-CV-Review-${new Date().toLocaleDateString('id-ID')}.pdf`, image: { type: 'jpeg', quality: 0.98 }, html2canvas: { scale: 2 }, jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' } }).from(resultRef.current).save()
     } catch { alert('Gagal export PDF.') }
     setSavingPdf(false)
   }
@@ -152,7 +152,7 @@ export default function CVReview({ user }) {
           ) : (
             <div ref={resultRef} style={{ background: '#fff', borderRadius: '12px', padding: '16px', border: '1px solid var(--wa-border)', fontSize: '0.9rem', lineHeight: 1.7 }}>
               <div style={{ marginBottom: '12px', paddingBottom: '8px', borderBottom: '1px solid var(--wa-border)' }}>
-                <strong style={{ fontSize: '0.95rem' }}>LamarCerdas — Hasil CV Review</strong>
+                <strong style={{ fontSize: '0.95rem' }}>Verneks — Hasil CV Review</strong>
                 <p style={{ fontSize: '0.72rem', color: 'var(--wa-gray)', marginTop: '2px' }}>
                   {jobTarget && `Posisi: ${jobTarget} · `}{new Date().toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' })}
                 </p>

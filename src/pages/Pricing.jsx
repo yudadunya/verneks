@@ -188,7 +188,7 @@ export default function Pricing({ user }) {
             { label: 'Sesi career coach 1 jam', price: 'Rp 500rb–1jt' },
             { label: 'Review CV profesional', price: 'Rp 150rb–300rb' },
             { label: 'Kursus mock interview', price: 'Rp 300rb–500rb' },
-            { label: 'LamarCerdas Premium/bulan', price: 'Rp 199rb', highlight: true },
+            { label: 'Verneks Premium/bulan', price: 'Rp 199rb', highlight: true },
           ].map(item => (
             <div key={item.label} style={{ display: 'flex', justifyContent: 'space-between', padding: '5px 0', borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
               <span style={{ color: item.highlight ? '#fff' : 'rgba(255,255,255,0.45)', fontSize: '0.8rem', fontWeight: item.highlight ? 700 : 400 }}>{item.label}</span>
