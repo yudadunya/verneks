@@ -2,9 +2,13 @@ import React from 'react'
 import ReactDOM from 'react-dom/client'
 import App from './App'
 import './index.css'
-import { registerSW } from './registerSW'
 
-registerSW()
+// PWA/Service Worker sudah dihapus — unregister sisa SW lama (sekali jalan)
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.getRegistrations().then(regs => {
+    regs.forEach(r => r.unregister())
+  })
+}
 
 ReactDOM.createRoot(document.getElementById('root')).render(
   <React.StrictMode>
