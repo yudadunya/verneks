@@ -58,8 +58,15 @@ export default function App() {
   }, [])
 
   useEffect(() => {
-    // Failsafe: kalau getSession() hang (stale token setelah logout), paksa unblock setelah 8 detik
-    const loadingTimeout = setTimeout(() => setLoading(false), 8000)
+    // Failsafe: paksa unblock setelah 3 detik kalau getSession hang
+    const loadingTimeout = setTimeout(() => setLoading(false), 3000)
+
+    // Unregister SW lama (PWA sudah dihapus)
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.getRegistrations()
+        .then(regs => regs.forEach(r => r.unregister()))
+        .catch(() => {})
+    }
 
     supabase.auth.getSession()
       .then(({ data: { session } }) => {
