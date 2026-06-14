@@ -9,4 +9,4 @@ Disallow: /register
 Disallow: /forgot-password
 Disallow: /reset-password
 
-Sitemap: https://lamarcerdas.com/sitemap.xml
+Sitemap: https://verneks.my.id/sitemap.xml
