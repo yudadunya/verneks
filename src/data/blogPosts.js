@@ -61,9 +61,9 @@ Struktur ideal CV yang lolos ATS:
 
 ## Cek ATS Score CV Kamu Sekarang
 
-Tidak perlu tebak-tebakan. Di LamarCerdas, kamu bisa cek ATS score CV kamu **gratis** dalam 30 detik. AI kami akan kasih skor ATS dari 0-100, tunjukkan bagian mana yang perlu diperbaiki, dan berikan saran konkret yang bisa langsung kamu terapkan.
+Tidak perlu tebak-tebakan. Di Verneks, kamu bisa cek ATS score CV kamu **gratis** dalam 30 detik. AI kami akan kasih skor ATS dari 0-100, tunjukkan bagian mana yang perlu diperbaiki, dan berikan saran konkret yang bisa langsung kamu terapkan.
 
-**Ribuan job seeker sudah meningkatkan ATS score mereka dari rata-rata 48 menjadi 78+ setelah menggunakan LamarCerdas.**
+**Ribuan job seeker sudah meningkatkan ATS score mereka dari rata-rata 48 menjadi 78+ setelah menggunakan Verneks.**
     `
   },
   {
@@ -116,7 +116,7 @@ Latih jawaban untuk pertanyaan yang hampir selalu ditanyakan:
 Di akhir interview, pasti ditanya "Ada pertanyaan?" Jangan jawab tidak ada. Tanyakan seperti apa hari-hari pertama onboarding atau apa yang membuat seseorang sukses di posisi ini.
 
 ### 5. Latihan Mock Interview
-Berlatih sendirian di depan cermin tidak cukup efektif. Kamu butuh feedback dari luar. Minta teman atau senior untuk mock interview, atau gunakan AI seperti LamarCerdas untuk simulasi HRD.
+Berlatih sendirian di depan cermin tidak cukup efektif. Kamu butuh feedback dari luar. Minta teman atau senior untuk mock interview, atau gunakan AI seperti Verneks untuk simulasi HRD.
 
 ### 6. Perhatikan Bahasa Tubuh
 55% kesan pertama berasal dari bahasa tubuh. Duduk tegak, tatap mata pewawancara, dan senyum wajar saat memperkenalkan diri.
@@ -124,9 +124,9 @@ Berlatih sendirian di depan cermin tidak cukup efektif. Kamu butuh feedback dari
 ### 7. Follow Up Setelah Interview
 Kirim email terima kasih 24 jam setelah interview. Ini jarang dilakukan tapi memberi kesan sangat positif.
 
-## Latihan Mock Interview Gratis di LamarCerdas
+## Latihan Mock Interview Gratis di Verneks
 
-Di LamarCerdas, kamu bisa latihan interview dengan AI yang berperan sebagai HRD — kapan saja, tanpa perlu takut dihakimi. AI akan ajukan pertanyaan sesuai posisi, evaluasi jawaban kamu secara jujur, dan kasih saran konkret.
+Di Verneks, kamu bisa latihan interview dengan AI yang berperan sebagai HRD — kapan saja, tanpa perlu takut dihakimi. AI akan ajukan pertanyaan sesuai posisi, evaluasi jawaban kamu secara jujur, dan kasih saran konkret.
 
 **Latihan membuat sempurna. Mulai mock interview gratis sekarang.**
     `
@@ -188,7 +188,7 @@ Kalau gaji tidak bisa dinaikkan, coba negosiasi bonus signing, tunjangan transpo
 
 ## Latihan Negosiasi dengan AI
 
-Negosiasi adalah skill — semakin sering dilatih, semakin natural. Di LamarCerdas, kamu bisa simulasikan skenario negosiasi gaji dengan AI dan dapat feedback tentang kalimat dan pendekatan kamu.
+Negosiasi adalah skill — semakin sering dilatih, semakin natural. Di Verneks, kamu bisa simulasikan skenario negosiasi gaji dengan AI dan dapat feedback tentang kalimat dan pendekatan kamu.
 
 **Career coach Diah Anna siap membantu kamu mempersiapkan negosiasi gaji yang sukses.**
     `
@@ -252,7 +252,7 @@ CV kamu tidak perlu menyembunyikan background lama — tapi harus di-frame ulang
 
 ## Diskusi Career Switch dengan Diah Anna
 
-Setiap orang punya situasi unik. Diah Anna di LamarCerdas bisa bantu kamu identifikasi transferable skills, buat roadmap switch karir yang realistis, dan review CV yang sudah di-reframe.
+Setiap orang punya situasi unik. Diah Anna di Verneks bisa bantu kamu identifikasi transferable skills, buat roadmap switch karir yang realistis, dan review CV yang sudah di-reframe.
 
 **Gratis, 24/7, tanpa judgement. Mulai diskusi sekarang.**
     `
@@ -316,7 +316,7 @@ Bagi menjadi hard skills (Excel, Python, Figma) dan soft skills — pilih maksim
 
 ## Buat CV Profesional dengan AI dalam 2 Menit
 
-CV Maker AI di LamarCerdas bisa membantu. Ceritakan pengalamanmu, AI menyusun CV dengan format ATS-friendly, otomatis mengoptimalkan kata kerja dan achievement, lalu export ke PDF siap kirim.
+CV Maker AI di Verneks bisa membantu. Ceritakan pengalamanmu, AI menyusun CV dengan format ATS-friendly, otomatis mengoptimalkan kata kerja dan achievement, lalu export ke PDF siap kirim.
 
 **Tidak perlu template berbayar. Mulai gratis sekarang.**
     `
@@ -377,7 +377,7 @@ Di setting profile, aktifkan Open to Work. Pilih "Recruiter saja" jika tidak ing
 
 ## Optimalkan Profile LinkedIn dengan Diah Anna
 
-Bingung bagaimana menulis headline atau bagian About? Ceritakan background kamu ke Diah Anna di LamarCerdas dan dapatkan saran headline yang keyword-rich, draft bagian About yang menjual, dan tips spesifik untuk industri kamu.
+Bingung bagaimana menulis headline atau bagian About? Ceritakan background kamu ke Diah Anna di Verneks dan dapatkan saran headline yang keyword-rich, draft bagian About yang menjual, dan tips spesifik untuk industri kamu.
 
 **Konsultasi gratis, langsung dapat actionable advice.**
     `
