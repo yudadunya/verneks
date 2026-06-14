@@ -785,13 +785,13 @@ Pilih yang sesuai buat kamu:`
       const res = await fetch('/api/cv-to-docx', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ markdown, filename: 'CV-LamarCerdas' })
+        body: JSON.stringify({ markdown, filename: 'CV-Verneks' })
       })
       if (!res.ok) throw new Error('Gagal generate file')
       const blob = await res.blob()
       const url = URL.createObjectURL(blob)
       const a = document.createElement('a')
-      a.href = url; a.download = 'CV-LamarCerdas.docx'; a.click()
+      a.href = url; a.download = 'CV-Verneks.docx'; a.click()
       URL.revokeObjectURL(url)
     } catch (e) {
       pushBot('Gagal download file Word. Coba lagi ya!')
