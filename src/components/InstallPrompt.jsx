@@ -64,9 +64,9 @@ export default function InstallPrompt() {
       <div style={{ width: 36, height: 4, background: '#ddd', borderRadius: 2, margin: '0 auto 14px' }} />
 
       <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 14 }}>
-        <img src="/icons/icon-72x72.png" alt="LamarCerdas" style={{ width: 52, height: 52, borderRadius: 12, flexShrink: 0 }} />
+        <img src="/verneks_icon_1.png" alt="Verneks" style={{ width: 52, height: 52, borderRadius: 12, flexShrink: 0, objectFit: 'contain' }} />
         <div>
-          <div style={{ fontWeight: 700, fontSize: '0.95rem', color: '#111' }}>Install LamarCerdas</div>
+          <div style={{ fontWeight: 700, fontSize: '0.95rem', color: '#111' }}>Install Verneks</div>
           <div style={{ fontSize: '0.78rem', color: '#667781', marginTop: 2 }}>
             Akses lebih cepat langsung dari layar utama HP kamu 📲
           </div>
