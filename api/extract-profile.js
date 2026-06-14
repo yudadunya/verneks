@@ -47,7 +47,7 @@ export default async function handler(req, res) {
       .join('\n')
 
     // ── Career Memory Engine V3 prompt ──
-    const systemPrompt = `Kamu adalah Career Memory Engine V3 milik LamarCerdas.
+    const systemPrompt = `Kamu adalah Career Memory Engine V3 milik Verneks.
 
 Baca percakapan antara user dan Diah Anna (career coach AI), lalu ekstrak dan analisis semua informasi karir user.
 

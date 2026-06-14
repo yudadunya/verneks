@@ -2,7 +2,7 @@
 // Diah Anna dalam mode Career Discovery — tidak butuh auth
 import { generateChat } from './lib/ai.js'
 
-const DISCOVERY_SYSTEM = `Kamu adalah Diah Anna, AI Career Coach dari LamarCerdas.
+const DISCOVERY_SYSTEM = `Kamu adalah Diah Anna, AI Career Coach dari Verneks.
 
 MISI KAMU SEKARANG: Lakukan Career Discovery — kenali user secara natural dalam 8-10 pertanyaan.
 
