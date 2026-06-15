@@ -49,7 +49,7 @@ export default function App() {
   useEffect(() => {
     if (!user) return
 
-    const INACTIVE_LIMIT = 5 * 60 * 1000 // 30 menit
+    const INACTIVE_LIMIT = 30 * 60 * 1000 // 30 menit
     let inactiveTimer
 
     const resetTimer = () => {
@@ -93,15 +93,20 @@ export default function App() {
       try {
         if ('serviceWorker' in navigator) {
           const regs = await navigator.serviceWorker.getRegistrations()
+          console.log('[App] SW registrations:', regs.length)
           await Promise.all(regs.map(r => r.unregister()))
         }
         if ('caches' in window) {
           const keys = await caches.keys()
+          console.log('[App] Cache keys:', keys)
           await Promise.all(keys.map(k => caches.delete(k)))
         }
-      } catch {}
+      } catch (e) { console.warn('[App] clearSW error:', e) }
     }
     clearSWAndCache()
+
+    console.log('[App] Starting getSession...')
+    console.log('[App] sb- keys in localStorage:', Object.keys(localStorage).filter(k => k.startsWith('sb-')))
 
     // Race: getSession vs timeout 2.5 detik
     // Kalau timeout menang → clear session corrupt & tampilkan home
@@ -110,7 +115,8 @@ export default function App() {
     const timeoutId = setTimeout(async () => {
       if (settled) return
       settled = true
-      console.warn('[App] getSession timeout — clearing stale session')
+      console.warn('[App] getSession timeout setelah 2.5 detik — clearing stale session')
+      console.log('[App] sb- keys saat timeout:', Object.keys(localStorage).filter(k => k.startsWith('sb-')))
       try { await supabase.auth.signOut() } catch {}
       // Hapus semua localStorage session Supabase
       Object.keys(localStorage)
@@ -127,6 +133,7 @@ export default function App() {
         if (settled) return
         settled = true
         clearTimeout(timeoutId)
+        console.log('[App] getSession resolved, user:', session?.user?.email ?? 'null')
         const u = session?.user ?? null
         setUser(u)
         if (u) setChatMessages(loadMessages(u.id))
