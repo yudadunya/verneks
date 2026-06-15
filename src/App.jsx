@@ -112,21 +112,17 @@ export default function App() {
     // Kalau timeout menang → clear session corrupt & tampilkan home
     let settled = false
 
-    const timeoutId = setTimeout(async () => {
+    const timeoutId = setTimeout(() => {
       if (settled) return
       settled = true
-      console.warn('[App] getSession timeout setelah 2.5 detik — clearing stale session')
-      console.log('[App] sb- keys saat timeout:', Object.keys(localStorage).filter(k => k.startsWith('sb-')))
-      try { await supabase.auth.signOut() } catch {}
-      // Hapus semua localStorage session Supabase
+      console.warn('[App] getSession timeout — clearing stale session & redirect')
+      // Hapus semua token Supabase dari localStorage
       Object.keys(localStorage)
         .filter(k => k.startsWith('sb-'))
         .forEach(k => localStorage.removeItem(k))
-      setUser(null)
-      setChatMessages([])
-      setLoading(false)
+      // Langsung redirect tanpa tunggu signOut (karena network mungkin down)
       window.location.replace('/')
-    }, 2500)
+    }, 1500)
 
     supabase.auth.getSession()
       .then(({ data: { session } }) => {
