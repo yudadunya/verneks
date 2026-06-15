@@ -45,6 +45,36 @@ export default function App() {
   const [showUpgrade, setShowUpgrade] = useState(false)
   const [upgradeData, setUpgradeData] = useState(null)
 
+  // ── Auto-logout setelah inaktif 30 menit (seperti mobile banking) ───────
+  useEffect(() => {
+    if (!user) return
+
+    const INACTIVE_LIMIT = 30 * 60 * 1000 // 30 menit
+    let inactiveTimer
+
+    const resetTimer = () => {
+      clearTimeout(inactiveTimer)
+      inactiveTimer = setTimeout(async () => {
+        console.warn('[App] Auto-logout: inaktif 30 menit')
+        await supabase.auth.signOut()
+        Object.keys(localStorage)
+          .filter(k => k.startsWith('sb-') || k.startsWith('lc_'))
+          .forEach(k => localStorage.removeItem(k))
+        window.location.replace('/')
+      }, INACTIVE_LIMIT)
+    }
+
+    // Event yang dianggap aktif
+    const events = ['mousedown', 'mousemove', 'keydown', 'scroll', 'touchstart', 'click']
+    events.forEach(e => window.addEventListener(e, resetTimer, { passive: true }))
+    resetTimer() // mulai timer
+
+    return () => {
+      clearTimeout(inactiveTimer)
+      events.forEach(e => window.removeEventListener(e, resetTimer))
+    }
+  }, [user])
+
   // Global upgrade modal trigger
   useEffect(() => {
     const handler = (e) => {
@@ -74,9 +104,14 @@ export default function App() {
       settled = true
       console.warn('[App] getSession timeout — clearing stale session')
       try { await supabase.auth.signOut() } catch {}
+      // Hapus semua localStorage session Supabase
+      Object.keys(localStorage)
+        .filter(k => k.startsWith('sb-'))
+        .forEach(k => localStorage.removeItem(k))
       setUser(null)
       setChatMessages([])
       setLoading(false)
+      window.location.replace('/')
     }, 2500)
 
     supabase.auth.getSession()
