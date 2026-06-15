@@ -30,20 +30,24 @@
             keys.forEach(function(k) { caches.delete(k); });
           });
         }
-        // Hapus key Supabase yang expired/corrupt dari localStorage
-        // Deteksi: kalau ada sb- key tapi sudah lebih dari 1 jam tidak ada aktivitas
-        var lastActive = localStorage.getItem('vk_last_active')
+        // Cek token Supabase — kalau expired, hapus langsung sebelum getSession
         var now = Date.now()
-        if (lastActive && (now - parseInt(lastActive)) > 3600000) {
-          Object.keys(localStorage)
-            .filter(function(k) { return k.startsWith('sb-'); })
-            .forEach(function(k) { localStorage.removeItem(k); });
-        }
-        localStorage.setItem('vk_last_active', now.toString());
-
-        // DEBUG: log semua localStorage keys
-        console.log('[Verneks] localStorage keys:', Object.keys(localStorage));
-        console.log('[Verneks] last_active:', lastActive, '| now:', now, '| diff (menit):', lastActive ? Math.round((now - parseInt(lastActive))/60000) : 'N/A');
+        var sbKeys = Object.keys(localStorage).filter(function(k) { return k.startsWith('sb-'); })
+        sbKeys.forEach(function(k) {
+          try {
+            var val = JSON.parse(localStorage.getItem(k))
+            // Supabase session punya expires_at (unix timestamp detik)
+            var expiresAt = val && val.expires_at ? val.expires_at * 1000 : null
+            if (expiresAt && expiresAt < now) {
+              console.log('[Verneks] Token expired, hapus:', k)
+              localStorage.removeItem(k)
+            }
+          } catch(e) {
+            // Kalau tidak bisa di-parse, hapus juga
+            localStorage.removeItem(k)
+          }
+        })
+        localStorage.setItem('vk_last_active', now.toString())
       })();
     </script>
     <script type="module" src="/src/main.jsx"></script>
