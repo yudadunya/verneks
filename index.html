@@ -40,6 +40,10 @@
             .forEach(function(k) { localStorage.removeItem(k); });
         }
         localStorage.setItem('vk_last_active', now.toString());
+
+        // DEBUG: log semua localStorage keys
+        console.log('[Verneks] localStorage keys:', Object.keys(localStorage));
+        console.log('[Verneks] last_active:', lastActive, '| now:', now, '| diff (menit):', lastActive ? Math.round((now - parseInt(lastActive))/60000) : 'N/A');
       })();
     </script>
     <script type="module" src="/src/main.jsx"></script>
