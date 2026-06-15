@@ -49,7 +49,7 @@ export default function App() {
   useEffect(() => {
     if (!user) return
 
-    const INACTIVE_LIMIT = 30 * 60 * 1000 // 30 menit
+    const INACTIVE_LIMIT = 5 * 60 * 1000 // 30 menit
     let inactiveTimer
 
     const resetTimer = () => {
