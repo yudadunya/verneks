@@ -58,9 +58,6 @@ export default function App() {
   }, [])
 
   useEffect(() => {
-    // Failsafe: paksa unblock setelah 3 detik kalau getSession hang
-    const loadingTimeout = setTimeout(() => setLoading(false), 3000)
-
     // Unregister SW lama (PWA sudah dihapus)
     if ('serviceWorker' in navigator) {
       navigator.serviceWorker.getRegistrations()
@@ -68,15 +65,37 @@ export default function App() {
         .catch(() => {})
     }
 
+    // Race: getSession vs timeout 2.5 detik
+    // Kalau timeout menang → clear session corrupt & tampilkan home
+    let settled = false
+
+    const timeoutId = setTimeout(async () => {
+      if (settled) return
+      settled = true
+      console.warn('[App] getSession timeout — clearing stale session')
+      try { await supabase.auth.signOut() } catch {}
+      setUser(null)
+      setChatMessages([])
+      setLoading(false)
+    }, 2500)
+
     supabase.auth.getSession()
       .then(({ data: { session } }) => {
-        clearTimeout(loadingTimeout)
+        if (settled) return
+        settled = true
+        clearTimeout(timeoutId)
         const u = session?.user ?? null
         setUser(u)
         if (u) setChatMessages(loadMessages(u.id))
         setLoading(false)
       })
-      .catch(() => { clearTimeout(loadingTimeout); setLoading(false) })
+      .catch(() => {
+        if (settled) return
+        settled = true
+        clearTimeout(timeoutId)
+        setUser(null)
+        setLoading(false)
+      })
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
       if (_event === 'PASSWORD_RECOVERY') {
