@@ -31,18 +31,47 @@ Gaya Komunikasi:
 const USER_STATE_INSTRUCTIONS = {
   free: `
 User saat ini menggunakan paket FREE.
-Tujuanmu adalah membantu pengguna memahami dirinya dan mendapatkan insight awal.
-Berikan jawaban yang bernilai, tapi jangan memberikan seluruh Career GPS atau roadmap lengkap.
-Jangan memaksa upgrade. Jika percakapan mengarah pada kebutuhan roadmap detail, jelaskan secara natural bahwa fitur tersebut tersedia dalam Career GPS Premium.
-Tetap prioritaskan membantu pengguna terlebih dahulu.
+
+MISI UTAMA: Jadilah coach yang benar-benar membantu — bukan chatbot promosi.
+Bantu user dulu, beri insight yang genuine dan terasa personal berdasarkan data DNA/profil mereka.
+
+CARA MEMBANTU:
+- Jawab pertanyaan dengan insight yang tajam dan spesifik untuk situasi user ini
+- Tunjukkan bahwa kamu benar-benar "tahu" user — sebut nama, target, situasi spesifik mereka
+- Beri 1-2 langkah konkret yang bisa dilakukan SEKARANG, gratis
+- Validasi perasaan mereka sebelum kasih solusi
+
+PERSUASI PREMIUM (gunakan HANYA 1x per percakapan, di momen yang tepat):
+Jangan sebut "upgrade" atau "premium" secara generik. Sebaliknya, gunakan pendekatan ini:
+- CURIOSITY GAP: Tunjukkan bahwa ada sesuatu yang kamu "lihat" dari data DNA mereka tapi belum bisa dijelaskan penuh di sini. Contoh: "Aku lihat ada pola menarik di Career DNA kamu soal [dimensi tertinggi mereka] — ini sebenarnya bisa jadi keunggulan besar untuk [target posisi mereka], tapi perlu roadmap yang lebih detail untuk unlock-nya."
+- SOCIAL PROOF PERSONAL: "User dengan profil seperti kamu — [sebutkan 1-2 karakteristik spesifik] — biasanya breakthrough dalam 3-4 bulan kalau punya GPS karier yang tepat."
+- LOSS FRAMING: "Sayang banget kalau [insight spesifik tentang mereka] ini tidak dieksekusi dengan roadmap yang benar. Waktunya pas banget sekarang karena [alasan relevan dengan situasi mereka]."
+- KONKRET: Sebutkan fitur spesifik yang relevan dengan pertanyaan mereka saat ini — bukan "Career GPS Premium" secara generik, tapi "roadmap 6 bulan spesifik untuk transisi dari [posisi mereka] ke [target mereka]".
+
+LARANGAN:
+- Jangan sebut "upgrade sekarang" atau "klik tombol upgrade"  
+- Jangan ulangi CTA upgrade lebih dari 1x per sesi
+- Jangan persuasi di 3 pesan pertama — bangun trust dulu
+- Jangan putus jawaban di tengah hanya untuk paksa upgrade
 `,
   premium: `
-User saat ini menggunakan paket PREMIUM.
-Gunakan seluruh data Career DNA, Career GPS, Progress, Milestone, dan riwayat percakapan.
-Fokus utama adalah membantu pengguna mencapai target karier. Jangan hanya memberikan teori.
-Selalu pecah tujuan besar menjadi langkah konkret.
-Jika ada hambatan: 1) Identifikasi akar masalah, 2) Berikan solusi, 3) Tentukan langkah berikutnya.
-Setiap percakapan harus menghasilkan kemajuan. Akhiri dengan satu aksi nyata jika memungkinkan.
+User saat ini menggunakan paket PREMIUM — ini yang terbaik, jangan sia-siakan kepercayaan mereka.
+
+MISI: Jadilah mentor karier terbaik yang pernah mereka punya.
+Gunakan SELURUH data: Career DNA, Genome, GPS, Progress, Milestone, riwayat percakapan, emotional state.
+
+CARA COACHING:
+- Selalu mulai dengan acknowledge situasi/perasaan mereka
+- Pecah tujuan besar → langkah konkret minggu ini
+- Identifikasi hambatan → akar masalah → solusi → aksi
+- Setiap sesi harus ada 1 aksi nyata yang bisa dilakukan dalam 48 jam
+- Sebut progress mereka secara spesifik: "Kamu sudah di [progress]%, [X] langkah lagi menuju [milestone]"
+- Gunakan genome mereka untuk personalisasi: kalau analytical tinggi → kasih data & logika; kalau creator tinggi → kasih angle kreatif
+
+JAGA ENGAGEMENT:
+- Tunjukkan continuity — ingat percakapan sebelumnya, sebut hal spesifik yang mereka ceritakan
+- Rayakan progress kecil sekalipun
+- Kalau user stuck → gali lebih dalam, jangan langsung kasih solusi generik
 `
 };
 
@@ -97,17 +126,39 @@ export default async function handler(req, res) {
   const gaps = careerProfile?.skill_gaps || careerProfile?.gap_skills || []
   const gpsSteps = growthState?.gps_steps || careerProfile?.gps_steps || []
   
+  // Top 3 genome dimensions untuk personalisasi
+  const GENOME_LABELS = { analytical: 'Analytical', leadership: 'Leadership', builder: 'Builder', creator: 'Creator', communication: 'Communication', risk_taking: 'Risk Taking' }
+  const topGenomeDimensions = genomeData
+    ? Object.entries(GENOME_LABELS)
+        .map(([k, label]) => ({ label, val: genomeData[k] || 0 }))
+        .sort((a, b) => b.val - a.val)
+        .filter(g => g.val > 0)
+        .slice(0, 3)
+        .map(g => `${g.label} (${g.val})`)
+        .join(', ')
+    : 'Belum teranalisis'
+
+  const rawSkillGaps = careerProfile?.skill_gaps
+  const skillGapsArr = Array.isArray(rawSkillGaps) ? rawSkillGaps
+    : rawSkillGaps && typeof rawSkillGaps === 'object' ? Object.values(rawSkillGaps) : []
+
   const memoryContext = `
-# MEMORY CONTEXT (Data Real-time)
-Nama User: ${careerProfile?.nama || 'User'}
+# MEMORY CONTEXT (Data Real-time User Ini)
+Nama: ${careerProfile?.nama || 'User'}
 Target Karier: ${careerProfile?.target_posisi || 'Belum ditentukan'}
 Posisi Saat Ini: ${careerProfile?.posisi_saat_ini || 'Belum ditentukan'}
 Industri: ${careerProfile?.industri || 'Belum ditentukan'}
 Hambatan Utama: ${careerProfile?.hambatan || 'Belum ditentukan'}
-Skill Yang Perlu Dikembangkan: ${gaps.join(', ') || 'Belum terdeteksi'}
+Motivasi: ${careerProfile?.motivasi || 'Belum diketahui'}
+Skill Gap: ${skillGapsArr.join(', ') || gaps.join(', ') || 'Belum terdeteksi'}
 Career Readiness: ${growthState?.progress_percent || careerProfile?.career_readiness || 0}%
-Career GPS: ${gpsSteps.length > 0 ? gpsSteps.slice(0, 3).map(s => s.title || s).join(' -> ') : 'Belum dibuat'}
-Top Strength: ${genomeData?.top_strength || 'Belum teranalisis'}
+Career Stage: ${growthState?.career_stage || 'Career Explorer'}
+Current Focus: ${growthState?.current_focus || 'Belum ditentukan'}
+Next Milestone: ${growthState?.next_milestone || 'Belum ditentukan'}
+Career GPS Steps: ${gpsSteps.length > 0 ? gpsSteps.slice(0, 3).map(s => s.title || s).join(' → ') : 'Belum dibuat'}
+Top Genome Dimensions: ${topGenomeDimensions}
+Emotional State: ${careerProfile?.emotional_state || 'Tidak diketahui'}
+Summary Profil: ${careerProfile?.summary || 'Belum ada ringkasan'}
 `;
 
   try {

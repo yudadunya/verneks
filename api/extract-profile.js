@@ -133,6 +133,7 @@ ${existingContext}`
       prompt: `Percakapan:\n${convoText}`,
       maxTokens: 1500,
       tier: 'smart',
+      plan: 'premium', // Memory engine selalu pakai model terbaik — data terlalu penting
     })
 
     let memory
@@ -168,10 +169,9 @@ ${existingContext}`
       target_gaji:       mergeVal(p.target_gaji, existingProfile?.target_gaji),
       perusahaan_impian: mergeVal(p.perusahaan_impian, existingProfile?.perusahaan_impian),
       timeline_karir:    mergeVal(p.timeline_karir, existingProfile?.timeline_karir),
-      hambatan:          mergeVal(p.tantangan_karir, existingProfile?.hambatan),
+      hambatan:          mergeVal(p.hambatan || p.tantangan_karir, existingProfile?.hambatan),
       motivasi:          mergeVal(p.motivasi, existingProfile?.motivasi),
       progress_lamaran:  mergeVal(p.progress_lamaran, existingProfile?.progress_lamaran),
-      hambatan:          mergeVal(p.hambatan, existingProfile?.hambatan),
       gaya_kerja:        mergeVal(p.gaya_kerja, existingProfile?.gaya_kerja),
       emotional_state:   mergeVal(p.emotional_state, existingProfile?.emotional_state),
       summary:           p.summary || existingProfile?.summary,
