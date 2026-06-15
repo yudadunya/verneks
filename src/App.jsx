@@ -49,7 +49,7 @@ export default function App() {
   useEffect(() => {
     if (!user) return
 
-    const INACTIVE_LIMIT = 5 * 60 * 1000 // 30 menit
+    const INACTIVE_LIMIT = 30 * 60 * 1000 // 30 menit
     let inactiveTimer
 
     const resetTimer = () => {
@@ -88,12 +88,20 @@ export default function App() {
   }, [])
 
   useEffect(() => {
-    // Unregister SW lama (PWA sudah dihapus)
-    if ('serviceWorker' in navigator) {
-      navigator.serviceWorker.getRegistrations()
-        .then(regs => regs.forEach(r => r.unregister()))
-        .catch(() => {})
+    // Paksa clear SW cache dan unregister semua SW lama
+    const clearSWAndCache = async () => {
+      try {
+        if ('serviceWorker' in navigator) {
+          const regs = await navigator.serviceWorker.getRegistrations()
+          await Promise.all(regs.map(r => r.unregister()))
+        }
+        if ('caches' in window) {
+          const keys = await caches.keys()
+          await Promise.all(keys.map(k => caches.delete(k)))
+        }
+      } catch {}
     }
+    clearSWAndCache()
 
     // Race: getSession vs timeout 2.5 detik
     // Kalau timeout menang → clear session corrupt & tampilkan home
