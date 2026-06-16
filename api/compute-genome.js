@@ -1,29 +1,54 @@
 // api/compute-genome.js
-// Hitung Career Genome dari percakapan Discovery — tanpa auth, tanpa DB save
 import { generateText } from './lib/ai.js'
 
 export default async function handler(req, res) {
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' })
 
-  const { messages } = req.body
-  if (!messages?.length) return res.status(400).json({ error: 'Missing messages' })
+  const { messages, profile } = req.body
+  if (!messages?.length && !profile) return res.status(400).json({ error: 'Missing data' })
 
-  const userCount = messages.filter(m => m.role === 'user').length
-  if (userCount < 2) return res.status(400).json({ error: 'Too few messages' })
+  const userCount = (messages || []).filter(m => m.role === 'user').length
+  if (userCount < 2 && !profile) return res.status(400).json({ error: 'Too few messages' })
 
-  const convoText = messages
-    .map(m => `${m.role === 'user' ? 'User' : 'Diah Anna'}: ${m.text || m.content || ''}`)
+  // Buat context dari messages
+  const convoText = (messages || [])
+    .slice(-16)
+    .map(m => `${m.role === 'user' ? 'User' : 'Diah Anna'}: ${(m.text || m.content || '').slice(0, 400)}`)
     .join('\n')
 
-  const prompt = `Analisis percakapan Career Discovery ini dan kembalikan JSON VALID, tanpa backtick, tanpa teks lain:
+  // Tambah context dari profile kalau ada (untuk re-compute dari DNA page)
+  const profileContext = profile ? `
+Data profil yang sudah tersimpan:
+- Nama: ${profile.nama || '-'}
+- Target: ${profile.target_posisi || '-'}
+- Posisi saat ini: ${profile.posisi_saat_ini || '-'}
+- Industri: ${profile.industri || '-'}
+- Hambatan: ${profile.hambatan || '-'}
+` : ''
+
+  const prompt = `Kamu adalah Career Genome Analyzer milik Verneks — sistem analisis karier paling personal di Indonesia.
+
+Tugasmu: analisis percakapan Career Discovery ini dan hasilkan profil karier yang AKURAT, PERSONAL, dan MENGEJUTKAN — bukan template generik.
+
+${profileContext}
+
+Percakapan Discovery:
+${convoText}
+
+---
+
+KEMBALIKAN JSON VALID BERIKUT (tanpa backtick, tanpa teks lain):
 
 {
   "profile_preview": {
     "nama": "nama user jika disebutkan, null jika tidak",
-    "target_posisi": "target posisi user jika disebutkan, null jika tidak",
-    "posisi_saat_ini": "posisi saat ini jika disebutkan, null jika tidak",
-    "industri": "industri yang diminati jika disebutkan, null jika tidak",
-    "hambatan_utama": "hambatan terbesar dalam 1 kalimat, null jika tidak jelas"
+    "target_posisi": "target posisi spesifik",
+    "posisi_saat_ini": "posisi saat ini",
+    "industri": "industri yang diminati",
+    "hambatan_utama": "hambatan NYATA dalam 1 kalimat — bukan surface level, tapi root cause",
+    "motivasi": "motivasi terdalam yang tersirat dari percakapan — apa yang sebenarnya mereka kejar",
+    "kekuatan_tersembunyi": "1 kekuatan yang mungkin belum mereka sadari sepenuhnya berdasarkan percakapan",
+    "gaya_kerja": "gaya kerja yang terdeteksi dari percakapan"
   },
   "genome_scores": {
     "analytical": 0,
@@ -36,88 +61,92 @@ export default async function handler(req, res) {
   "career_readiness": 0,
   "top_strength": "salah satu dari: analytical/leadership/builder/creator/communication/risk_taking",
   "gap_skills": ["skill1", "skill2", "skill3"],
-  "gap_summary": "2-3 kalimat tentang gap antara posisi sekarang dan target",
-  "mentor_message": "pesan personal dari Diah Anna (2-3 kalimat) kepada user berdasarkan analisis: sebutkan nama jika ada, akui potensinya, sebutkan hambatan terbesar spesifik, dan hint bahwa ada roadmap yang sudah disiapkan. Bahasa Indonesia, hangat, personal.",
+  "gap_analysis": {
+    "summary": "2-3 kalimat diagnosis gap — bukan daftar kekurangan, tapi penjelasan APA yang memisahkan mereka dari target dan KENAPA",
+    "root_cause": "1 kalimat root cause terdalam — seringkali bukan soal skill teknis",
+    "breakthrough_key": "1 hal yang kalau diselesaikan, akan membuka jalan paling cepat ke target mereka"
+  },
+  "wow_insight": "1 observasi tajam dan mengejutkan tentang user berdasarkan percakapan — sesuatu yang mereka mungkin belum sadari sendiri. Spesifik, personal, bukan klise. Contoh: 'Yang menarik dari situasi kamu adalah hambatan terbesarmu bukan soal skill — tapi soal [sesuatu spesifik]. Dan justru itu yang bisa jadi keunggulan tersembunyimu.'",
+  "mentor_message": "Pesan personal dari Diah Anna — 3-4 kalimat. HARUS: 1) Sebut nama jika ada, 2) Akui 1 kekuatan spesifik yang terdeteksi, 3) Sebutkan hambatan utama dengan cara yang empati bukan menghakimi, 4) Beri hint tentang roadmap yang sudah disiapkan. Bahasa Indonesia natural seperti teman senior, BUKAN seperti laporan sistem.",
   "gps_steps": [
-    { "title": "Career Assessment", "done": true },
-    { "title": "langkah konkret pertama yang spesifik untuk target user (misalnya: SQL Basic untuk Data Analyst)", "done": false },
-    { "title": "langkah kedua yang logis setelah langkah pertama", "done": false },
-    { "title": "langkah ketiga", "done": false },
-    { "title": "langkah keempat", "done": false },
-    { "title": "langkah kelima (biasanya Interview Preparation)", "done": false }
+    { "title": "Career Assessment", "done": true, "description": "Kamu sudah tahu siapa dirimu dan mau ke mana" },
+    { "title": "langkah konkret pertama yang spesifik untuk target user", "done": false, "description": "penjelasan singkat kenapa langkah ini penting" },
+    { "title": "langkah kedua yang logis", "done": false, "description": "penjelasan singkat" },
+    { "title": "langkah ketiga — ini terkunci", "done": false, "description": "preview singkat" },
+    { "title": "langkah keempat — ini terkunci", "done": false, "description": "preview singkat" },
+    { "title": "langkah kelima — ini terkunci", "done": false, "description": "preview singkat" }
   ],
   "growth_state": {
     "career_stage": "Career Explorer",
     "progress_percent": 0,
-    "current_focus": "fokus utama saat ini dalam 5 kata"
-  }
+    "current_focus": "fokus utama dalam 5 kata",
+    "next_milestone": "milestone pertama yang harus dicapai"
+  },
+  "eta_months": 0
 }
 
-ATURAN genome_scores (nilai 0-100):
-- analytical: suka data, logika, riset
-- leadership: pernah memimpin, inisiatif tinggi
-- builder: eksekutor, suka bikin sesuatu, teknis
-- creator: kreatif, inovatif, suka ide baru
-- communication: artikulatif, presentasi, networking
-- risk_taking: berani ambil risiko, entrepreneurial
+---
 
-career_readiness: 0-100, seberapa siap user mencapai target karirnya.
-career_stage pilih dari: Career Explorer / Career Builder / Career Professional / Career Expert / Career Leader
-gap_skills: 3-5 skill spesifik yang paling kurang berdasarkan target posisi user.
-gps_steps: 6 langkah konkret dan spesifik berdasarkan target posisi user. Step 1 selalu "Career Assessment" (done: true). Step 2-3 terlihat (free). Step 4-6 terkunci (premium).
+ATURAN ANALISIS:
 
-Percakapan:
-${convoText}`
+genome_scores (0-100, berdasarkan PERCAKAPAN bukan asumsi):
+- analytical: suka data, logika, riset, problem solving sistematis
+- leadership: pernah memimpin, inisiatif tinggi, suka pengaruhi orang
+- builder: eksekutor, suka bikin sesuatu, teknis, hands-on
+- creator: kreatif, inovatif, ekspresif, suka ide baru
+- communication: artikulatif, presentasi, networking, persuasif
+- risk_taking: berani ambil risiko, entrepreneurial, nyaman dengan uncertainty
+
+career_readiness (0-100):
+- Bukan hanya soal skill — tapi kesiapan TOTAL: skill + mindset + clarity + resources
+- Kalau baru mulai: 15-35%
+- Kalau sudah ada pengalaman relevan: 35-60%
+- Kalau hampir siap: 60-85%
+- Jangan terlalu tinggi atau terlalu rendah — harus terasa earned
+
+eta_months: estimasi bulan untuk mencapai target dengan konsistensi normal. Realistis, bukan optimistis.
+
+career_stage: Career Explorer / Career Builder / Career Professional / Career Expert / Career Leader
+
+wow_insight: INI YANG PALING PENTING. Harus membuat user berpikir "bagaimana dia bisa tahu ini?" Berdasarkan pola yang muncul dari percakapan — bukan dari data yang eksplisit disebutkan.
+
+mentor_message: Tulis seperti Diah Anna yang genuinely care. Bukan seperti sistem yang generate laporan.`
 
   try {
-    // Batasi panjang konversasi agar prompt tidak terlalu panjang
-    const trimmedConvo = messages.slice(-16)
-    const trimmedText  = trimmedConvo
-      .map(m => `${m.role === 'user' ? 'User' : 'Diah Anna'}: ${(m.text || m.content || '').slice(0, 400)}`)
-      .join('\n')
-    const trimmedPrompt = prompt.replace(convoText, trimmedText)
-
     const raw = await generateText({
-      system: 'Kamu adalah Career Genome Analyzer. Kembalikan HANYA JSON valid, tanpa teks lain, tanpa backtick.',
-      prompt: trimmedPrompt,
-      maxTokens: 1800,   // naik dari 1000 → cukup untuk full JSON
+      system: 'Kamu adalah Career Genome Analyzer Verneks. Kembalikan HANYA JSON valid, tanpa teks lain, tanpa backtick markdown.',
+      prompt,
+      maxTokens: 2000,
       tier: 'smart',
+      plan: 'premium', // Analisis ini terlalu penting untuk model yang lebih lemah
     })
 
-    // Bersihkan output AI
     let clean = raw.trim()
       .replace(/^```json\s*/i, '').replace(/^```\s*/i, '')
-      .replace(/\s*```$/,      '').trim()
+      .replace(/\s*```$/, '').trim()
 
-    // Ekstrak JSON object jika ada teks di luar
     const firstBrace = clean.indexOf('{')
     const lastBrace  = clean.lastIndexOf('}')
     if (firstBrace !== -1 && lastBrace !== -1) {
       clean = clean.slice(firstBrace, lastBrace + 1)
     }
 
-    // Coba parse — kalau gagal karena truncated, repair dulu
     let result
     try {
       result = JSON.parse(clean)
     } catch (parseErr) {
       console.warn('[compute-genome] JSON truncated, attempting repair...')
-      // Tutup string yang terbuka, lalu tutup brackets yang belum ditutup
       let repaired = clean
-      // Hitung bracket depth
       let depth = 0, inStr = false, escape = false
       for (const ch of repaired) {
-        if (escape)          { escape = false; continue }
-        if (ch === '\\')    { escape = true;  continue }
+        if (escape)           { escape = false; continue }
+        if (ch === '\\')      { escape = true;  continue }
         if (ch === '"' && !inStr) inStr = true
         else if (ch === '"' && inStr) inStr = false
         else if (!inStr && ch === '{') depth++
         else if (!inStr && ch === '}') depth--
       }
-      // Tutup string yang terbuka
       if (inStr) repaired += '"'
-      // Tutup array/object yang terbuka
-      // Cari struktur yang belum ditutup dari tail
       let opens = 0, arrOpens = 0, tmpIn = false
       for (const ch of repaired) {
         if (ch === '"' && !tmpIn) tmpIn = true
