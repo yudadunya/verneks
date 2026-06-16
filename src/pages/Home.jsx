@@ -220,13 +220,14 @@ export default function Home({ user }) {
           transition: 'all 0.7s ease',
           textAlign: 'center',
         }}>
-          {/* Overline */}
-          <div style={{ display: 'inline-flex', alignItems: 'center', gap: 6, background: 'rgba(79,70,229,0.12)', border: '1px solid rgba(79,70,229,0.25)', borderRadius: 99, padding: '5px 14px', marginBottom: 28 }}>
-            <span style={{ fontSize: '0.7rem', color: C.secondary, fontWeight: 700, letterSpacing: '1px' }}>DIAH ANNA • TEMAN PERJALANAN KARIERMU</span>
+          {/* Overline — Diah Anna badge */}
+          <div style={{ display: 'inline-flex', alignItems: 'center', gap: 8, background: 'rgba(6,182,212,0.1)', border: '1px solid rgba(6,182,212,0.3)', borderRadius: 99, padding: '6px 14px 6px 8px', marginBottom: 28 }}>
+            <img src="/diah-anna.png" alt="Diah Anna" style={{ width: 22, height: 22, borderRadius: '50%', objectFit: 'cover', border: '1.5px solid rgba(6,182,212,0.5)' }} />
+            <span style={{ fontSize: '0.7rem', color: '#22D3EE', fontWeight: 700, letterSpacing: '0.5px' }}>Diah Anna, teman perjalanan kariermu</span>
           </div>
 
           {/* Headline */}
-          <h1 style={{ color: '#fff', fontSize: '1.75rem', fontWeight: 900, lineHeight: 1.2, margin: '0 0 20px', letterSpacing: '-0.5px' }}>
+          <h1 style={{ color: '#fff', fontSize: '1.75rem', fontWeight: 900, lineHeight: 1.25, margin: '0 0 20px', letterSpacing: '-0.5px' }}>
             Jangan Habiskan Hidupmu<br />
             <span style={{ background: C.grad, WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>
               Berjalan ke Arah yang Salah.
@@ -235,8 +236,14 @@ export default function Home({ user }) {
 
           {/* Body copy */}
           <div style={{ color: C.muted, fontSize: '0.93rem', lineHeight: 1.9, marginBottom: 28 }}>
-             <p style={{ margin: '0 0 20px', color: '#fff', fontWeight: 700, fontSize: '1rem', fontStyle: 'italic' }}>
-              Karena waktu yang hilang tidak bisa kembali.
+            <p style={{ margin: '0 0 16px' }}>Kamu sudah bekerja keras.</p>
+            <p style={{ margin: '0 0 4px', color: 'rgba(255,255,255,0.55)' }}>Pertanyaannya:</p>
+            <p style={{ margin: '0 0 20px', color: '#fff', fontWeight: 700, fontSize: '1rem', fontStyle: 'italic' }}>
+              Apakah kamu sedang menuju tujuan yang benar?
+            </p>
+            <p style={{ margin: '0 0 4px' }}>Karena yang paling melelahkan bukan bekerja keras.</p>
+            <p style={{ margin: 0, color: '#fff', fontWeight: 700 }}>
+              Melainkan menghabiskan bertahun-tahun mengejar masa depan yang ternyata bukan milikmu.
             </p>
           </div>
 
@@ -246,15 +253,20 @@ export default function Home({ user }) {
               Kenali Dirimu. Temukan Arahmu. Bangun Masa Depanmu.
             </p>
             <p style={{ color: C.muted, fontSize: '0.85rem', lineHeight: 1.7, margin: 0 }}>
-              Bersama <strong style={{ color: C.secondary }}>Diah Anna</strong>, yang membantumu memahami diri, menemukan arah yang tepat, dan melangkah dengan lebih yakin.
+              Bersama <strong style={{ color: '#22D3EE' }}>Diah Anna</strong>, teman karier berbasis AI yang mengenalmu lebih dalam dari CV-mu, membantumu menemukan arah yang tepat, dan menemanimu hingga tujuanmu tercapai.
             </p>
           </div>
 
           {/* CTA Primary */}
           <CTAButton label="Mulai Gratis" />
 
+          {/* Sub CTA note */}
+          <p style={{ margin: '10px 0 0', fontSize: '0.72rem', color: 'rgba(255,255,255,0.25)' }}>
+            Mulai dalam 2 menit • Tanpa Upload CV • Tanpa tes panjang
+          </p>
+
           {/* Login hint */}
-          <p style={{ margin: '14px 0 0', fontSize: '0.72rem', color: 'rgba(255,255,255,0.3)' }}>
+          <p style={{ margin: '10px 0 0', fontSize: '0.72rem', color: 'rgba(255,255,255,0.3)' }}>
             Sudah punya akun?{' '}
             <span onClick={handleGoogle} style={{ color: C.primary, fontWeight: 700, cursor: 'pointer', textDecoration: 'underline' }}>
               Masuk di sini
