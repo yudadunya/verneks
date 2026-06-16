@@ -194,19 +194,6 @@ export default function Home({ user }) {
   return (
     <div style={{ background: C.bg, minHeight: '100vh', fontFamily: "'Plus Jakarta Sans', -apple-system, sans-serif", overflowX: 'hidden' }}>
 
-      {/* ── ANNOUNCEMENT BAR ── */}
-      <div style={{
-        position: 'relative', zIndex: 101,
-        background: 'linear-gradient(90deg, #7C3AED, #4F46E5, #06B6D4)',
-        padding: '9px 20px',
-        display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
-        textAlign: 'center',
-      }}>
-        <span style={{ fontSize: '0.75rem', color: '#fff', fontWeight: 400, opacity: 0.9 }}>LamarCerdas kini hadir sebagai</span>
-        <span style={{ fontSize: '0.78rem', color: '#fff', fontWeight: 800, letterSpacing: '0.5px' }}>✦ Verneks</span>
-        <span style={{ fontSize: '0.75rem', color: '#fff', fontWeight: 400, opacity: 0.9 }}>— AI Career Coach yang lebih personal, lebih cerdas.</span>
-      </div>
-
       {/* ── NAVBAR ── */}
       <nav style={{ position: 'relative', zIndex: 100, padding: '16px 20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
