@@ -235,12 +235,9 @@ export default function Home({ user }) {
 
           {/* Body copy */}
           <div style={{ color: C.muted, fontSize: '0.93rem', lineHeight: 1.9, marginBottom: 28 }}>
-            <p style={{ margin: '0 0 16px' }}>Kamu sudah bekerja keras.</p>
-            <p style={{ margin: '0 0 20px', color: '#fff', fontWeight: 700, fontSize: '1rem', fontStyle: 'italic' }}>
-              Apakah kamu sedang menuju tujuan yang benar?
+             <p style={{ margin: '0 0 20px', color: '#fff', fontWeight: 700, fontSize: '1rem', fontStyle: 'italic' }}>
+              Temukan arah yang tepat sebelum terlambat.
             </p>
-            <p style={{ margin: '0 0 4px' }}>Karena yang paling melelahkan bukanlah bekerja keras.</p>
-            <p style={{ margin: 0, color: '#fff', fontWeight: 700 }}>Melainkan menghabiskan bertahun-tahun mengejar jalan yang ternyata bukan milikmu.</p>
           </div>
 
           {/* Sub-headline */}
@@ -249,7 +246,7 @@ export default function Home({ user }) {
               Kenali Dirimu. Temukan Arahmu. Bangun Masa Depanmu.
             </p>
             <p style={{ color: C.muted, fontSize: '0.85rem', lineHeight: 1.7, margin: 0 }}>
-              Bersama <strong style={{ color: C.secondary }}>Diah Anna</strong>, AI Career Companion yang membantumu memahami diri, menemukan arah yang tepat, dan mendampingimu hingga tujuanmu tercapai.
+              Bersama <strong style={{ color: C.secondary }}>Diah Anna</strong>, teman karier yang membantumu melangkah dengan lebih yakin.
             </p>
           </div>
 
