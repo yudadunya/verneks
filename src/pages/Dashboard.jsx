@@ -532,10 +532,10 @@ export default function Dashboard({ user, loading = false }) {
   const [actions, setActions]   = useState([])
   const [events, setEvents]     = useState([])
   const [isPremium, setIsPremium] = useState(false)
-  const [loading, setLoading]   = useState(true)
+  const [dataLoading, setDataLoading] = useState(true)
 
   useEffect(() => {
-    if (loading) return
+    if (loading) return // tunggu App.jsx selesai getSession
     if (!user) { navigate('/'); return }
     Promise.all([
       supabase.from('user_career_profiles').select('*').eq('user_id', user.id).maybeSingle(),
@@ -551,7 +551,7 @@ export default function Dashboard({ user, loading = false }) {
       setIsPremium(!!sub?.plan && sub.plan !== 'free')
       setActions(acts || [])
       setEvents(evs || [])
-      setLoading(false)
+      setDataLoading(false)
 
       // Backfill user lama: kalau summary kosong tapi ada career data → refresh otomatis
       if (p?.target_posisi && !p?.summary) {
@@ -577,7 +577,7 @@ export default function Dashboard({ user, loading = false }) {
   const firstName = user?.user_metadata?.full_name?.split(' ')[0]
                  || user?.user_metadata?.name?.split(' ')[0] || 'Kamu'
 
-  if (loading) return (
+  if (dataLoading) return (
     <div style={{ minHeight: '100vh', background: '#0a0f0d', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
       <div style={{ color: 'rgba(255,255,255,0.25)', fontSize: '0.85rem' }}>Memuat...</div>
     </div>

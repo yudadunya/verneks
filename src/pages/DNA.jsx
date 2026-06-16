@@ -132,15 +132,16 @@ function Tag({ label, emoji, color, bg, border }) {
 }
 
 // ─── MAIN ─────────────────────────────────────────────────────────────────────
-export default function DNA({ user }) {
+export default function DNA({ user, loading = false }) {
   const { plan } = useSubscription(user?.id)
   const navigate  = useNavigate()
   const [scores, setScores]   = useState(null)
   const [profile, setProfile] = useState(null)
-  const [loading, setLoading] = useState(true)
+  const [dataLoading, setDataLoading] = useState(true)
   const [visible, setVisible] = useState(false)
 
   useEffect(() => {
+    if (loading) return
     if (!user) { navigate('/'); return }
     Promise.all([
       supabase.from('user_genome_scores').select('*').eq('user_id', user.id).maybeSingle(),
@@ -213,7 +214,7 @@ export default function DNA({ user }) {
       }
 
       setProfile(p)
-      setLoading(false)
+      setDataLoading(false)
       setTimeout(() => setVisible(true), 80)
     })
   }, [user?.id])

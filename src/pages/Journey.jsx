@@ -240,7 +240,7 @@ function PhaseBlock({ phase, globalStartIdx, currentIdx, isPremium, expanded, on
 }
 
 // ─── MAIN PAGE ────────────────────────────────────────────────────────────────
-export default function Journey({ user }) {
+export default function Journey({ user, loading = false }) {
   const navigate = useNavigate()
 
   const [profile,   setProfile]   = useState(null)
@@ -248,11 +248,12 @@ export default function Journey({ user }) {
   const [actions,   setActions]   = useState([])
   const [events,    setEvents]    = useState([])
   const [isPremium, setIsPremium] = useState(null)
-  const [loading,   setLoading]   = useState(true)
+  const [dataLoading, setDataLoading] = useState(true)
   const [visible,   setVisible]   = useState(false)
   const [expanded,  setExpanded]  = useState(null) // globalIdx of expanded step
 
   useEffect(() => {
+    if (loading) return
     if (!user) { navigate('/'); return }
 
     supabase
@@ -280,7 +281,7 @@ export default function Journey({ user }) {
       setGrowth(g)
       setActions(a || [])
       setEvents(e || [])
-      setLoading(false)
+      setDataLoading(false)
       setTimeout(() => setVisible(true), 80)
     })
   }, [user?.id])
@@ -296,7 +297,7 @@ export default function Journey({ user }) {
   }
 
   // ── Guards ──────────────────────────────────────────────────────────────────
-  if (loading || isPremium === null) return (
+  if (dataLoading || isPremium === null) return (
     <div style={{ minHeight: '100vh', background: '#0a0f0d', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: "'Plus Jakarta Sans', sans-serif" }}>
       <div style={{ textAlign: 'center' }}>
         <div style={{ fontSize: '2rem', marginBottom: 12 }}>🗺️</div>

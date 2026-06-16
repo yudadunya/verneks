@@ -4,16 +4,17 @@ import { supabase } from '../lib/supabase'
 import { useSubscription } from '../hooks/useSubscription'
 import BottomNav from '../components/BottomNav'
 
-export default function Profile({ user }) {
+export default function Profile({ user, loading = false }) {
   const { plan } = useSubscription(user?.id)
   const navigate = useNavigate()
   const [profile, setProfile]       = useState(null)
   const [growth, setGrowth]         = useState(null)
-  const [loading, setLoading]       = useState(true)
+  const [dataLoading, setDataLoading] = useState(true)
   const [logoutLoading, setLogoutLoading] = useState(false)
   const [visible, setVisible]       = useState(false)
 
   useEffect(() => {
+    if (loading) return
     if (!user) { navigate('/'); return }
     Promise.all([
       supabase.from('user_career_profiles').select('*').eq('user_id', user.id).maybeSingle(),
@@ -21,7 +22,7 @@ export default function Profile({ user }) {
     ]).then(([{ data: p }, { data: g }]) => {
       setProfile(p)
       setGrowth(g)
-      setLoading(false)
+      setDataLoading(false)
       setTimeout(() => setVisible(true), 80)
     })
   }, [user?.id])

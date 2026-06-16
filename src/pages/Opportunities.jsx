@@ -26,14 +26,15 @@ function clearCache(userId) {
   try { sessionStorage.removeItem(`${CACHE_KEY}_${userId}`) } catch {}
 }
 
-export default function Opportunities({ user }) {
+export default function Opportunities({ user, loading = false }) {
   const navigate   = useNavigate()
   const [isPremium, setIsPremium] = useState(null)
   const [jobs,      setJobs]      = useState([])
-  const [loading,   setLoading]   = useState(false)
+  const [dataLoading, setDataLoading] = useState(false)
   const [error,     setError]     = useState(null)
 
   useEffect(() => {
+    if (loading) return
     if (!user) { navigate('/'); return }
 
     supabase
@@ -59,7 +60,7 @@ export default function Opportunities({ user }) {
 
   const fetchJobs = async (forceRefresh = false) => {
     if (forceRefresh) clearCache(user.id)
-    setLoading(true)
+    setDataLoading(true)
     setError(null)
     try {
       const res  = await fetch('/api/job-match', {
@@ -74,7 +75,7 @@ export default function Opportunities({ user }) {
     } catch (e) {
       setError(e.message)
     } finally {
-      setLoading(false)
+      setDataLoading(false)
     }
   }
 
@@ -125,7 +126,7 @@ export default function Opportunities({ user }) {
       <div style={{ padding: '16px' }}>
 
         {/* Loading */}
-        {loading && (
+        {dataLoading && (
           <div style={{ textAlign: 'center', padding: '48px 0' }}>
             <div style={{ fontSize: '2rem', marginBottom: 12 }}>🔍</div>
             <div style={{ color: '#666', fontSize: '0.85rem', lineHeight: 1.7 }}>
@@ -135,7 +136,7 @@ export default function Opportunities({ user }) {
         )}
 
         {/* Error */}
-        {!loading && error && (
+        {!dataLoading && error && (
           <div style={{ background: '#fff5f5', border: '1px solid #fecaca', borderRadius: 12, padding: '16px', marginBottom: 16, textAlign: 'center' }}>
             <div style={{ fontSize: '1.5rem', marginBottom: 8 }}>⚠️</div>
             <div style={{ color: '#dc2626', fontSize: '0.85rem', marginBottom: 12 }}>
@@ -153,7 +154,7 @@ export default function Opportunities({ user }) {
         )}
 
         {/* Job cards */}
-        {!loading && !error && jobs.length > 0 && (
+        {!dataLoading && !error && jobs.length > 0 && (
           <>
             <div style={{ color: '#999', fontSize: '0.75rem', marginBottom: 12 }}>
               {jobs.length} lowongan cocok dengan profil kamu
