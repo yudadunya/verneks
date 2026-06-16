@@ -222,7 +222,7 @@ export default function Home({ user }) {
         }}>
           {/* Overline */}
           <div style={{ display: 'inline-flex', alignItems: 'center', gap: 6, background: 'rgba(79,70,229,0.12)', border: '1px solid rgba(79,70,229,0.25)', borderRadius: 99, padding: '5px 14px', marginBottom: 28 }}>
-            <span style={{ fontSize: '0.7rem', color: C.secondary, fontWeight: 700, letterSpacing: '1px' }}>AI CAREER COMPANION</span>
+            <span style={{ fontSize: '0.7rem', color: C.secondary, fontWeight: 700, letterSpacing: '1px' }}>DIAH ANNA • TEMAN PERJALANAN KARIERMU</span>
           </div>
 
           {/* Headline */}
