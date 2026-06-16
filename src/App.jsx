@@ -182,16 +182,19 @@ export default function App() {
                   target_posisi:    p.target_posisi    || null,
                   posisi_saat_ini:  p.posisi_saat_ini  || null,
                   industri:         p.industri         || null,
-                  hambatan:         p.hambatan_utama   || null,
+                  hambatan:         p.hambatan_utama   || p.hambatan || null,
+                  motivasi:         p.motivasi         || null,
+                  gaya_kerja:       p.gaya_kerja       || null,
                   career_readiness: result.career_readiness || 0,
                   skill_gaps:       result.gap_skills  || [],
                   gps_steps:        result.gps_steps   || [],
                   mentor_message:   result.mentor_message || null,
-                  summary:          result.mentor_message || null,
+                  summary:          result.wow_insight  || result.mentor_message || null,
                   last_updated:     new Date().toISOString(),
                 }, { onConflict: 'user_id' }).then(({ error }) => {
                   if (error) console.warn('[discovery-save] profile error:', error.message)
                 })
+
 
                 // 2. Simpan genome scores
                 if (Object.values(gs).some(v => v > 0)) {
@@ -315,11 +318,11 @@ export default function App() {
         <Route path="/discovery"      element={<Discovery />} />
         <Route path="/genome-result"   element={<GenomeResult />} />
         <Route path="/paywall"          element={<Paywall />} />
-        <Route path="/dashboard"       element={<Dashboard user={user} />} />
-        <Route path="/journey"         element={<Journey user={user} />} />
-        <Route path="/dna"            element={<DNA user={user} />} />
-        <Route path="/opportunities"  element={<Opportunities user={user} />} />
-        <Route path="/profile"        element={<Profile user={user} />} />
+        <Route path="/dashboard"       element={<Dashboard user={user} loading={loading} />} />
+        <Route path="/journey"         element={<Journey user={user} loading={loading} />} />
+        <Route path="/dna"            element={<DNA user={user} loading={loading} />} />
+        <Route path="/opportunities"  element={<Opportunities user={user} loading={loading} />} />
+        <Route path="/profile"        element={<Profile user={user} loading={loading} />} />
         <Route path="/blog"          element={<Blog user={user} />} />
         <Route path="/blog/:slug"    element={<BlogPost user={user} />} />
         <Route path="/adm-lc"        element={<AdminPanel />} />
