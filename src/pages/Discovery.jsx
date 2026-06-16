@@ -43,17 +43,36 @@ function getOpportunities(targetPosisi) {
 function AnalysisResult({ result, onSave, saving }) {
   const [revealed, setRevealed] = useState(false)
   const [expandedGenome, setExpandedGenome] = useState(null)
+  const [wowRevealed, setWowRevealed] = useState(false)
+  const [readinessAnim, setReadinessAnim] = useState(0)
 
-  useEffect(() => { setTimeout(() => setRevealed(true), 80) }, [])
+  useEffect(() => {
+    setTimeout(() => setRevealed(true), 80)
+    // Wow insight reveal dengan delay
+    setTimeout(() => setWowRevealed(true), 600)
+    // Readiness counter animation
+    const target = result?.career_readiness || 0
+    let current = 0
+    const step = target / 40
+    const timer = setInterval(() => {
+      current = Math.min(current + step, target)
+      setReadinessAnim(Math.round(current))
+      if (current >= target) clearInterval(timer)
+    }, 40)
+    return () => clearInterval(timer)
+  }, [])
 
   if (!result) return null
 
   const gs          = result.genome_scores || {}
   const p           = result.profile_preview || {}
   const growth      = result.growth_state || {}
+  const gapAnalysis = result.gap_analysis || {}
   const gapSkills   = result.gap_skills || []
   const gpsSteps    = result.gps_steps || []
   const readiness   = result.career_readiness || 0
+  const wowInsight  = result.wow_insight || null
+  const etaMonths   = result.eta_months || null
   const opportunities = getOpportunities(p.target_posisi)
 
   const sortedGenome = [...GENOME_MAP]
@@ -61,88 +80,162 @@ function AnalysisResult({ result, onSave, saving }) {
     .filter(g => g.val > 0)
     .sort((a, b) => b.val - a.val)
 
-  const topGenome = sortedGenome.slice(0, 3)
+  const topGenome = sortedGenome[0]
+  const firstName = p.nama?.split(' ')[0] || null
 
   const fade = (delay = 0) => ({
     opacity: revealed ? 1 : 0,
     transform: revealed ? 'translateY(0)' : 'translateY(18px)',
-    transition: `opacity 0.5s ease ${delay}s, transform 0.5s ease ${delay}s`,
+    transition: `opacity 0.55s ease ${delay}s, transform 0.55s ease ${delay}s`,
   })
-
   return (
-    <div style={{ background: '#0a0f0d', minHeight: '100vh', fontFamily: "'Plus Jakarta Sans', -apple-system, sans-serif" }}>
+    <div style={{ background: '#0a0f0d', minHeight: '100vh', fontFamily: "'Plus Jakarta Sans', -apple-system, sans-serif", paddingBottom: 200 }}>
 
-      {/* ── Header hasil ── */}
+      {/* ── Header ── */}
       <div style={{ background: 'rgba(37,211,102,0.07)', borderBottom: '1px solid rgba(37,211,102,0.15)', padding: '14px 18px', position: 'sticky', top: 0, zIndex: 10, backdropFilter: 'blur(10px)' }}>
         <div style={{ maxWidth: 480, margin: '0 auto', display: 'flex', alignItems: 'center', gap: 10 }}>
           <img src="/diah-anna.png" alt="" style={{ width: 32, height: 32, borderRadius: '50%', objectFit: 'cover' }} />
           <div>
             <div style={{ color: '#25D366', fontWeight: 700, fontSize: '0.82rem' }}>Diah Anna selesai menganalisis kamu</div>
-            <div style={{ color: 'rgba(255,255,255,0.35)', fontSize: '0.68rem' }}>Hasil Career Discovery</div>
+            <div style={{ color: 'rgba(255,255,255,0.35)', fontSize: '0.68rem' }}>Hasil Career Discovery · Verneks</div>
           </div>
         </div>
       </div>
 
-      <div style={{ padding: '20px 18px 180px', maxWidth: 480, margin: '0 auto' }}>
+      <div style={{ padding: '20px 18px 0', maxWidth: 480, margin: '0 auto' }}>
 
-        {/* ── Hero: Target + Readiness ── */}
+        {/* ── WOW INSIGHT — muncul pertama, sebelum angka ── */}
+        {wowInsight && (
+          <div style={{
+            background: 'linear-gradient(135deg, rgba(103,58,183,0.15), rgba(37,211,102,0.08))',
+            border: '1px solid rgba(103,58,183,0.3)',
+            borderRadius: 18, padding: '18px 16px', marginBottom: 16,
+            opacity: wowRevealed ? 1 : 0,
+            transform: wowRevealed ? 'translateY(0) scale(1)' : 'translateY(20px) scale(0.97)',
+            transition: 'all 0.7s cubic-bezier(0.34,1.56,0.64,1)',
+          }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10 }}>
+              <span style={{ fontSize: '1.1rem' }}>✨</span>
+              <div style={{ color: '#CE93D8', fontWeight: 700, fontSize: '0.78rem', letterSpacing: '1px' }}>INSIGHT DIAH ANNA</div>
+            </div>
+            <div style={{ color: 'rgba(255,255,255,0.88)', fontSize: '0.88rem', lineHeight: 1.7, fontStyle: 'italic' }}>
+              "{wowInsight}"
+            </div>
+          </div>
+        )}
+
+        {/* ── Hero: Target + Readiness dengan counter animation ── */}
         <div style={{
           background: 'linear-gradient(135deg, rgba(37,211,102,0.1), rgba(52,183,241,0.06))',
           border: '1px solid rgba(37,211,102,0.2)',
           borderRadius: 18, padding: '20px', marginBottom: 14,
-          ...fade(0)
+          ...fade(0.1)
         }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-            <div style={{ flex: 1 }}>
-              <div style={{ color: 'rgba(255,255,255,0.35)', fontSize: '0.62rem', letterSpacing: '1.5px', marginBottom: 4 }}>🎯 TARGET KARIER</div>
-              <div style={{ color: '#fff', fontWeight: 800, fontSize: '1.15rem', lineHeight: 1.2, marginBottom: 10 }}>
-                {p.target_posisi || 'Karier Impianmu'}
-              </div>
-              {p.posisi_saat_ini && (
-                <div style={{ color: 'rgba(255,255,255,0.4)', fontSize: '0.75rem' }}>
-                  Dari: {p.posisi_saat_ini}
-                </div>
-              )}
+          <div style={{ color: 'rgba(255,255,255,0.35)', fontSize: '0.62rem', letterSpacing: '1.5px', marginBottom: 6 }}>
+            🎯 CAREER TARGET
+          </div>
+          <div style={{ color: '#fff', fontWeight: 800, fontSize: '1.2rem', lineHeight: 1.2, marginBottom: 4 }}>
+            {p.target_posisi || 'Karier Impianmu'}
+          </div>
+          {p.posisi_saat_ini && (
+            <div style={{ color: 'rgba(255,255,255,0.35)', fontSize: '0.72rem', marginBottom: 14 }}>
+              dari posisi {p.posisi_saat_ini}
             </div>
-            <div style={{ textAlign: 'right', flexShrink: 0, marginLeft: 16 }}>
-              <div style={{ color: '#25D366', fontWeight: 900, fontSize: '2rem', lineHeight: 1 }}>{readiness}%</div>
-              <div style={{ color: 'rgba(255,255,255,0.3)', fontSize: '0.62rem', marginTop: 2 }}>Career Readiness</div>
+          )}
+
+          {/* Readiness dengan counter */}
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
+            <div style={{ color: 'rgba(255,255,255,0.5)', fontSize: '0.75rem' }}>Career Readiness</div>
+            <div style={{ display: 'flex', alignItems: 'baseline', gap: 2 }}>
+              <span style={{ color: '#25D366', fontWeight: 900, fontSize: '2rem', lineHeight: 1 }}>{readinessAnim}</span>
+              <span style={{ color: '#25D366', fontWeight: 700, fontSize: '1rem' }}>%</span>
             </div>
           </div>
-          {/* Progress bar */}
-          <div style={{ background: 'rgba(255,255,255,0.07)', borderRadius: 99, height: 6, marginTop: 14, overflow: 'hidden' }}>
+          <div style={{ background: 'rgba(255,255,255,0.07)', borderRadius: 99, height: 8, overflow: 'hidden' }}>
             <div style={{
               background: 'linear-gradient(90deg,#25D366,#34B7F1)',
               height: '100%', borderRadius: 99,
               width: revealed ? `${readiness}%` : '0%',
-              transition: 'width 1.4s ease 0.3s',
+              transition: 'width 1.6s cubic-bezier(0.4,0,0.2,1) 0.2s',
             }} />
           </div>
+
+          {/* ETA kalau ada */}
+          {etaMonths && (
+            <div style={{ marginTop: 10, display: 'flex', alignItems: 'center', gap: 6 }}>
+              <span style={{ fontSize: '0.75rem' }}>⏱</span>
+              <span style={{ color: 'rgba(255,255,255,0.4)', fontSize: '0.72rem' }}>
+                Estimasi tercapai dalam <strong style={{ color: 'rgba(255,255,255,0.7)' }}>{etaMonths} bulan</strong> dengan konsistensi
+              </span>
+            </div>
+          )}
         </div>
 
-        {/* ── Career Gap Analysis ── */}
-        {gapSkills.length > 0 && (
+        {/* ── Kekuatan Tersembunyi (kalau ada) ── */}
+        {p.kekuatan_tersembunyi && (
+          <div style={{
+            background: 'rgba(37,211,102,0.06)', border: '1px solid rgba(37,211,102,0.15)',
+            borderRadius: 14, padding: '14px 16px', marginBottom: 14,
+            ...fade(0.18)
+          }}>
+            <div style={{ color: '#25D366', fontWeight: 700, fontSize: '0.78rem', letterSpacing: '0.5px', marginBottom: 6 }}>
+              💎 KEKUATAN TERSEMBUNYI
+            </div>
+            <div style={{ color: 'rgba(255,255,255,0.8)', fontSize: '0.85rem', lineHeight: 1.6 }}>
+              {p.kekuatan_tersembunyi}
+            </div>
+          </div>
+        )}
+
+        {/* ── Gap Analysis (bukan sekedar list) ── */}
+        {(gapAnalysis.summary || gapSkills.length > 0) && (
           <div style={{
             background: 'rgba(255,183,77,0.06)', border: '1px solid rgba(255,183,77,0.18)',
             borderRadius: 16, padding: '16px', marginBottom: 14,
-            ...fade(0.08)
+            ...fade(0.24)
           }}>
-            <div style={{ color: '#FFB74D', fontWeight: 700, fontSize: '0.85rem', marginBottom: 12 }}>⚠ Gap Utama</div>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 7 }}>
+            <div style={{ color: '#FFB74D', fontWeight: 700, fontSize: '0.85rem', marginBottom: 10 }}>
+              🎯 Yang Memisahkan Kamu dari Target
+            </div>
+
+            {/* Root cause kalau ada */}
+            {gapAnalysis.root_cause && (
+              <div style={{ marginBottom: 12, padding: '10px 12px', background: 'rgba(255,183,77,0.08)', borderRadius: 10, borderLeft: '3px solid rgba(255,183,77,0.4)' }}>
+                <div style={{ color: 'rgba(255,255,255,0.75)', fontSize: '0.82rem', lineHeight: 1.6 }}>
+                  {gapAnalysis.root_cause}
+                </div>
+              </div>
+            )}
+
+            {/* Gap skills */}
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginBottom: gapAnalysis.breakthrough_key ? 10 : 0 }}>
               {gapSkills.slice(0, 4).map((skill, i) => (
-                <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                  <div style={{
-                    width: 6, height: 6, borderRadius: '50%',
-                    background: i === 0 ? '#EF5350' : i === 1 ? '#FFB74D' : 'rgba(255,255,255,0.25)',
-                    flexShrink: 0,
-                  }} />
-                  <span style={{ color: 'rgba(255,255,255,0.7)', fontSize: '0.85rem', fontWeight: i === 0 ? 600 : 400 }}>{skill}</span>
+                <div key={i} style={{
+                  padding: '4px 10px', borderRadius: 99, fontSize: '0.75rem', fontWeight: 600,
+                  background: i === 0 ? 'rgba(239,83,80,0.15)' : 'rgba(255,255,255,0.06)',
+                  border: `1px solid ${i === 0 ? 'rgba(239,83,80,0.3)' : 'rgba(255,255,255,0.1)'}`,
+                  color: i === 0 ? '#EF9A9A' : 'rgba(255,255,255,0.6)',
+                }}>
+                  {skill}
                 </div>
               ))}
             </div>
-            {result.gap_summary && (
-              <div style={{ marginTop: 10, padding: '10px 12px', background: 'rgba(255,255,255,0.03)', borderRadius: 10, color: 'rgba(255,255,255,0.45)', fontSize: '0.78rem', lineHeight: 1.6 }}>
-                {result.gap_summary}
+
+            {/* Breakthrough key */}
+            {gapAnalysis.breakthrough_key && (
+              <div style={{ marginTop: 10, display: 'flex', gap: 8, alignItems: 'flex-start' }}>
+                <span style={{ fontSize: '0.9rem', flexShrink: 0 }}>🔑</span>
+                <div style={{ color: 'rgba(255,255,255,0.65)', fontSize: '0.78rem', lineHeight: 1.6 }}>
+                  <strong style={{ color: 'rgba(255,255,255,0.85)' }}>Kunci breakthrough: </strong>
+                  {gapAnalysis.breakthrough_key}
+                </div>
+              </div>
+            )}
+
+            {/* Gap summary fallback */}
+            {!gapAnalysis.root_cause && gapAnalysis.summary && (
+              <div style={{ color: 'rgba(255,255,255,0.5)', fontSize: '0.78rem', lineHeight: 1.6, marginTop: 8 }}>
+                {gapAnalysis.summary}
               </div>
             )}
           </div>
@@ -152,115 +245,103 @@ function AnalysisResult({ result, onSave, saving }) {
         <div style={{
           background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.07)',
           borderRadius: 16, padding: '16px', marginBottom: 14,
-          ...fade(0.14)
+          ...fade(0.30)
         }}>
-          <div style={{ color: '#fff', fontWeight: 700, fontSize: '0.85rem', marginBottom: 14 }}>🧠 Career Genome</div>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14 }}>
+            <div style={{ color: '#fff', fontWeight: 700, fontSize: '0.85rem' }}>🧠 Career Genome</div>
+            {topGenome && (
+              <div style={{ background: `${topGenome.color}22`, border: `1px solid ${topGenome.color}44`, borderRadius: 99, padding: '3px 10px' }}>
+                <span style={{ color: topGenome.color, fontSize: '0.7rem', fontWeight: 700 }}>
+                  {topGenome.emoji} {topGenome.label} dominant
+                </span>
+              </div>
+            )}
+          </div>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
             {sortedGenome.map((g, i) => (
               <div key={g.key}>
-                <div
-                  onClick={() => setExpandedGenome(expandedGenome === g.key ? null : g.key)}
-                  style={{ cursor: 'pointer' }}
-                >
+                <div onClick={() => setExpandedGenome(expandedGenome === g.key ? null : g.key)} style={{ cursor: 'pointer' }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 5 }}>
-                    <span style={{ color: 'rgba(255,255,255,0.8)', fontSize: '0.82rem', fontWeight: 600 }}>
+                    <span style={{ color: i === 0 ? '#fff' : 'rgba(255,255,255,0.7)', fontSize: '0.82rem', fontWeight: i === 0 ? 700 : 500 }}>
                       {g.emoji} {g.label}
                     </span>
                     <span style={{ color: g.color, fontWeight: 800, fontSize: '0.88rem' }}>{g.val}</span>
                   </div>
-                  <div style={{ background: 'rgba(255,255,255,0.07)', borderRadius: 99, height: 5, overflow: 'hidden' }}>
+                  <div style={{ background: 'rgba(255,255,255,0.07)', borderRadius: 99, height: i === 0 ? 7 : 5, overflow: 'hidden' }}>
                     <div style={{
-                      background: g.color, height: '100%', borderRadius: 99,
+                      background: i === 0 ? `linear-gradient(90deg, ${g.color}, ${g.color}bb)` : g.color,
+                      height: '100%', borderRadius: 99,
                       width: revealed ? `${g.val}%` : '0%',
-                      transition: `width 0.9s ease ${0.3 + i * 0.07}s`,
+                      transition: `width 1s ease ${0.4 + i * 0.08}s`,
                     }} />
                   </div>
                 </div>
                 {expandedGenome === g.key && (
-                  <div style={{ marginTop: 7, padding: '9px 11px', background: `${g.color}11`, border: `1px solid ${g.color}22`, borderRadius: 9, fontSize: '0.78rem', color: 'rgba(255,255,255,0.58)', lineHeight: 1.6 }}>
+                  <div style={{ marginTop: 8, padding: '10px 12px', background: `${g.color}11`, border: `1px solid ${g.color}22`, borderRadius: 10, fontSize: '0.78rem', color: 'rgba(255,255,255,0.6)', lineHeight: 1.6 }}>
                     {GENOME_MAP.find(m => m.key === g.key)?.insight || '—'}
                   </div>
                 )}
               </div>
             ))}
           </div>
-          <div style={{ marginTop: 8, color: 'rgba(255,255,255,0.2)', fontSize: '0.68rem' }}>Tap nama untuk lihat insight</div>
+          <div style={{ marginTop: 10, color: 'rgba(255,255,255,0.2)', fontSize: '0.68rem' }}>Tap untuk lihat insight per dimensi</div>
         </div>
 
-        {/* ── Cocok untuk kamu ── */}
-        <div style={{
-          background: 'rgba(52,183,241,0.05)', border: '1px solid rgba(52,183,241,0.15)',
-          borderRadius: 16, padding: '16px', marginBottom: 14,
-          ...fade(0.20)
-        }}>
-          <div style={{ color: '#34B7F1', fontWeight: 700, fontSize: '0.85rem', marginBottom: 12 }}>💼 Cocok untuk Kamu</div>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-            {opportunities.map(([role, pct], i) => (
-              <div key={i} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                <span style={{ color: i === 0 ? '#fff' : 'rgba(255,255,255,0.6)', fontSize: '0.85rem', fontWeight: i === 0 ? 700 : 400 }}>
-                  {i === 0 && p.target_posisi ? p.target_posisi : role}
-                </span>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                  <div style={{ width: 60, height: 4, background: 'rgba(255,255,255,0.08)', borderRadius: 99, overflow: 'hidden' }}>
-                    <div style={{
-                      height: '100%', borderRadius: 99,
-                      background: i === 0 ? '#34B7F1' : 'rgba(52,183,241,0.4)',
-                      width: revealed ? `${pct}%` : '0%',
-                      transition: `width 0.9s ease ${0.5 + i * 0.1}s`,
-                    }} />
-                  </div>
-                  <span style={{ color: i === 0 ? '#34B7F1' : 'rgba(255,255,255,0.3)', fontSize: '0.75rem', fontWeight: 600, minWidth: 30, textAlign: 'right' }}>{pct}%</span>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-
-        {/* ── GPS Preview (3 step pertama visible, sisanya blur) ── */}
+        {/* ── GPS Preview ── */}
         {gpsSteps.length > 0 && (
           <div style={{
             background: 'rgba(37,211,102,0.04)', border: '1px solid rgba(37,211,102,0.15)',
             borderRadius: 16, padding: '16px', marginBottom: 14,
-            ...fade(0.26)
+            ...fade(0.38)
           }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
-              <div style={{ color: '#25D366', fontWeight: 700, fontSize: '0.85rem' }}>🗺️ Career GPS (Preview)</div>
-              <div style={{ background: 'rgba(37,211,102,0.15)', color: '#25D366', fontSize: '0.62rem', fontWeight: 700, padding: '2px 8px', borderRadius: 99 }}>6 LANGKAH</div>
+              <div style={{ color: '#25D366', fontWeight: 700, fontSize: '0.85rem' }}>🗺️ Career GPS Preview</div>
+              <div style={{ background: 'rgba(37,211,102,0.15)', color: '#25D366', fontSize: '0.62rem', fontWeight: 700, padding: '2px 8px', borderRadius: 99 }}>
+                {gpsSteps.length} LANGKAH
+              </div>
             </div>
-            <div style={{ color: 'rgba(255,255,255,0.3)', fontSize: '0.72rem', marginBottom: 12 }}>Roadmap personal untuk {p.target_posisi || 'target kariermu'}</div>
+            <div style={{ color: 'rgba(255,255,255,0.3)', fontSize: '0.72rem', marginBottom: 12 }}>
+              Roadmap personal menuju {p.target_posisi || 'target kariermu'}
+            </div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
               {gpsSteps.map((step, i) => {
                 const isVisible = i < 3
                 const isDone = step.done
                 return (
                   <div key={i} style={{
-                    display: 'flex', alignItems: 'center', gap: 10,
-                    padding: '9px 12px', borderRadius: 10,
+                    display: 'flex', alignItems: 'flex-start', gap: 10,
+                    padding: '10px 12px', borderRadius: 10,
                     background: isDone ? 'rgba(37,211,102,0.1)' : isVisible ? 'rgba(255,255,255,0.03)' : 'rgba(255,255,255,0.01)',
-                    border: isDone ? '1px solid rgba(37,211,102,0.2)' : isVisible ? '1px solid rgba(255,255,255,0.07)' : '1px solid rgba(255,255,255,0.03)',
+                    border: isDone ? '1px solid rgba(37,211,102,0.25)' : isVisible ? '1px solid rgba(255,255,255,0.07)' : '1px solid rgba(255,255,255,0.03)',
                     position: 'relative', overflow: 'hidden',
                   }}>
                     <div style={{
-                      width: 24, height: 24, borderRadius: '50%', flexShrink: 0,
+                      width: 26, height: 26, borderRadius: '50%', flexShrink: 0,
                       background: isDone ? '#25D366' : isVisible ? 'rgba(255,255,255,0.1)' : 'rgba(255,255,255,0.04)',
                       display: 'flex', alignItems: 'center', justifyContent: 'center',
                       fontSize: '0.65rem', fontWeight: 700,
-                      color: isDone ? '#fff' : isVisible ? 'rgba(255,255,255,0.6)' : 'rgba(255,255,255,0.15)',
+                      color: isDone ? '#fff' : isVisible ? 'rgba(255,255,255,0.7)' : 'rgba(255,255,255,0.15)',
+                      marginTop: 1,
                     }}>
                       {isDone ? '✓' : isVisible ? i + 1 : '🔒'}
                     </div>
-                    <span style={{
-                      fontSize: '0.82rem', fontWeight: isDone ? 600 : 500,
-                      color: isDone ? '#25D366' : isVisible ? 'rgba(255,255,255,0.75)' : 'rgba(255,255,255,0.12)',
-                      filter: !isVisible ? 'blur(4px)' : 'none',
-                      userSelect: !isVisible ? 'none' : 'auto',
-                      flex: 1,
-                    }}>
-                      {step.title}
-                    </span>
+                    <div style={{ flex: 1, filter: !isVisible ? 'blur(4px)' : 'none', userSelect: !isVisible ? 'none' : 'auto' }}>
+                      <div style={{
+                        fontSize: '0.83rem', fontWeight: isDone ? 600 : 500,
+                        color: isDone ? '#25D366' : isVisible ? 'rgba(255,255,255,0.8)' : 'rgba(255,255,255,0.12)',
+                        marginBottom: step.description && isVisible ? 3 : 0,
+                      }}>
+                        {step.title}
+                      </div>
+                      {step.description && isVisible && (
+                        <div style={{ fontSize: '0.72rem', color: 'rgba(255,255,255,0.35)', lineHeight: 1.4 }}>
+                          {step.description}
+                        </div>
+                      )}
+                    </div>
                     {!isVisible && (
-                      <div style={{ position: 'absolute', inset: 0, background: 'rgba(10,15,13,0.5)', backdropFilter: 'blur(1px)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                        <span style={{ fontSize: '0.65rem', color: 'rgba(255,255,255,0.2)', fontWeight: 600 }}>🔒 Tersimpan setelah login</span>
+                      <div style={{ position: 'absolute', inset: 0, background: 'rgba(10,15,13,0.6)', backdropFilter: 'blur(1px)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                        <span style={{ fontSize: '0.65rem', color: 'rgba(255,255,255,0.25)', fontWeight: 600 }}>🔒 Tersimpan setelah login</span>
                       </div>
                     )}
                   </div>
@@ -270,18 +351,25 @@ function AnalysisResult({ result, onSave, saving }) {
           </div>
         )}
 
-        {/* ── Pesan Diah Anna ── */}
+        {/* ── Pesan Diah Anna — diperbesar dan lebih personal ── */}
         {result.mentor_message && (
           <div style={{
-            background: 'rgba(37,211,102,0.06)', border: '1px solid rgba(37,211,102,0.15)',
-            borderRadius: 14, padding: '14px', marginBottom: 14,
-            display: 'flex', gap: 10,
-            ...fade(0.32)
+            background: 'rgba(37,211,102,0.06)', border: '1px solid rgba(37,211,102,0.2)',
+            borderRadius: 18, padding: '18px', marginBottom: 14,
+            ...fade(0.46)
           }}>
-            <img src="/diah-anna.png" alt="" style={{ width: 34, height: 34, borderRadius: '50%', objectFit: 'cover', flexShrink: 0 }} />
-            <div>
-              <div style={{ color: '#25D366', fontWeight: 700, fontSize: '0.72rem', marginBottom: 5 }}>Pesan dari Diah Anna</div>
-              <div style={{ color: 'rgba(255,255,255,0.7)', fontSize: '0.82rem', lineHeight: 1.65 }}>{result.mentor_message}</div>
+            <div style={{ display: 'flex', gap: 12, marginBottom: 12 }}>
+              <img src="/diah-anna.png" alt="" style={{ width: 40, height: 40, borderRadius: '50%', objectFit: 'cover', flexShrink: 0 }} />
+              <div>
+                <div style={{ color: '#25D366', fontWeight: 700, fontSize: '0.85rem' }}>Diah Anna</div>
+                <div style={{ color: 'rgba(255,255,255,0.3)', fontSize: '0.7rem' }}>Career Coach · Verneks</div>
+              </div>
+            </div>
+            <div style={{ color: 'rgba(255,255,255,0.82)', fontSize: '0.88rem', lineHeight: 1.75, paddingLeft: 4 }}>
+              {firstName && (
+                <span style={{ color: '#fff', fontWeight: 700 }}>{firstName}, </span>
+              )}
+              {firstName ? result.mentor_message.replace(new RegExp(`^${firstName}[,.]?\\s*`, 'i'), '') : result.mentor_message}
             </div>
           </div>
         )}
@@ -298,40 +386,6 @@ function AnalysisResult({ result, onSave, saving }) {
         <div style={{ marginBottom: 10, padding: '10px 14px', background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 10 }}>
           <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
             <span style={{ fontSize: '0.85rem' }}>🔒</span>
-            <div>
-              <div style={{ color: 'rgba(255,255,255,0.7)', fontSize: '0.78rem', fontWeight: 600 }}>Simpan hasil + buka roadmap lengkap</div>
-              <div style={{ color: 'rgba(255,255,255,0.3)', fontSize: '0.7rem' }}>Gratis · Login dengan Google · 30 detik</div>
-            </div>
-          </div>
-        </div>
-        <button
-          onClick={onSave}
-          disabled={saving}
-          style={{
-            width: '100%', padding: '15px',
-            background: saving ? 'rgba(37,211,102,0.4)' : 'linear-gradient(135deg,#25D366,#128C7E)',
-            color: '#fff', fontWeight: 800, fontSize: '1rem',
-            borderRadius: 14, border: 'none', cursor: saving ? 'not-allowed' : 'pointer',
-            boxShadow: '0 4px 24px rgba(37,211,102,0.4)',
-            display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
-          }}
-        >
-          {saving ? (
-            <>⏳ Menyimpan...</>
-          ) : (
-            <>
-              <GoogleIcon />
-              🚀 Simpan Hasil Saya
-            </>
-          )}
-        </button>
-        <div style={{ textAlign: 'center', marginTop: 7, color: 'rgba(255,255,255,0.2)', fontSize: '0.68rem' }}>
-          Hasil & roadmap tersimpan otomatis ke akunmu
-        </div>
-      </div>
-
-    </div>
-  )
 }
 
 // Google Icon kecil
@@ -475,9 +529,9 @@ export default function Discovery() {
     try {
       await supabase.auth.signInWithOAuth({
         provider: 'google',
-        options: { redirectTo: `${window.location.origin}/dashboard` }
+        options: { redirectTo: `${window.location.origin}/discovery` }
       })
-      // Setelah redirect balik ke /dashboard, App.jsx akan sync discovery_result ke Supabase
+      // Setelah redirect balik, App.jsx akan sync discovery_result ke Supabase
     } catch {
       alert('Gagal login. Coba lagi!')
       setSaving(false)
