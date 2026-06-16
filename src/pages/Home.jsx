@@ -233,25 +233,24 @@ export default function Home({ user }) {
             </span>
           </h1>
 
-          {/* Body copy — short lines for impact */}
-          <div style={{ color: C.muted, fontSize: '0.95rem', lineHeight: 2, marginBottom: 28 }}>
-            <p style={{ margin: '0 0 4px' }}>Setiap hari kamu bekerja keras.</p>
-            <p style={{ margin: '0 0 4px' }}>Belajar. Mencari peluang.</p>
-            <p style={{ margin: '0 0 20px' }}>Mengejar masa depan yang lebih baik.</p>
-            <p style={{ margin: '0 0 4px', color: 'rgba(255,255,255,0.65)' }}>Namun pernahkah kamu bertanya:</p>
-            <p style={{ margin: '0 0 24px', color: '#fff', fontWeight: 700, fontSize: '1rem', fontStyle: 'italic' }}>
-              "Apakah ini benar-benar jalan yang tepat untukku?"
+          {/* Body copy */}
+          <div style={{ color: C.muted, fontSize: '0.93rem', lineHeight: 1.9, marginBottom: 28 }}>
+            <p style={{ margin: '0 0 16px' }}>Kamu sudah bekerja keras.</p>
+            <p style={{ margin: '0 0 4px', color: 'rgba(255,255,255,0.65)' }}>Pertanyaannya:</p>
+            <p style={{ margin: '0 0 20px', color: '#fff', fontWeight: 700, fontSize: '1rem', fontStyle: 'italic' }}>
+              Apakah kamu sedang menuju tujuan yang benar?
             </p>
-            <p style={{ margin: '0 0 4px' }}>Karena yang paling melelahkan bukan bekerja keras.</p>
-            <p style={{ margin: 0, color: '#fff', fontWeight: 700 }}>Yang paling melelahkan adalah bekerja keras tanpa arah yang jelas.</p>
+            <p style={{ margin: '0 0 4px' }}>Karena yang paling melelahkan bukanlah bekerja keras.</p>
+            <p style={{ margin: 0, color: '#fff', fontWeight: 700 }}>Melainkan menghabiskan bertahun-tahun mengejar jalan yang ternyata bukan milikmu.</p>
           </div>
 
           {/* Sub-headline */}
           <div style={{ marginBottom: 28 }}>
-            <p style={{ color: '#fff', fontWeight: 800, fontSize: '1.05rem', margin: '0 0 4px' }}>Kenali Dirimu. Temukan Arahmu.</p>
-            <p style={{ color: '#fff', fontWeight: 800, fontSize: '1.05rem', margin: '0 0 16px' }}>Bangun Masa Depanmu.</p>
+            <p style={{ color: '#fff', fontWeight: 800, fontSize: '1.05rem', margin: '0 0 16px' }}>
+              Kenali Dirimu. Temukan Arahmu. Bangun Masa Depanmu.
+            </p>
             <p style={{ color: C.muted, fontSize: '0.85rem', lineHeight: 1.7, margin: 0 }}>
-              Bersama <strong style={{ color: C.secondary }}>Diah Anna</strong>, AI Career Companion yang membantumu memahami potensi diri, menemukan arah yang tepat, dan mendampingimu hingga tujuanmu tercapai.
+              Bersama <strong style={{ color: C.secondary }}>Diah Anna</strong>, AI Career Companion yang membantumu memahami diri, menemukan arah yang tepat, dan mendampingimu hingga tujuanmu tercapai.
             </p>
           </div>
 
