@@ -236,7 +236,6 @@ export default function Home({ user }) {
           {/* Body copy */}
           <div style={{ color: C.muted, fontSize: '0.93rem', lineHeight: 1.9, marginBottom: 28 }}>
             <p style={{ margin: '0 0 16px' }}>Kamu sudah bekerja keras.</p>
-            <p style={{ margin: '0 0 4px', color: 'rgba(255,255,255,0.65)' }}>Pertanyaannya:</p>
             <p style={{ margin: '0 0 20px', color: '#fff', fontWeight: 700, fontSize: '1rem', fontStyle: 'italic' }}>
               Apakah kamu sedang menuju tujuan yang benar?
             </p>
