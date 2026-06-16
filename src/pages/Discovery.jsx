@@ -384,9 +384,39 @@ function AnalysisResult({ result, onSave, saving }) {
         background: 'linear-gradient(to top, #0a0f0d 70%, transparent)',
       }}>
         <div style={{ marginBottom: 10, padding: '10px 14px', background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 10 }}>
-          <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
-            <span style={{ fontSize: '0.85rem' }}>🔒</span>
+          <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+            {['🗺️ Career GPS Lengkap', '🎯 Roadmap Personal', '📊 Progress Tracking', '💬 Coaching Unlimited'].map(f => (
+              <span key={f} style={{ fontSize: '0.7rem', color: 'rgba(255,255,255,0.35)', display: 'flex', alignItems: 'center', gap: 3 }}>
+                <span style={{ color: '#25D366', fontSize: '0.6rem' }}>🔒</span> {f}
+              </span>
+            ))}
+          </div>
+        </div>
+        <button
+          onClick={onSave}
+          disabled={saving}
+          style={{
+            width: '100%', padding: '15px', borderRadius: 14, border: 'none',
+            background: saving ? '#aaa' : 'linear-gradient(135deg, #25D366, #128C7E)',
+            color: '#fff', fontWeight: 800, fontSize: '1rem',
+            cursor: saving ? 'not-allowed' : 'pointer',
+            boxShadow: '0 4px 20px rgba(37,211,102,0.4)',
+            display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10,
+          }}
+        >
+          {saving
+            ? <><span>⏳</span> Menyimpan...</>
+            : <><GoogleIcon /> Simpan dengan Google — Gratis</>
+          }
+        </button>
+        <div style={{ textAlign: 'center', marginTop: 8, color: 'rgba(255,255,255,0.2)', fontSize: '0.68rem' }}>
+          Gratis · Tidak perlu kartu kredit · Data kamu aman
+        </div>
+      </div>
+    </div>
+  )
 }
+
 
 // Google Icon kecil
 function GoogleIcon() {
