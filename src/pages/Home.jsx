@@ -312,7 +312,164 @@ export default function Home({ user }) {
         </div>
 
         {/* ══════════════════════════════════
-            SECTION 3 — SOLUTION (DIAH ANNA)
+            SECTION 3 — ALUR VERNEKS
+        ══════════════════════════════════ */}
+        <div style={{
+          padding: '40px 0',
+          opacity: visible ? 1 : 0,
+          transition: 'opacity 0.7s ease 0.25s',
+          borderTop: '1px solid rgba(255,255,255,0.05)',
+        }}>
+          <h2 style={{ color: '#fff', fontWeight: 800, fontSize: '1.2rem', textAlign: 'center', marginBottom: 6 }}>
+            Bagaimana Verneks Bekerja?
+          </h2>
+          <p style={{ color: C.muted, fontSize: '0.83rem', textAlign: 'center', marginBottom: 28, lineHeight: 1.6 }}>
+            Dari percakapan pertama hingga tujuanmu tercapai.
+          </p>
+
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 0 }}>
+            {[
+              {
+                step: '01',
+                icon: '💬',
+                title: 'Ngobrol dengan Diah Anna',
+                desc: 'Ceritakan situasimu sekarang dan ke mana kamu ingin pergi. Tidak perlu CV. Tidak perlu dokumen apapun.',
+                color: '#22D3EE',
+              },
+              {
+                step: '02',
+                icon: '🧬',
+                title: 'Temukan Career DNA-mu',
+                desc: 'Diah Anna menganalisis kekuatan, kepribadian, dan potensi tersembunyimu — hal yang tidak terlihat dari CV.',
+                color: '#818CF8',
+              },
+              {
+                step: '03',
+                icon: '🗺️',
+                title: 'Dapatkan Peta Jalan Personal',
+                desc: 'Roadmap karier yang dibuat khusus untukmu — langkah demi langkah, realistis, dan bisa langsung dijalankan.',
+                color: '#34D399',
+              },
+              {
+                step: '04',
+                icon: '🚀',
+                title: 'Bergerak dengan Jelas',
+                desc: 'Setiap hari kamu tahu harus melakukan apa. Tidak ada lagi kebingungan, tidak ada lagi jalan memutar.',
+                color: '#FB923C',
+              },
+              {
+                step: '05',
+                icon: '🎯',
+                title: 'Tujuanmu Tercapai',
+                desc: 'Diah Anna menemanimu sepanjang perjalanan — mengingatkan, memotivasi, dan merayakan setiap kemajuanmu.',
+                color: '#F472B6',
+              },
+            ].map((item, i, arr) => (
+              <div key={i} style={{ display: 'flex', gap: 0, alignItems: 'stretch' }}>
+                {/* Line connector */}
+                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', width: 44, flexShrink: 0 }}>
+                  <div style={{
+                    width: 36, height: 36, borderRadius: '50%', flexShrink: 0,
+                    background: `${item.color}18`, border: `2px solid ${item.color}40`,
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    fontSize: '1rem', marginTop: 2,
+                  }}>
+                    {item.icon}
+                  </div>
+                  {i < arr.length - 1 && (
+                    <div style={{ width: 2, flex: 1, background: `linear-gradient(to bottom, ${item.color}30, ${arr[i+1].color}20)`, minHeight: 24 }} />
+                  )}
+                </div>
+
+                {/* Content */}
+                <div style={{ paddingLeft: 14, paddingBottom: i < arr.length - 1 ? 24 : 0, paddingTop: 4 }}>
+                  <div style={{ color: item.color, fontSize: '0.65rem', fontWeight: 700, letterSpacing: '1px', marginBottom: 3 }}>
+                    LANGKAH {item.step}
+                  </div>
+                  <div style={{ color: '#fff', fontWeight: 700, fontSize: '0.9rem', marginBottom: 5 }}>
+                    {item.title}
+                  </div>
+                  <div style={{ color: C.muted, fontSize: '0.82rem', lineHeight: 1.6 }}>
+                    {item.desc}
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* ══════════════════════════════════
+            SECTION 4 — TESTIMONI BETA
+        ══════════════════════════════════ */}
+        <div style={{
+          padding: '40px 0',
+          opacity: visible ? 1 : 0,
+          transition: 'opacity 0.7s ease 0.3s',
+          borderTop: '1px solid rgba(255,255,255,0.05)',
+        }}>
+          <h2 style={{ color: '#fff', fontWeight: 800, fontSize: '1.2rem', textAlign: 'center', marginBottom: 6 }}>
+            Kata Mereka yang Sudah Mencoba
+          </h2>
+          <p style={{ color: C.muted, fontSize: '0.83rem', textAlign: 'center', marginBottom: 28 }}>
+            Beta tester Verneks dari seluruh Indonesia
+          </p>
+
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+            {[
+              {
+                text: 'Aku pikir aku udah tau mau ke mana. Ternyata setelah ngobrol sama Diah Anna, aku sadar selama ini aku cuma ikut-ikutan. Sekarang aku punya arah yang beneran aku mau.',
+                name: 'Ayu R.',
+                city: 'Surabaya',
+                emoji: '🌟',
+              },
+              {
+                text: 'Yang bikin beda itu Diah Anna kayak beneran dengerin, bukan cuma ngasih daftar saran generik. Dia tau situasiku dan ngomongnya pas banget.',
+                name: 'Rizky F.',
+                city: 'Bandung',
+                emoji: '🔥',
+              },
+              {
+                text: 'Saya sudah 3 tahun stuck di posisi yang sama. Setelah pakai Verneks, saya akhirnya tahu langkah konkret apa yang harus saya ambil minggu ini.',
+                name: 'Sari W.',
+                city: 'Jakarta',
+                emoji: '✨',
+              },
+              {
+                text: 'Jujur awalnya skeptis sama AI. Tapi Diah Anna bisa ngerti konteks saya yang cukup kompleks. Roadmap-nya realistis dan langsung bisa diterapin.',
+                name: 'Bagas M.',
+                city: 'Yogyakarta',
+                emoji: '💡',
+              },
+            ].map((t, i) => (
+              <div key={i} style={{
+                background: 'rgba(255,255,255,0.03)',
+                border: '1px solid rgba(255,255,255,0.07)',
+                borderRadius: 16, padding: '16px',
+              }}>
+                <div style={{ color: C.muted, fontSize: '0.83rem', lineHeight: 1.7, marginBottom: 12, fontStyle: 'italic' }}>
+                  "{t.text}"
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                  <div style={{
+                    width: 32, height: 32, borderRadius: '50%',
+                    background: 'rgba(255,255,255,0.06)',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    fontSize: '0.9rem', flexShrink: 0,
+                  }}>
+                    {t.emoji}
+                  </div>
+                  <div>
+                    <div style={{ color: '#fff', fontWeight: 700, fontSize: '0.82rem' }}>{t.name}</div>
+                    <div style={{ color: C.muted, fontSize: '0.72rem' }}>{t.city}</div>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* ══════════════════════════════════
+            SECTION 5 — SOLUTION (DIAH ANNA)
         ══════════════════════════════════ */}
         <div style={{
           padding: '40px 0',
