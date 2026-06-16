@@ -190,7 +190,7 @@ export default function Chat({ user, chatMessages = [], setChatMessages }) {
     // Fetch growth_state + profil sekaligus untuk greeting & context injection
     Promise.all([
       supabase.from('user_growth_state').select('career_stage, progress_percent, current_focus, next_milestone, streak_days').eq('user_id', user.id).maybeSingle(),
-      supabase.from('user_career_profiles').select('nama, target_posisi, posisi_saat_ini, industri, hambatan, career_readiness, skill_gaps, gps_steps, mentor_message, greeted_at').eq('user_id', user.id).maybeSingle(),
+      supabase.from('user_career_profiles').select('nama, target_posisi, posisi_saat_ini, industri, hambatan, motivasi, gaya_kerja, career_readiness, skill_gaps, gps_steps, mentor_message, summary, greeted_at').eq('user_id', user.id).maybeSingle(),
       supabase.from('user_genome_scores').select('analytical, leadership, builder, creator, communication, risk_taking, top_strength').eq('user_id', user.id).maybeSingle(),
     ]).then(([{ data: g }, { data: p }, { data: gs }]) => {
       // ── Inject context ke coachHistory kalau kosong (device baru) ──
@@ -347,7 +347,7 @@ export default function Chat({ user, chatMessages = [], setChatMessages }) {
     const firstName = (user?.user_metadata?.name || user?.user_metadata?.full_name || '').split(' ')[0]
 
     Promise.all([
-      supabase.from('user_career_profiles').select('nama, target_posisi, posisi_saat_ini, career_readiness, skill_gaps, hambatan, mentor_message, greeted_at').eq('user_id', user.id).maybeSingle(),
+      supabase.from('user_career_profiles').select('nama, target_posisi, posisi_saat_ini, career_readiness, skill_gaps, hambatan, motivasi, summary, greeted_at').eq('user_id', user.id).maybeSingle(),
       supabase.from('user_growth_state').select('career_stage, progress_percent, current_focus, next_milestone, streak_days').eq('user_id', user.id).maybeSingle(),
       supabase.from('user_genome_scores').select('top_strength').eq('user_id', user.id).maybeSingle(),
     ]).then(([{ data: p }, { data: g }, { data: gs }]) => {

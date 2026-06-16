@@ -524,7 +524,7 @@ function PremiumDashboard({ user, profile, genome, growth, actions, events }) {
 }
 
 // ─── MAIN DASHBOARD ───────────────────────────────────────────────────────────
-export default function Dashboard({ user }) {
+export default function Dashboard({ user, loading = false }) {
   const navigate  = useNavigate()
   const [profile, setProfile]   = useState(null)
   const [genome, setGenome]     = useState(null)
@@ -535,6 +535,7 @@ export default function Dashboard({ user }) {
   const [loading, setLoading]   = useState(true)
 
   useEffect(() => {
+    if (loading) return
     if (!user) { navigate('/'); return }
     Promise.all([
       supabase.from('user_career_profiles').select('*').eq('user_id', user.id).maybeSingle(),
@@ -551,6 +552,25 @@ export default function Dashboard({ user }) {
       setActions(acts || [])
       setEvents(evs || [])
       setLoading(false)
+
+      // Backfill user lama: kalau summary kosong tapi ada career data → refresh otomatis
+      if (p?.target_posisi && !p?.summary) {
+        fetch('/api/refresh-profile', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ userId: user.id })
+        }).then(r => r.json()).then(res => {
+          if (res.success) {
+            setProfile(prev => ({
+              ...prev,
+              summary:        res.updated.summary        || prev?.summary,
+              mentor_message: res.updated.mentor_message || prev?.mentor_message,
+              motivasi:       res.updated.motivasi       || prev?.motivasi,
+              greeted_at:     null,
+            }))
+          }
+        }).catch(() => {})
+      }
     })
   }, [user?.id])
 
