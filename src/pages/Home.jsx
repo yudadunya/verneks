@@ -236,7 +236,7 @@ export default function Home({ user }) {
           {/* Body copy */}
           <div style={{ color: C.muted, fontSize: '0.93rem', lineHeight: 1.9, marginBottom: 28 }}>
              <p style={{ margin: '0 0 20px', color: '#fff', fontWeight: 700, fontSize: '1rem', fontStyle: 'italic' }}>
-              Temukan arah yang tepat sebelum terlambat.
+              Karena waktu yang hilang tidak bisa kembali.
             </p>
           </div>
 
@@ -246,7 +246,7 @@ export default function Home({ user }) {
               Kenali Dirimu. Temukan Arahmu. Bangun Masa Depanmu.
             </p>
             <p style={{ color: C.muted, fontSize: '0.85rem', lineHeight: 1.7, margin: 0 }}>
-              Bersama <strong style={{ color: C.secondary }}>Diah Anna</strong>, teman karier yang membantumu melangkah dengan lebih yakin.
+              Bersama <strong style={{ color: C.secondary }}>Diah Anna</strong>, yang membantumu memahami diri, menemukan arah yang tepat, dan melangkah dengan lebih yakin.
             </p>
           </div>
 
