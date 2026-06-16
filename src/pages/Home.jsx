@@ -236,14 +236,8 @@ export default function Home({ user }) {
 
           {/* Body copy */}
           <div style={{ color: C.muted, fontSize: '0.93rem', lineHeight: 1.9, marginBottom: 28 }}>
-            <p style={{ margin: '0 0 16px' }}>Kamu sudah bekerja keras.</p>
-            <p style={{ margin: '0 0 4px', color: 'rgba(255,255,255,0.55)' }}>Pertanyaannya:</p>
             <p style={{ margin: '0 0 20px', color: '#fff', fontWeight: 700, fontSize: '1rem', fontStyle: 'italic' }}>
-              Apakah kamu sedang menuju tujuan yang benar?
-            </p>
-            <p style={{ margin: '0 0 4px' }}>Karena yang paling melelahkan bukan bekerja keras.</p>
-            <p style={{ margin: 0, color: '#fff', fontWeight: 700 }}>
-              Melainkan menghabiskan bertahun-tahun mengejar masa depan yang ternyata bukan milikmu.
+              Karena waktu yang hilang tidak bisa kembali.
             </p>
           </div>
 
@@ -253,7 +247,7 @@ export default function Home({ user }) {
               Kenali Dirimu. Temukan Arahmu. Bangun Masa Depanmu.
             </p>
             <p style={{ color: C.muted, fontSize: '0.85rem', lineHeight: 1.7, margin: 0 }}>
-              Bersama <strong style={{ color: '#22D3EE' }}>Diah Anna</strong>, teman karier berbasis AI yang mengenalmu lebih dalam dari CV-mu, membantumu menemukan arah yang tepat, dan menemanimu hingga tujuanmu tercapai.
+              Bersama <strong style={{ color: '#22D3EE' }}>Diah Anna</strong>, yang membantumu memahami diri, menemukan arah yang tepat, dan melangkah dengan lebih yakin.
             </p>
           </div>
 
