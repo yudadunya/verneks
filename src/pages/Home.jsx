@@ -124,6 +124,30 @@ function SectionTitle({ badge, badgeColor, title, sub, center = true }) {
 }
 
 // ─── MAIN ─────────────────────────────────────────────────────────────────────
+function FAQItem({ q, a }) {
+  const [open, setOpen] = useState(false)
+  return (
+    <div
+      onClick={() => setOpen(o => !o)}
+      style={{
+        background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.07)',
+        borderRadius: 12, padding: '14px 16px', cursor: 'pointer',
+        transition: 'background 0.2s',
+      }}
+    >
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12 }}>
+        <span style={{ color: '#fff', fontWeight: 600, fontSize: '0.85rem', lineHeight: 1.4 }}>{q}</span>
+        <span style={{ color: 'rgba(255,255,255,0.3)', fontSize: '0.9rem', flexShrink: 0, transform: open ? 'rotate(45deg)' : 'none', transition: 'transform 0.2s' }}>+</span>
+      </div>
+      {open && (
+        <div style={{ color: 'rgba(255,255,255,0.55)', fontSize: '0.82rem', lineHeight: 1.7, marginTop: 10, paddingTop: 10, borderTop: '1px solid rgba(255,255,255,0.06)' }}>
+          {a}
+        </div>
+      )}
+    </div>
+  )
+}
+
 export default function Home({ user }) {
   const navigate  = useNavigate()
   const [authLoading, setAuthLoading] = useState(false)
@@ -254,8 +278,25 @@ export default function Home({ user }) {
           {/* CTA Primary */}
           <CTAButton label="Mulai Gratis" />
 
+          {/* Social Proof */}
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10, margin: '14px 0 0' }}>
+            <div style={{ display: 'flex' }}>
+              {[0,1,2,3,4].map(i => (
+                <div key={i} style={{
+                  width: 24, height: 24, borderRadius: '50%',
+                  background: ['#22D3EE','#818CF8','#34D399','#FB923C','#F472B6'][i],
+                  border: '2px solid #0a0f0d',
+                  marginLeft: i > 0 ? -7 : 0,
+                }} />
+              ))}
+            </div>
+            <span style={{ color: 'rgba(255,255,255,0.4)', fontSize: '0.74rem' }}>
+              <strong style={{ color: 'rgba(255,255,255,0.7)' }}>1.000+</strong> orang sudah memulai
+            </span>
+          </div>
+
           {/* Sub CTA note */}
-          <p style={{ margin: '10px 0 0', fontSize: '0.72rem', color: 'rgba(255,255,255,0.25)' }}>
+          <p style={{ margin: '8px 0 0', fontSize: '0.72rem', color: 'rgba(255,255,255,0.25)' }}>
             Mulai dalam 2 menit • Tanpa Upload CV • Tanpa tes panjang
           </p>
 
@@ -268,7 +309,49 @@ export default function Home({ user }) {
           </p>
         </div>
 
-        
+        {/* ══════════════════════════════════
+            SECTION 2 — PAIN POINTS
+        ══════════════════════════════════ */}
+        <div style={{
+          padding: '40px 0',
+          opacity: visible ? 1 : 0,
+          transition: 'opacity 0.7s ease 0.2s',
+          borderTop: '1px solid rgba(255,255,255,0.05)',
+        }}>
+          <h2 style={{ color: '#fff', fontWeight: 800, fontSize: '1.25rem', textAlign: 'center', marginBottom: 8, lineHeight: 1.3 }}>
+            Kamu Tidak Membutuhkan<br />Motivasi Lebih.
+          </h2>
+          <p style={{ color: C.secondary, fontWeight: 700, fontSize: '1.1rem', textAlign: 'center', marginBottom: 28 }}>
+            Kamu Membutuhkan Kejelasan.
+          </p>
+
+          <p style={{ color: C.muted, fontSize: '0.85rem', textAlign: 'center', marginBottom: 20 }}>Banyak orang merasa:</p>
+
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginBottom: 24 }}>
+            {[
+              'Bingung harus melangkah ke mana',
+              'Tidak yakin dengan potensi dirinya',
+              'Takut mengambil keputusan yang salah',
+              'Merasa tertinggal dari orang lain',
+              'Tidak tahu bagaimana mencapai kehidupan yang diinginkan',
+            ].map((item, i) => (
+              <div key={i} style={{
+                display: 'flex', alignItems: 'center', gap: 12,
+                padding: '12px 16px', borderRadius: 12,
+                background: 'rgba(239,83,80,0.06)', border: '1px solid rgba(239,83,80,0.15)',
+              }}>
+                <span style={{ color: '#EF5350', fontSize: '1rem', flexShrink: 0 }}>❌</span>
+                <span style={{ color: 'rgba(255,255,255,0.75)', fontSize: '0.85rem' }}>{item}</span>
+              </div>
+            ))}
+          </div>
+
+          <div style={{ padding: '16px', background: 'rgba(79,70,229,0.08)', border: '1px solid rgba(79,70,229,0.2)', borderRadius: 14, textAlign: 'center' }}>
+            <p style={{ color: C.muted, fontSize: '0.85rem', margin: '0 0 6px' }}>Masalahnya bukan karena mereka tidak mampu.</p>
+            <p style={{ color: '#fff', fontWeight: 800, fontSize: '0.95rem', margin: 0 }}>Mereka hanya belum memiliki peta.</p>
+          </div>
+        </div>
+
         {/* ══════════════════════════════════
             SECTION 3 — ALUR VERNEKS
         ══════════════════════════════════ */}
@@ -354,6 +437,14 @@ export default function Home({ user }) {
               </div>
             ))}
           </div>
+        </div>
+
+        {/* ── CTA Sekunder ── */}
+        <div style={{ padding: '0 0 32px', textAlign: 'center', opacity: visible ? 1 : 0, transition: 'opacity 0.7s ease 0.28s' }}>
+          <p style={{ color: C.muted, fontSize: '0.83rem', marginBottom: 14 }}>
+            Siap menemukan arahmu?
+          </p>
+          <CTAButton label="Mulai Sekarang — Gratis" />
         </div>
 
         {/* ══════════════════════════════════
@@ -532,6 +623,49 @@ export default function Home({ user }) {
 
           <p style={{ color: 'rgba(255,255,255,0.18)', fontSize: '0.7rem', marginTop: 16 }}>
             Gratis · Tidak perlu kartu kredit · Mulai dalam 2 menit
+          </p>
+        </div>
+
+        {/* ══════════════════════════════════
+            SECTION — FAQ
+        ══════════════════════════════════ */}
+        <div style={{
+          padding: '40px 0',
+          opacity: visible ? 1 : 0,
+          transition: 'opacity 0.7s ease 0.55s',
+          borderTop: '1px solid rgba(255,255,255,0.05)',
+        }}>
+          <h2 style={{ color: '#fff', fontWeight: 800, fontSize: '1.15rem', textAlign: 'center', marginBottom: 24 }}>
+            Pertanyaan yang Sering Ditanyakan
+          </h2>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+            {[
+              { q: 'Apakah benar-benar gratis?', a: 'Ya. Kamu bisa mulai Discovery, lihat Career DNA, dan ngobrol dengan Diah Anna tanpa bayar apapun. Tidak perlu kartu kredit.' },
+              { q: 'Apakah data saya aman?', a: 'Data kamu disimpan dengan enkripsi dan tidak pernah dibagikan ke pihak ketiga. Kamu bisa hapus akunmu kapan saja.' },
+              { q: 'Apa bedanya dengan tes karier biasa?', a: 'Verneks bukan tes — ini percakapan. Diah Anna menggali situasimu secara personal dan mengingat konteksmu dari sesi ke sesi berikutnya.' },
+              { q: 'Harus upload CV dulu?', a: 'Tidak perlu. Cukup ceritakan situasimu ke Diah Anna. Dia yang akan membantu memetakan potensimu dari percakapan.' },
+              { q: 'Cocok untuk siapa saja?', a: 'Ya — fresh graduate, profesional yang ingin pivot karier, atau siapapun yang merasa belum punya arah yang jelas.' },
+            ].map((item, i) => <FAQItem key={i} q={item.q} a={item.a} />)}
+          </div>
+        </div>
+
+        {/* ══════════════════════════════════
+            FOOTER
+        ══════════════════════════════════ */}
+        <div style={{
+          padding: '28px 0 60px',
+          borderTop: '1px solid rgba(255,255,255,0.05)',
+          textAlign: 'center',
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, marginBottom: 8 }}>
+            <VerneksLogo size={20} />
+            <span style={{ color: 'rgba(255,255,255,0.45)', fontWeight: 700, fontSize: '0.88rem' }}>Verneks</span>
+          </div>
+          <p style={{ color: 'rgba(255,255,255,0.18)', fontSize: '0.72rem', margin: '0 0 4px' }}>
+            AI Career Companion untuk profesional Indonesia
+          </p>
+          <p style={{ color: 'rgba(255,255,255,0.12)', fontSize: '0.68rem', margin: 0 }}>
+            © 2025 Verneks · verneks.my.id
           </p>
         </div>
 
