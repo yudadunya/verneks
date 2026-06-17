@@ -175,8 +175,8 @@ export default function App() {
                 const gs = result.genome_scores   || {}
                 const gw = result.growth_state    || {}
 
-                // 1. Simpan profil
-                supabase.from('user_career_profiles').upsert({
+                // 1. Simpan profil — await agar data pasti tersimpan sebelum redirect
+                const { error: profileErr } = await supabase.from('user_career_profiles').upsert({
                   user_id:          u.id,
                   nama:             p.nama             || null,
                   target_posisi:    p.target_posisi    || null,
@@ -191,9 +191,8 @@ export default function App() {
                   mentor_message:   result.mentor_message || null,
                   summary:          result.wow_insight  || result.mentor_message || null,
                   last_updated:     new Date().toISOString(),
-                }, { onConflict: 'user_id' }).then(({ error }) => {
-                  if (error) console.warn('[discovery-save] profile error:', error.message)
-                })
+                }, { onConflict: 'user_id' })
+                if (profileErr) console.warn('[discovery-save] profile error:', profileErr.message)
 
 
                 // 2. Simpan genome scores
