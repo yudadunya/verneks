@@ -268,49 +268,7 @@ export default function Home({ user }) {
           </p>
         </div>
 
-        {/* ══════════════════════════════════
-            SECTION 2 — PAIN POINTS
-        ══════════════════════════════════ */}
-        <div style={{
-          padding: '40px 0',
-          opacity: visible ? 1 : 0,
-          transition: 'opacity 0.7s ease 0.2s',
-          borderTop: '1px solid rgba(255,255,255,0.05)',
-        }}>
-          <h2 style={{ color: '#fff', fontWeight: 800, fontSize: '1.25rem', textAlign: 'center', marginBottom: 8, lineHeight: 1.3 }}>
-            Kamu Tidak Membutuhkan<br />Motivasi Lebih.
-          </h2>
-          <p style={{ color: C.secondary, fontWeight: 700, fontSize: '1.1rem', textAlign: 'center', marginBottom: 28 }}>
-            Kamu Membutuhkan Kejelasan.
-          </p>
-
-          <p style={{ color: C.muted, fontSize: '0.85rem', textAlign: 'center', marginBottom: 20 }}>Banyak orang merasa:</p>
-
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginBottom: 24 }}>
-            {[
-              'Bingung harus melangkah ke mana',
-              'Tidak yakin dengan potensi dirinya',
-              'Takut mengambil keputusan yang salah',
-              'Merasa tertinggal dari orang lain',
-              'Tidak tahu bagaimana mencapai kehidupan yang diinginkan',
-            ].map((item, i) => (
-              <div key={i} style={{
-                display: 'flex', alignItems: 'center', gap: 12,
-                padding: '12px 16px', borderRadius: 12,
-                background: 'rgba(239,83,80,0.06)', border: '1px solid rgba(239,83,80,0.15)',
-              }}>
-                <span style={{ color: '#EF5350', fontSize: '1rem', flexShrink: 0 }}>❌</span>
-                <span style={{ color: 'rgba(255,255,255,0.75)', fontSize: '0.85rem' }}>{item}</span>
-              </div>
-            ))}
-          </div>
-
-          <div style={{ padding: '16px', background: 'rgba(79,70,229,0.08)', border: '1px solid rgba(79,70,229,0.2)', borderRadius: 14, textAlign: 'center' }}>
-            <p style={{ color: C.muted, fontSize: '0.85rem', margin: '0 0 6px' }}>Masalahnya bukan karena mereka tidak mampu.</p>
-            <p style={{ color: '#fff', fontWeight: 800, fontSize: '0.95rem', margin: 0 }}>Mereka hanya belum memiliki peta.</p>
-          </div>
-        </div>
-
+        
         {/* ══════════════════════════════════
             SECTION 3 — ALUR VERNEKS
         ══════════════════════════════════ */}
