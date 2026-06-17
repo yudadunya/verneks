@@ -181,7 +181,7 @@ export default function Chat({ user, chatMessages = [], setChatMessages }) {
     if (greetingFiredRef.current) return // race condition guard
     if (greetingKey && sessionStorage.getItem(greetingKey)) return // sudah greeting di sesi ini
 
-    // Set KEDUA guard sebelum async fetch
+    // Set guard SEBELUM fetch — prevent double greeting bahkan saat refresh cepat
     greetingFiredRef.current = true
     if (greetingKey) sessionStorage.setItem(greetingKey, '1')
 
@@ -248,6 +248,11 @@ export default function Chat({ user, chatMessages = [], setChatMessages }) {
       const hasDiscoveryData = p && (p.target_posisi || p.career_readiness)
 
       if (hasDiscoveryData) {
+        // Double check: kalau greeted_at sudah ada di Supabase, update sessionStorage juga
+        // Ini handle kasus private tab / browser baru yang tidak punya sessionStorage
+        if (p.greeted_at && greetingKey) {
+          sessionStorage.setItem(greetingKey, '1')
+        }
         const neverGreeted = !p.greeted_at
 
         if (neverGreeted) {
@@ -262,11 +267,13 @@ export default function Chat({ user, chatMessages = [], setChatMessages }) {
           ).slice(0, 3)
           const gapLine = gaps.length > 0 ? ('\n\u26a0 Gap Utama:' + gaps.join(', ')) : ''
           const summaryMsg = ('Halo ' + name + ' \ud83d\udc4b\nSaya sudah menyimpan hasil Career Discovery kamu.\n\ud83c\udfaf Target:' + target + '\n\ud83d\udcca Readiness:' + readiness + '%' + gapLine + '\nSaya akan membantu kamu memahami langkah berikutnya.')
-          pushBot(summaryMsg)
+          // Set greeted_at ke Supabase DULU sebelum pushBot
+          // supaya kalau user refresh langsung setelah greeting, tidak muncul lagi
           supabase.from('user_career_profiles')
             .update({ greeted_at: new Date().toISOString() })
             .eq('user_id', user.id)
             .then()
+          pushBot(summaryMsg)
         } else {
           // ── Greeting returning user — WOW MOMENT ──
           // Semua data dari Discovery sudah ada di p & g — tampilkan fakta spesifik

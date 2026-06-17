@@ -35,6 +35,9 @@ export default function Profile({ user, loading = false }) {
       localStorage.removeItem(`lc_coach_${user.id}`)
       localStorage.removeItem(`lc_discovery_greeted_${user.id}`)
       localStorage.removeItem(`onboarded_${user.id}`)
+      // Clear sessionStorage greeting flags
+      sessionStorage.removeItem(`lc_greeted_${user.id}`)
+      sessionStorage.removeItem(`vk_greeted_${user.id}`)
     }
     localStorage.removeItem('lc_discovery_messages')
     localStorage.removeItem('lc_discovery_result')

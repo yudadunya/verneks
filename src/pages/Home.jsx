@@ -192,9 +192,22 @@ export default function Home({ user }) {
     setAuthLoading(false)
   }
 
-  // CTA utama (user baru) → /discovery setelah login
+  // CTA utama — cek session dulu
   const handleCTA = async () => {
     setAuthLoading(true)
+    // Cek apakah sudah pernah login sebelumnya
+    const { data: { session } } = await supabase.auth.getSession()
+    if (session?.user) {
+      // Sudah punya akun — cek apakah punya data Discovery
+      const { data: cp } = await supabase
+        .from('user_career_profiles')
+        .select('career_readiness')
+        .eq('user_id', session.user.id)
+        .maybeSingle()
+      window.location.href = cp?.career_readiness != null ? '/chat' : '/discovery'
+      return
+    }
+    // Belum punya akun → OAuth ke /discovery
     await supabase.auth.signInWithOAuth({ provider: 'google', options: { redirectTo: `${window.location.origin}/discovery` } })
     setAuthLoading(false)
   }
