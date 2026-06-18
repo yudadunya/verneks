@@ -29,7 +29,7 @@ const PLANS = [
     name: 'Premium',
     priceDisplay: 'Rp 199rb',
     priceOri: 'Rp 599rb',
-    period: '/bulan',
+    period: 'akses 1 bulan',
     color: 'rgba(37,211,102,0.07)',
     border: 'rgba(37,211,102,0.4)',
     cta: '🚀 Mulai Premium — Hemat 67%',
