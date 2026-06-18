@@ -588,25 +588,19 @@ Pilih yang sesuai buat kamu:`
       }
       case 'cv-maker-format': { if (CV_FORMATS.find(f => f.id === id)) await doCvMaker(id.replace('fmt_', '')); return }
       case 'coach': {
-        const msg = id.toLowerCase()
-        const isInterviewTopic = /interview|wawancara|latihan interview|mock|pertanyaan interview|simulasi interview/.test(msg)
-        const isCvReviewTopic  = /review cv|cek cv|koreksi cv|nilai cv|feedback cv|benerin cv/.test(msg)
-        const isAtsTopic       = /ats|applicant tracking|ats score|lolos ats/.test(msg)
-        const isCvMakerTopic   = /bikin cv|buat cv|template cv|contoh cv|cv maker|tulis cv/.test(msg)
-
-        if (isInterviewTopic && !await checkUsage('interview')) { showFeatureGate('interview'); return }
-        if (isCvReviewTopic  && !await checkUsage('cv-review')) { showFeatureGate('cv-review'); return }
-        if (isAtsTopic       && !await checkUsage('ats'))        { showFeatureGate('ats');       return }
-        if (isCvMakerTopic   && !await checkUsage('cv-maker'))   { showFeatureGate('cv-maker');  return }
-
+        const triggered = await detectAndTriggerFeature(id)
+        if (triggered) return
         await doCoach(id); return
       }
       default: {
         // Kalau sedang dalam flow cv-maker, jangan masuk coach
         if (mode.startsWith('cv-maker')) return
 
-        // Gunakan coachHistory yang sudah ada (context injection dari greeting)
-        // jangan overwrite dengan array baru — itu buang konteks profil user
+        // Cek keyword feature sebelum masuk coach biasa
+        const triggered = await detectAndTriggerFeature(id)
+        if (triggered) return
+
+        // Tidak ada intent fitur — lanjut sebagai chat biasa
         setMode('coach')
         const startHistory = coachHistory.length > 0
           ? [...coachHistory, { role: 'user', content: id }]
@@ -615,6 +609,33 @@ Pilih yang sesuai buat kamu:`
         setLoading(true); await callCoachApi(startHistory); setLoading(false)
       }
     }
+  }
+
+  // ── Helper: deteksi intent via obrolan dan trigger feature ──────────────
+  const detectAndTriggerFeature = async (msg) => {
+    const m = msg.toLowerCase()
+    const wantsCvReview  = /mau review|tolong review|bantu review|cek cv|koreksi cv|nilai cv|feedback cv|benerin cv|review cv|upload cv|lihat cv/.test(m)
+    const wantsAts       = /cek ats|skor ats|lolos ats|ats cv|ats checker|cek lolos|screen ats|bypass ats|tembus ats/.test(m)
+    const wantsInterview = /latihan interview|mau interview|simulasi interview|mock interview|practice interview|latihan wawancara|simulasi wawancara|persiapan interview|coba interview/.test(m)
+    const wantsCvMaker   = /bikin cv|buat cv|buatin cv|tulis cv|generate cv|cv maker|cv baru|cv dari nol/.test(m)
+
+    if (wantsCvReview) {
+      if (!await checkUsage('cv-review')) { showFeatureGate('cv-review'); return true }
+      startCvReview(); return true
+    }
+    if (wantsAts) {
+      if (!await checkUsage('ats')) { showFeatureGate('ats'); return true }
+      startAts(); return true
+    }
+    if (wantsInterview) {
+      if (!await checkUsage('interview')) { showFeatureGate('interview'); return true }
+      startInterview(); return true
+    }
+    if (wantsCvMaker) {
+      if (!await checkUsage('cv-maker')) { showFeatureGate('cv-maker'); return true }
+      startCvMaker(); return true
+    }
+    return false // tidak ada intent — lanjut chat biasa
   }
 
   // ── Feature starters ────────────────────────────────────────────────────
