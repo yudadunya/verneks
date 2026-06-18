@@ -238,7 +238,7 @@ export default function UpgradeModal({ user, onClose, initialData = null }) {
             </div>
             <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'center', gap: 4 }}>
               <span style={{ color: '#FFB74D', fontWeight: 900, fontSize: '1.6rem' }}>Rp199.000</span>
-              <span style={{ color: 'rgba(255,255,255,0.35)', fontSize: '0.82rem' }}>/bulan</span>
+              <span style={{ color: 'rgba(255,255,255,0.35)', fontSize: '0.82rem' }}> periode akses 1 bulan (sekali bayar)</span>
             </div>
             <div style={{ color: 'rgba(255,255,255,0.25)', fontSize: '0.7rem', marginTop: 2 }}>Semua fitur premium · Unlimited · Batalkan kapan saja</div>
           </div>
