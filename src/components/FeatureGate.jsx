@@ -38,7 +38,7 @@ export default function FeatureGate({ canUse, feature, plan, children }) {
           rel="noopener noreferrer"
           style={{ display: 'block', marginBottom: '10px' }}
         >
-          <button className="wa-btn-primary">🚀 Upgrade Premium — Rp 199rb periode akses 1 bulan (sekali bayar)</button>
+          <button className="wa-btn-primary">🚀 Upgrade Premium — Rp 199rb periode akses 1 bulan</button>
         </a>
         <Link to="/chat" style={{ display: 'block' }}>
           <button className="wa-btn-secondary">⏳ Tunggu reset besok</button>
