@@ -292,7 +292,7 @@ function FreeDashboard({ user, profile, genome, growth, onUpgrade }) {
 
           <div style={{ textAlign: 'center', marginBottom: 14 }}>
             <div style={{ color: 'rgba(255,255,255,0.25)', fontSize: '0.73rem', textDecoration: 'line-through', marginBottom: 2 }}>Harga Normal Rp599.000</div>
-            <div style={{ color: '#25D366', fontWeight: 900, fontSize: '1.3rem' }}>Rp199.000 <span style={{ fontSize: '0.7rem', color: 'rgba(255,255,255,0.4)', fontWeight: 400 }}>/bulan</span></div>
+            <div style={{ color: '#25D366', fontWeight: 900, fontSize: '1.3rem' }}>Rp199.000 <span style={{ fontSize: '0.7rem', color: 'rgba(255,255,255,0.4)', fontWeight: 400 }}>akses 1 bulan</span></div>
           </div>
 
           <button
