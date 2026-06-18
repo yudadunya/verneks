@@ -215,7 +215,7 @@ export default function Profile({ user, loading = false }) {
                 boxShadow: '0 3px 14px rgba(37,211,102,0.35)',
               }}
             >
-              🚀 Upgrade Premium — Rp 199rb/bln
+              🚀 Upgrade Premium — Rp 199rb periode akses 1 bulan (sekali bayar)
             </a>
           </div>
         )}
