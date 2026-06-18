@@ -514,7 +514,7 @@ Pilih yang sesuai buat kamu:`
       const base64 = await new Promise((res, rej) => {
         const r = new FileReader(); r.onload = () => res(r.result.split(',')[1]); r.onerror = rej; r.readAsDataURL(file)
       })
-      const data = await apiFetch('/api/parse-cv', { base64, fileName: file.name })
+      const data = await apiFetch('/api/career-coach', { action: 'parse-cv', base64, fileName: file.name })
       setCvText(data.text)
       if (mode === 'cv-review-upload') {
         setMode('cv-review-job')
@@ -656,7 +656,7 @@ Pilih yang sesuai buat kamu:`
   const doCvReview = async (jobTarget) => {
     setMode('cv-review-done'); setLoading(true)
     try {
-      const data = await apiFetch('/api/cv-review', { cvText, jobTarget })
+      const data = await apiFetch('/api/career-coach', { action: 'cv-review', cvText, jobTarget })
       logUsage('cv-review')
       pushBot(data.review, [{ id: 'ats', label: '🎯 Cek ATS Score juga' }, { id: '__share_cv', label: '📤 Bagikan hasil' }, { id: '__share_app', label: '👥 Ajak teman coba' }])
       // Inject hasil review ke coachHistory agar Diah Anna ingat konteksnya
@@ -689,7 +689,7 @@ Pilih yang sesuai buat kamu:`
   const doAts = async (jobDescription) => {
     setMode('ats-done'); setLoading(true)
     try {
-      const data = await apiFetch('/api/ats-checker', { cvText, jobDescription })
+      const data = await apiFetch('/api/career-coach', { action: 'ats', cvText, jobDescription })
       logUsage('ats')
       pushBot(data.result, [{ id: 'cv-review', label: '📄 Review CV juga' }, { id: '__share_ats', label: '📤 Bagikan hasil' }, { id: '__share_app', label: '👥 Ajak teman coba' }])
       // Inject hasil ATS ke coachHistory agar Diah Anna ingat konteksnya
@@ -721,7 +721,7 @@ Pilih yang sesuai buat kamu:`
   const startInterviewSession = async (position, level) => {
     setMode('interview-active'); setLoading(true)
     try {
-      const data = await apiFetch('/api/mock-interview', { action: 'start', position, level, messages: [] })
+      const data = await apiFetch('/api/career-coach', { action: 'mock-interview', subAction: 'start', position, level, messages: [] })
       logUsage('interview')
       setInterview(prev => ({ ...prev, messages: [{ role: 'assistant', content: data.reply }], qNum: data.questionNumber }))
       pushBot(data.reply)
@@ -733,12 +733,12 @@ Pilih yang sesuai buat kamu:`
     setLoading(true)
     const newMsgs = [...interview.messages, { role: 'user', content: answer }]
     try {
-      const data = await apiFetch('/api/mock-interview', { action: 'answer', position: interview.position, level: interview.level, messages: newMsgs, questionNumber: interview.qNum })
+      const data = await apiFetch('/api/career-coach', { action: 'mock-interview', subAction: 'answer', position: interview.position, level: interview.level, messages: newMsgs, questionNumber: interview.qNum })
       const updatedMsgs = [...newMsgs, { role: 'assistant', content: data.reply }]
       setInterview(prev => ({ ...prev, messages: updatedMsgs, qNum: data.questionNumber }))
       if (data.isComplete) {
         pushBot(data.reply)
-        const fbData = await apiFetch('/api/mock-interview', { action: 'feedback', position: interview.position, level: interview.level, messages: updatedMsgs })
+        const fbData = await apiFetch('/api/career-coach', { action: 'mock-interview', subAction: 'feedback', position: interview.position, level: interview.level, messages: updatedMsgs })
         setMode('interview-done')
         const feedbackText = fbData.feedback || 'Sesi selesai! Kamu hebat! 🎉'
         pushBot(feedbackText, [{ id: 'interview', label: '🔄 Interview lagi' }, { id: '__share_app', label: '👥 Ajak teman coba' }])
@@ -764,7 +764,7 @@ Pilih yang sesuai buat kamu:`
   const doCvMaker = async (format) => {
     setMode('cv-maker-done'); setLoading(true)
     try {
-      const data = await apiFetch('/api/cv-maker', { mode: 'optimize', format, cvText })
+      const data = await apiFetch('/api/career-coach', { action: 'cv-maker', mode: 'optimize', format, cvText })
       logUsage('cv-maker')
       pushBot(data.result, [
         { id: '__download_docx', label: '📥 Download Word (.docx)' },
