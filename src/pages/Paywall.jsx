@@ -249,10 +249,10 @@ export default function Paywall() {
           </div>
           <div style={{ display:'flex', alignItems:'baseline', justifyContent:'center', gap:4 }}>
             <span style={{ color:'#FFB74D', fontWeight:900, fontSize:'1.5rem' }}>Rp199.000</span>
-            <span style={{ color:'rgba(255,255,255,0.35)', fontSize:'0.8rem' }}>/bulan</span>
+            <span style={{ color:'rgba(255,255,255,0.35)', fontSize:'0.8rem' }}>akses 1 bulan </span>
           </div>
           <div style={{ color:'rgba(255,255,255,0.25)', fontSize:'0.7rem', marginTop:1 }}>
-            Semua fitur premium · Unlimited · Batalkan kapan saja
+            Semua fitur premium · Unlimited · Sekali Bayar
           </div>
         </div>
 
