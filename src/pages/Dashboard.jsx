@@ -321,6 +321,24 @@ function PremiumDashboard({ user, profile, genome, growth, actions, events }) {
   const gaps         = profile?.skill_gaps || profile?.gap_skills || []
   const gpsSteps     = profile?.gps_steps || growth?.gps_steps || []
   const mentorMsg    = profile?.mentor_message || null
+  const [weeklyReview, setWeeklyReview] = useState(null)
+  const [milestones, setMilestones]     = useState([])
+
+  useEffect(() => {
+    if (!user?.id) return
+    fetch('/api/weekly-review', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ userId: user.id })
+    }).then(r => r.json()).then(res => {
+      if (res.success && res.review) setWeeklyReview(res.review)
+    }).catch(() => {})
+    import('../lib/supabase').then(({ supabase }) => {
+      supabase.from('user_milestones').select('*').eq('user_id', user.id)
+        .order('step_index', { ascending: true })
+        .then(({ data }) => { if (data) setMilestones(data) })
+    }).catch(() => {})
+  }, [user?.id])
+
   const currentFocus = growth?.current_focus || gaps[0] || null
   const opportunities = getOpportunities(targetPosisi, readiness)
 
@@ -453,7 +471,7 @@ function PremiumDashboard({ user, profile, genome, growth, actions, events }) {
         </div>
       )}
 
-      {/* ═══ SECTION 5 — INSIGHT MINGGU INI ═════════════════════════════════ */}
+      {/* ═══ SECTION 5 — CATATAN DARI DIAH ANNA ════════════════════════════ */}
       <div style={{
         ...S.card({ background: 'rgba(37,211,102,0.04)', border: '1px solid rgba(37,211,102,0.13)' }),
         ...fade(0.25, visible),
@@ -461,23 +479,61 @@ function PremiumDashboard({ user, profile, genome, growth, actions, events }) {
         <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 12 }}>
           <img src="/diah-anna.png" alt="Diah Anna" style={{ width: 38, height: 38, borderRadius: '50%', objectFit: 'cover', border: '2px solid rgba(37,211,102,0.35)', flexShrink: 0 }} />
           <div>
-            <div style={{ color: '#25D366', fontWeight: 700, fontSize: '0.83rem' }}>Insight Minggu Ini</div>
-            <div style={{ color: 'rgba(255,255,255,0.25)', fontSize: '0.62rem' }}>Diah Anna</div>
+            <div style={{ color: '#25D366', fontWeight: 700, fontSize: '0.83rem' }}>Catatan dari Diah Anna</div>
+            <div style={{ color: 'rgba(255,255,255,0.25)', fontSize: '0.62rem' }}>
+              {weeklyReview ? `Minggu ini · ${weeklyReview.sessions_count || 0} sesi` : 'Mentor personalmu'}
+            </div>
           </div>
         </div>
         <div style={{ color: 'rgba(255,255,255,0.75)', fontSize: '0.85rem', lineHeight: 1.75 }}>
-          {firstName}, {mentorMsg
-            ? mentorMsg
-            : `saya melihat progres kamu meningkat ${weekProgress}% dalam 7 hari terakhir. ${targetPosisi ? `Jika ritme ini dipertahankan, target ${targetPosisi} bisa dicapai lebih cepat dari estimasi.` : 'Tetap konsisten ya!'}`
+          {weeklyReview?.review_text
+            ? weeklyReview.review_text
+            : mentorMsg
+              ? `${firstName}, ${mentorMsg}`
+              : `${firstName}, saya sudah menyiapkan roadmap personalmu. Yuk mulai ngobrol — satu langkah kecil hari ini bisa mengubah arahmu.`
           }
         </div>
-        <button
-          onClick={() => navigate('/chat')}
-          style={{ marginTop: 14, width: '100%', padding: '11px', background: 'linear-gradient(135deg,#25D366,#128C7E)', color: '#fff', fontWeight: 700, fontSize: '0.85rem', borderRadius: 11, border: 'none', cursor: 'pointer', boxShadow: '0 3px 14px rgba(37,211,102,0.3)' }}
-        >
-          💬 Tanya Diah Anna
+        {weeklyReview && (weeklyReview.milestones_done > 0 || weeklyReview.sessions_count > 0) && (
+          <div style={{ display: 'flex', gap: 10, marginTop: 12, flexWrap: 'wrap' }}>
+            {weeklyReview.sessions_count > 0 && (
+              <div style={{ background: 'rgba(37,211,102,0.1)', border: '1px solid rgba(37,211,102,0.2)', borderRadius: 8, padding: '5px 10px', fontSize: '0.72rem', color: '#25D366' }}>
+                💬 {weeklyReview.sessions_count} sesi minggu ini
+              </div>
+            )}
+            {weeklyReview.milestones_done > 0 && (
+              <div style={{ background: 'rgba(79,70,229,0.1)', border: '1px solid rgba(79,70,229,0.2)', borderRadius: 8, padding: '5px 10px', fontSize: '0.72rem', color: '#818CF8' }}>
+                🎯 {weeklyReview.milestones_done} milestone selesai
+              </div>
+            )}
+          </div>
+        )}
+        <button onClick={() => navigate('/chat')}
+          style={{ marginTop: 14, width: '100%', padding: '11px', background: 'linear-gradient(135deg,#25D366,#128C7E)', color: '#fff', fontWeight: 700, fontSize: '0.85rem', borderRadius: 11, border: 'none', cursor: 'pointer', boxShadow: '0 3px 14px rgba(37,211,102,0.3)' }}>
+          💬 Chat dengan Diah Anna
         </button>
       </div>
+
+      {milestones.length > 0 && (
+        <div style={{ ...S.card(), ...fade(0.28, visible) }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
+            <div style={S.sectionTitle}>🗺️ Perjalanan Kariermu</div>
+            <div style={{ color: 'rgba(255,255,255,0.3)', fontSize: '0.72rem' }}>{milestones.filter(m => m.is_completed).length}/{milestones.length} selesai</div>
+          </div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 7 }}>
+            {milestones.map((m, i) => (
+              <div key={m.id} style={{ display: 'flex', alignItems: 'flex-start', gap: 10, padding: '10px 12px', borderRadius: 12, background: m.is_completed ? 'rgba(37,211,102,0.08)' : 'rgba(255,255,255,0.03)', border: `1px solid ${m.is_completed ? 'rgba(37,211,102,0.2)' : 'rgba(255,255,255,0.07)'}` }}>
+                <div style={{ width: 24, height: 24, borderRadius: '50%', flexShrink: 0, marginTop: 1, background: m.is_completed ? '#25D366' : 'rgba(255,255,255,0.08)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.65rem', fontWeight: 700, color: m.is_completed ? '#fff' : 'rgba(255,255,255,0.4)' }}>
+                  {m.is_completed ? '✓' : i + 1}
+                </div>
+                <div style={{ flex: 1 }}>
+                  <div style={{ fontSize: '0.83rem', fontWeight: m.is_completed ? 600 : 400, color: m.is_completed ? '#25D366' : 'rgba(255,255,255,0.8)', textDecoration: m.is_completed ? 'line-through' : 'none' }}>{m.title}</div>
+                  {m.description && !m.is_completed && <div style={{ fontSize: '0.72rem', color: 'rgba(255,255,255,0.35)', marginTop: 2 }}>{m.description}</div>}
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* ═══ SECTION 6 — OPPORTUNITIES ═══════════════════════════════════════ */}
       {opportunities.length > 0 && (

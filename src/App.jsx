@@ -233,6 +233,23 @@ export default function App() {
                 }
               } // end if no existing data
 
+              // Init milestones dari GPS steps kalau belum ada
+              if (result.gps_steps?.length > 0) {
+                supabase.from('user_milestones').select('id').eq('user_id', u.id).limit(1)
+                  .then(({ data: existing }) => {
+                    if (!existing?.length) {
+                      const rows = result.gps_steps.map((step, i) => ({
+                        user_id:      u.id,
+                        title:        step.title || step,
+                        description:  step.description || null,
+                        step_index:   i,
+                        is_completed: step.done || false,
+                      }))
+                      supabase.from('user_milestones').insert(rows).then()
+                    }
+                  })
+              }
+
               // Data baru disimpan ATAU sudah ada sebelumnya — user kini punya career data
               hasCareerData = true
 

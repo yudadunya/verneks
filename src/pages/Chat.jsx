@@ -1040,10 +1040,24 @@ Pilih yang sesuai buat kamu:`
         pushBot(reply, null)
       }
 
-      if (user?.id && fullHistory.filter(m => m.role === 'user').length >= 3) {
-        setTimeout(() => {
-          apiFetch('/api/extract-profile', { userId: user.id, messages: fullHistory }).catch(() => {})
-        }, 500)
+      if (user?.id) {
+        const userMsgCount = fullHistory.filter(m => m.role === 'user').length
+        // Extract profile setiap >= 3 pesan
+        if (userMsgCount >= 3) {
+          setTimeout(() => {
+            apiFetch('/api/extract-profile', { userId: user.id, messages: fullHistory }).catch(() => {})
+          }, 500)
+        }
+        // Save session notes setiap kelipatan 5 pesan
+        if (userMsgCount >= 5 && userMsgCount % 5 === 0) {
+          setTimeout(() => {
+            apiFetch('/api/save-session-notes', {
+              userId: user.id,
+              messages: fullHistory,
+              profile: { nama: user.user_metadata?.full_name }
+            }).catch(() => {})
+          }, 1000)
+        }
       }
     } catch { pushBot('Diah Anna lagi sibuk sebentar, coba lagi ya! 🙏') }
   }
