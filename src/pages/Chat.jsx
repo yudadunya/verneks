@@ -619,23 +619,12 @@ Pilih yang sesuai buat kamu:`
     const wantsInterview = /latihan interview|mau interview|simulasi interview|mock interview|practice interview|latihan wawancara|simulasi wawancara|persiapan interview|coba interview/.test(m)
     const wantsCvMaker   = /bikin cv|buat cv|buatin cv|tulis cv|generate cv|cv maker|cv baru|cv dari nol/.test(m)
 
-    if (wantsCvReview) {
-      if (!await checkUsage('cv-review')) { showFeatureGate('cv-review'); return true }
-      startCvReview(); return true
-    }
-    if (wantsAts) {
-      if (!await checkUsage('ats')) { showFeatureGate('ats'); return true }
-      startAts(); return true
-    }
-    if (wantsInterview) {
-      if (!await checkUsage('interview')) { showFeatureGate('interview'); return true }
-      startInterview(); return true
-    }
-    if (wantsCvMaker) {
-      if (!await checkUsage('cv-maker')) { showFeatureGate('cv-maker'); return true }
-      startCvMaker(); return true
-    }
-    return false // tidak ada intent — lanjut chat biasa
+    // Serahkan checkUsage ke masing-masing starter — hindari double check
+    if (wantsCvReview)  { await startCvReview();  return true }
+    if (wantsAts)       { await startAts();        return true }
+    if (wantsInterview) { await startInterview();  return true }
+    if (wantsCvMaker)   { await startCvMaker();    return true }
+    return false
   }
 
   // ── Feature starters ────────────────────────────────────────────────────
