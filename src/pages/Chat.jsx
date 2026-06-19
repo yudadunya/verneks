@@ -856,6 +856,36 @@ Pilih yang sesuai buat kamu:`
   const messagesRef = useRef(chatMessages)
   useEffect(() => { messagesRef.current = chatMessages }, [chatMessages])
 
+  // ── Simpan ringkasan sesi saat user keluar dari chat ────────────────────
+  // Trigger: tab/browser ditutup (visibilitychange ke hidden) atau pindah halaman (unmount)
+  useEffect(() => {
+    if (!user?.id) return
+
+    const saveSessionNote = () => {
+      const history = getChatHistoryForExtract()
+      const userCount = history.filter(m => m.role === 'user').length
+      if (userCount < 2) return // sesi terlalu singkat
+
+      // Pakai fetch biasa (bukan apiFetch) — tidak perlu tunggu response, fire-and-forget
+      fetch('/api/career-coach', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'save-session-note', userId: user.id, messages: history }),
+        keepalive: true, // penting — request tetap jalan walau tab ditutup
+      }).catch(() => {})
+    }
+
+    const onVisibilityChange = () => {
+      if (document.visibilityState === 'hidden') saveSessionNote()
+    }
+
+    document.addEventListener('visibilitychange', onVisibilityChange)
+    return () => {
+      document.removeEventListener('visibilitychange', onVisibilityChange)
+      saveSessionNote() // juga jalan saat unmount (pindah halaman dalam app)
+    }
+  }, [user?.id])
+
   const getChatHistoryForExtract = () => {
     return messagesRef.current
       .filter(m => (m.role === 'user' || m.role === 'bot') && (m.text || '').length > 0)
@@ -1040,24 +1070,10 @@ Pilih yang sesuai buat kamu:`
         pushBot(reply, null)
       }
 
-      if (user?.id) {
-        const userMsgCount = fullHistory.filter(m => m.role === 'user').length
-        // Extract profile setiap >= 3 pesan
-        if (userMsgCount >= 3) {
-          setTimeout(() => {
-            apiFetch('/api/extract-profile', { userId: user.id, messages: fullHistory }).catch(() => {})
-          }, 500)
-        }
-        // Save session notes setiap kelipatan 5 pesan
-        if (userMsgCount >= 5 && userMsgCount % 5 === 0) {
-          setTimeout(() => {
-            apiFetch('/api/save-session-notes', {
-              userId: user.id,
-              messages: fullHistory,
-              profile: { nama: user.user_metadata?.full_name }
-            }).catch(() => {})
-          }, 1000)
-        }
+      if (user?.id && fullHistory.filter(m => m.role === 'user').length >= 3) {
+        setTimeout(() => {
+          apiFetch('/api/extract-profile', { userId: user.id, messages: fullHistory }).catch(() => {})
+        }, 500)
       }
     } catch { pushBot('Diah Anna lagi sibuk sebentar, coba lagi ya! 🙏') }
   }

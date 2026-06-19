@@ -75,5 +75,11 @@
       "src": "/(.*)",
       "dest": "/index.html"
     }
+  ],
+  "crons": [
+    {
+      "path": "/api/cron/weekly-review",
+      "schedule": "0 1 * * 1"
+    }
   ]
 }

@@ -76,7 +76,7 @@ function doneSteps(phases) {
 }
 
 // ─── STEP ROW ─────────────────────────────────────────────────────────────────
-function StepRow({ step, globalIdx, currentIdx, isPremium, onExpand, expanded, onChat }) {
+function StepRow({ step, globalIdx, currentIdx, isPremium, onExpand, expanded, onChat, onToggle, toggling }) {
   const isDone    = step.done
   const isCurrent = globalIdx === currentIdx
   const isLocked  = step.locked || (!isDone && !isCurrent && globalIdx > currentIdx && !isPremium)
@@ -136,18 +136,37 @@ function StepRow({ step, globalIdx, currentIdx, isPremium, onExpand, expanded, o
               : `Langkah ini menunggu setelah kamu menyelesaikan langkah sebelumnya.`
             }
           </div>
-          <button
-            onClick={onChat}
-            style={{
-              padding: '8px 14px',
-              background: 'rgba(37,211,102,0.1)',
-              border: '1px solid rgba(37,211,102,0.25)',
-              color: '#25D366', fontWeight: 600, fontSize: '0.78rem',
-              borderRadius: 9, cursor: 'pointer',
-            }}
-          >
-            💬 Tanya Diah Anna tentang ini →
-          </button>
+          <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+            {!step.locked && (
+              <button
+                onClick={() => onToggle(globalIdx, isDone)}
+                disabled={toggling === globalIdx}
+                style={{
+                  padding: '8px 14px',
+                  background: isDone ? 'rgba(255,255,255,0.05)' : 'rgba(37,211,102,0.12)',
+                  border: `1px solid ${isDone ? 'rgba(255,255,255,0.12)' : 'rgba(37,211,102,0.3)'}`,
+                  color: isDone ? 'rgba(255,255,255,0.45)' : '#25D366',
+                  fontWeight: 600, fontSize: '0.78rem',
+                  borderRadius: 9, cursor: toggling === globalIdx ? 'wait' : 'pointer',
+                  opacity: toggling === globalIdx ? 0.5 : 1,
+                }}
+              >
+                {toggling === globalIdx ? '...' : isDone ? '↺ Batalkan selesai' : '✓ Tandai Selesai'}
+              </button>
+            )}
+            <button
+              onClick={onChat}
+              style={{
+                padding: '8px 14px',
+                background: 'rgba(52,183,241,0.1)',
+                border: '1px solid rgba(52,183,241,0.25)',
+                color: '#34B7F1', fontWeight: 600, fontSize: '0.78rem',
+                borderRadius: 9, cursor: 'pointer',
+              }}
+            >
+              💬 Tanya Diah Anna →
+            </button>
+          </div>
         </div>
       )}
     </div>
@@ -155,7 +174,7 @@ function StepRow({ step, globalIdx, currentIdx, isPremium, onExpand, expanded, o
 }
 
 // ─── PHASE BLOCK ──────────────────────────────────────────────────────────────
-function PhaseBlock({ phase, globalStartIdx, currentIdx, isPremium, expanded, onExpand, onChat, visible, delay }) {
+function PhaseBlock({ phase, globalStartIdx, currentIdx, isPremium, expanded, onExpand, onChat, onToggle, toggling, visible, delay }) {
   const allDone   = phase.steps.every(s => s.done)
   const hasActive = phase.steps.some((_, i) => globalStartIdx + i === currentIdx)
   const isLocked  = phase.id === 4 && !isPremium
@@ -212,6 +231,8 @@ function PhaseBlock({ phase, globalStartIdx, currentIdx, isPremium, expanded, on
             expanded={expanded}
             onExpand={onExpand}
             onChat={onChat}
+            onToggle={onToggle}
+            toggling={toggling}
           />
         ))}
       </div>
@@ -289,6 +310,26 @@ export default function Journey({ user, loading = false }) {
   const handleToggleAction = async (id, isDone) => {
     await supabase.from('user_next_actions').update({ is_done: !isDone }).eq('id', id)
     setActions(prev => prev.map(a => a.id === id ? { ...a, is_done: !isDone } : a))
+  }
+
+  const [togglingStep, setTogglingStep] = useState(null)
+  const handleToggleMilestone = async (globalIdx, currentlyDone) => {
+    if (!user?.id) return
+    setTogglingStep(globalIdx)
+    try {
+      const res = await fetch('/api/career-coach', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'toggle-milestone', userId: user.id, stepIndex: globalIdx, done: !currentlyDone }),
+      })
+      const data = await res.json()
+      if (data.success) {
+        setProfile(prev => ({ ...prev, gps_steps: data.steps }))
+      }
+    } catch (e) {
+      console.warn('[milestone] toggle gagal:', e)
+    }
+    setTogglingStep(null)
   }
 
   const handleChatAboutStep = (stepTitle) => {
@@ -449,6 +490,8 @@ export default function Journey({ user, loading = false }) {
               onChat={() => handleChatAboutStep(
                 phases[pi].steps.find((_, si) => phaseStartIdxs[pi] + si === expanded)?.title || ''
               )}
+              onToggle={handleToggleMilestone}
+              toggling={togglingStep}
               visible={visible}
               delay={0.1 + pi * 0.05}
             />
