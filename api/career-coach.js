@@ -6,6 +6,74 @@ const supabase = createClient(
   process.env.SUPABASE_SERVICE_ROLE_KEY
 )
 
+// ── KEAMANAN: plan & usage TIDAK PERNAH dipercaya dari client ────────────────
+// Client (Chat.jsx) hanya mengirim userId. Plan & limit selalu dihitung ulang
+// di server dari tabel subscriptions/usage_logs. Ini mencegah user mengedit
+// request body (devtools/curl) untuk klaim plan premium atau lewati limit.
+
+// HARUS sinkron dengan src/hooks/useSubscription.js — kalau salah satu diubah, ubah juga yang lain.
+const LIMITS = {
+  free:    { chat: 15, 'cv-review': 1, ats: 1, coach: 999, interview: 1, 'cv-maker': 1 },
+  premium: { chat: 999, 'cv-review': 999, ats: 999, coach: 999, interview: 999, 'cv-maker': 999 },
+}
+
+// Ambil plan SEBENARNYA dari database — bukan dari req.body.
+async function getRealPlan(userId) {
+  if (!userId) return 'free'
+  try {
+    const { data } = await supabase
+      .from('subscriptions')
+      .select('plan, status, expires_at')
+      .eq('user_id', userId)
+      .order('created_at', { ascending: false })
+      .limit(1)
+      .maybeSingle()
+
+    if (!data?.plan || !LIMITS[data.plan]) return 'free'
+    const expired = data.expires_at && new Date(data.expires_at) < new Date()
+    if (!expired && data.status === 'active') return data.plan
+    return 'free'
+  } catch (e) {
+    console.error('[getRealPlan] error:', e.message)
+    return 'free' // fail-safe: kalau query gagal, jangan kasih akses premium gratis
+  }
+}
+
+// Cek + catat usage di server — sumber kebenaran tunggal, tidak bisa di-skip dari client.
+// Return { allowed, remaining }. Kalau allowed=false, jangan panggil AI sama sekali (hemat biaya).
+async function checkAndLogUsage(userId, plan, feature) {
+  const limit = LIMITS[plan]?.[feature] ?? 0
+  if (limit === 0) return { allowed: false, remaining: 0 }
+  if (limit >= 999) {
+    // Premium/unlimited — tetap log untuk analytics, tapi tidak pernah blokir
+    if (userId) supabase.from('usage_logs').insert({ user_id: userId, feature }).then(() => {}).catch(() => {})
+    return { allowed: true, remaining: 999 }
+  }
+  if (!userId) return { allowed: false, remaining: 0 }
+
+  try {
+    const since = feature === 'chat'
+      ? new Date(new Date().setHours(0, 0, 0, 0)).toISOString()
+      : new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString()
+
+    const { count } = await supabase
+      .from('usage_logs')
+      .select('*', { count: 'exact', head: true })
+      .eq('user_id', userId)
+      .eq('feature', feature)
+      .gte('created_at', since)
+
+    const used = count ?? 0
+    if (used >= limit) return { allowed: false, remaining: 0 }
+
+    await supabase.from('usage_logs').insert({ user_id: userId, feature })
+    return { allowed: true, remaining: limit - used - 1 }
+  } catch (e) {
+    console.error('[checkAndLogUsage] error:', e.message)
+    return { allowed: false, remaining: 0 } // fail-safe: kalau gagal cek, jangan kasih akses
+  }
+}
+
 // ── PERSONA INTI DIAH ANNA ────────────────────────────────────────────────────
 const CORE_PERSONA = `
 Kamu adalah Diah Anna, AI Career Companion milik Verneks.
@@ -175,9 +243,13 @@ export default async function handler(req, res) {
   // ACTION: CV REVIEW
   // ════════════════════════════════════════════
   if (action === 'cv-review') {
-    const { cvText, jobTarget } = req.body
+    const { cvText, jobTarget, userId } = req.body
     if (!cvText || cvText.trim().length < 50)
       return res.status(400).json({ error: 'CV terlalu pendek atau kosong.' })
+
+    const plan = await getRealPlan(userId)
+    const usage = await checkAndLogUsage(userId, plan, 'cv-review')
+    if (!usage.allowed) return res.status(403).json({ error: 'Kuota CV Review bulan ini sudah habis.', limitReached: true })
 
     try {
       const review = await generateText({
@@ -198,6 +270,7 @@ Jangan tambah seksi lain. Langsung mulai dari "Kesan Pertama", tanpa kalimat pem
         prompt: `${jobTarget ? `Target posisi: ${jobTarget}\n\n` : ''}Ini CV saya:\n\n${cvText.slice(0, 4000)}`,
         maxTokens: 700,
         tier: 'smart',
+        plan,
       })
       return res.status(200).json({ review })
     } catch (error) {
@@ -210,9 +283,13 @@ Jangan tambah seksi lain. Langsung mulai dari "Kesan Pertama", tanpa kalimat pem
   // ACTION: ATS CHECKER
   // ════════════════════════════════════════════
   if (action === 'ats') {
-    const { cvText, jobDescription } = req.body
+    const { cvText, jobDescription, userId } = req.body
     if (!cvText || cvText.trim().length < 50)
       return res.status(400).json({ error: 'CV terlalu pendek atau kosong.' })
+
+    const plan = await getRealPlan(userId)
+    const usage = await checkAndLogUsage(userId, plan, 'ats')
+    if (!usage.allowed) return res.status(403).json({ error: 'Kuota ATS Checker bulan ini sudah habis.', limitReached: true })
 
     try {
       const result = await generateText({
@@ -254,6 +331,7 @@ Analisis CV dan berikan output dalam format EXACT ini:
         prompt: `${jobDescription ? `Job Description Target:\n${jobDescription}\n\n` : ''}CV saya:\n\n${cvText.slice(0, 4000)}`,
         maxTokens: 1000,
         tier: 'smart',
+        plan,
       })
       return res.status(200).json({ result })
     } catch (error) {
@@ -266,7 +344,7 @@ Analisis CV dan berikan output dalam format EXACT ini:
   // ACTION: MOCK INTERVIEW
   // ════════════════════════════════════════════
   if (action === 'mock-interview') {
-    const { subAction, position, level, messages, questionNumber, totalQuestions = 6 } = req.body
+    const { subAction, position, level, messages, questionNumber, totalQuestions = 6, userId } = req.body
 
     const interviewPersona = `Kamu adalah Diah Anna, career companion Verneks yang sedang melakukan mock interview.
 Gaya kamu hangat tapi profesional, seperti HRD senior yang supportif.
@@ -274,6 +352,10 @@ Bahasa Indonesia natural, sesekali campur Inggris.`
 
     try {
       if (subAction === 'start') {
+        const plan = await getRealPlan(userId)
+        const usage = await checkAndLogUsage(userId, plan, 'interview')
+        if (!usage.allowed) return res.status(403).json({ error: 'Kuota Mock Interview bulan ini sudah habis.', limitReached: true })
+
         const reply = await generateText({
           system: interviewPersona,
           prompt: `Mulai mock interview untuk posisi ${position} level ${level}.
@@ -282,11 +364,13 @@ Format: sapa + penjelasan singkat + "Pertanyaan 1: [pertanyaan]"
 Jangan terlalu panjang.`,
           maxTokens: 300,
           tier: 'fast',
+          plan,
         })
         return res.status(200).json({ reply, questionNumber: 1 })
       }
 
       if (subAction === 'answer') {
+        const plan = await getRealPlan(userId)
         const isLastQuestion = questionNumber >= totalQuestions
         const nextAction = isLastQuestion
           ? `Ini jawaban terakhir. Berikan feedback singkat untuk jawaban ini, lalu katakan sesi selesai dan minta user tunggu feedback lengkap.`
@@ -297,11 +381,13 @@ Jangan terlalu panjang.`,
           messages: [...(messages || []), { role: 'user', content: nextAction }],
           maxTokens: 350,
           tier: 'fast',
+          plan,
         })
         return res.status(200).json({ reply, questionNumber: questionNumber + 1, isComplete: isLastQuestion })
       }
 
       if (subAction === 'feedback') {
+        const plan = await getRealPlan(userId)
         const feedback = await generateChat({
           system: `Kamu adalah Diah Anna, career companion Verneks, expert untuk posisi ${position} level ${level}.
 Berikan feedback interview yang jujur, spesifik, dan actionable.
@@ -331,6 +417,7 @@ Jujur tapi tetap supportif ya!`
           ],
           maxTokens: 2000,
           tier: 'smart',
+          plan,
         })
         return res.status(200).json({ feedback })
       }
@@ -346,7 +433,7 @@ Jujur tapi tetap supportif ya!`
   // ACTION: CV MAKER
   // ════════════════════════════════════════════
   if (action === 'cv-maker') {
-    const { mode, format, cvText, formData, jobTarget } = req.body
+    const { mode, format, cvText, formData, jobTarget, userId } = req.body
 
     if (!format || !CV_FORMAT_PROMPTS[format])
       return res.status(400).json({ error: 'Format tidak valid.' })
@@ -354,6 +441,10 @@ Jujur tapi tetap supportif ya!`
       return res.status(400).json({ error: 'CV terlalu pendek atau kosong.' })
     if (mode === 'scratch' && !formData?.name)
       return res.status(400).json({ error: 'Data diri tidak lengkap.' })
+
+    const plan = await getRealPlan(userId)
+    const usage = await checkAndLogUsage(userId, plan, 'cv-maker')
+    if (!usage.allowed) return res.status(403).json({ error: 'Kuota CV Maker bulan ini sudah habis.', limitReached: true })
 
     try {
       const fmt = CV_FORMAT_PROMPTS[format]
@@ -390,6 +481,7 @@ Jika ada informasi yang kurang, buat yang masuk akal dan realistis, tandai denga
         prompt,
         maxTokens: 1500,
         tier: 'smart',
+        plan,
       })
       return res.status(200).json({ result })
     } catch (error) {
@@ -478,10 +570,15 @@ Contoh: "User membahas kebingungan pindah karir ke data analyst, masih ragu kare
   // ════════════════════════════════════════════
   // ACTION: CHAT (default — career coaching)
   // ════════════════════════════════════════════
-  const { messages: rawMessages, userId, plan = 'free' } = req.body
+  const { messages: rawMessages, userId } = req.body
   const messages = (rawMessages || []).slice(-16)
 
   if (!messages?.length) return res.status(400).json({ error: 'Pesan tidak boleh kosong.' })
+
+  // KEAMANAN: plan TIDAK PERNAH diambil dari req.body — selalu dihitung ulang dari database.
+  const plan = await getRealPlan(userId)
+  const usage = await checkAndLogUsage(userId, plan, 'chat')
+  if (!usage.allowed) return res.status(403).json({ error: 'Kuota chat hari ini sudah habis.', limitReached: true })
 
   let careerProfile = null
   let growthState   = null

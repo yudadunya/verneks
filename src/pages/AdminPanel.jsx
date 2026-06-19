@@ -1,44 +1,24 @@
 // src/pages/AdminPanel.jsx
 import { useState } from 'react'
 
-const ADMIN_PASS = import.meta.env.VITE_ADMIN_PASSWORD || 'admin123'
-const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL
-const SUPABASE_SERVICE_KEY = import.meta.env.VITE_ADMIN_SERVICE_KEY
-
-// Generate kode 12 karakter acak (A-Z 0-9)
-function generateCode() {
-  const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'
-  return Array.from({ length: 12 }, () => chars[Math.floor(Math.random() * chars.length)]).join('')
-}
-
-async function adminFetch(path, body) {
-  const res = await fetch(`${SUPABASE_URL}/rest/v1/${path}`, {
-    method: body ? 'POST' : 'GET',
-    headers: {
-      'Content-Type':  'application/json',
-      'apikey':         SUPABASE_SERVICE_KEY,
-      'Authorization': `Bearer ${SUPABASE_SERVICE_KEY}`,
-      'Prefer':        'return=representation',
-    },
-    ...(body ? { body: JSON.stringify(body) } : {}),
+// KEAMANAN: tidak ada lagi Service Role Key atau password di sisi client.
+// Semua operasi admin lewat /api/admin yang verifikasi password di server setiap request.
+async function adminCall(password, action, extra = {}) {
+  const res = await fetch('/api/admin', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ password, action, ...extra }),
   })
-  return res.json()
-}
-
-async function fetchCodes() {
-  const res = await fetch(`${SUPABASE_URL}/rest/v1/redeem_codes?order=created_at.desc&limit=50`, {
-    headers: {
-      'apikey':         SUPABASE_SERVICE_KEY,
-      'Authorization': `Bearer ${SUPABASE_SERVICE_KEY}`,
-    },
-  })
-  return res.json()
+  const data = await res.json()
+  if (!res.ok) throw new Error(data.error || 'Gagal memproses.')
+  return data
 }
 
 export default function AdminPanel() {
   const [authed,    setAuthed]    = useState(false)
+  const [password,  setPassword]  = useState('') // disimpan di state, dikirim ulang tiap request
   const [passInput, setPassInput] = useState('')
-  const [passErr,   setPassErr]   = useState(false)
+  const [passErr,   setPassErr]   = useState('')
   const [codes,     setCodes]     = useState([])
   const [loading,   setLoading]   = useState(false)
   const [genLoading, setGenLoading] = useState(false)
@@ -46,26 +26,39 @@ export default function AdminPanel() {
   const [genCount,  setGenCount]  = useState(1)
 
   const handleLogin = async () => {
-    if (passInput !== ADMIN_PASS) { setPassErr(true); return }
-    setAuthed(true)
-    loadCodes()
+    setPassErr('')
+    setLoading(true)
+    try {
+      const data = await adminCall(passInput, 'list')
+      setCodes(data.codes || [])
+      setPassword(passInput) // simpan password tervalidasi untuk request berikutnya
+      setAuthed(true)
+    } catch (e) {
+      setPassErr(e.message === 'Password salah.' ? 'Password salah' : e.message)
+    }
+    setLoading(false)
   }
 
   const loadCodes = async () => {
     setLoading(true)
-    const data = await fetchCodes()
-    setCodes(Array.isArray(data) ? data : [])
+    try {
+      const data = await adminCall(password, 'list')
+      setCodes(data.codes || [])
+    } catch (e) {
+      setPassErr(e.message)
+      setAuthed(false) // password mungkin sudah tidak valid (misal diganti)
+    }
     setLoading(false)
   }
 
   const handleGenerate = async () => {
     setGenLoading(true)
-    const newCodes = Array.from({ length: genCount }, () => ({
-      code: generateCode(),
-      created_at: new Date().toISOString(),
-    }))
-    await adminFetch('redeem_codes', newCodes)
-    await loadCodes()
+    try {
+      const data = await adminCall(password, 'generate', { count: genCount })
+      setCodes(data.codes || [])
+    } catch (e) {
+      setPassErr(e.message)
+    }
     setGenLoading(false)
   }
 
@@ -100,11 +93,13 @@ export default function AdminPanel() {
           type="password"
           placeholder="Password admin"
           value={passInput}
-          onChange={e => { setPassInput(e.target.value); setPassErr(false) }}
+          onChange={e => { setPassInput(e.target.value); setPassErr('') }}
           onKeyDown={e => e.key === 'Enter' && handleLogin()}
         />
-        {passErr && <div style={{ color: '#EF5350', fontSize: '0.75rem', marginTop: 6 }}>Password salah</div>}
-        <button style={s.btn} onClick={handleLogin}>Masuk</button>
+        {passErr && <div style={{ color: '#EF5350', fontSize: '0.75rem', marginTop: 6 }}>{passErr}</div>}
+        <button style={s.btn} onClick={handleLogin} disabled={loading}>
+          {loading ? 'Memeriksa...' : 'Masuk'}
+        </button>
       </div>
     </div>
   )
@@ -133,6 +128,8 @@ export default function AdminPanel() {
           </button>
           <button style={{ ...s.btnSm }} onClick={loadCodes} disabled={loading}>🔄</button>
         </div>
+
+        {passErr && <div style={{ color: '#EF5350', fontSize: '0.78rem', marginBottom: 12 }}>{passErr}</div>}
 
         {/* List kode */}
         {loading ? (
