@@ -115,14 +115,19 @@ export default function App() {
     const timeoutId = setTimeout(() => {
       if (settled) return
       settled = true
-      console.warn('[App] getSession timeout — clearing stale session & redirect')
-      // Hapus semua token Supabase dari localStorage
-      Object.keys(localStorage)
-        .filter(k => k.startsWith('sb-'))
-        .forEach(k => localStorage.removeItem(k))
-      // Langsung redirect tanpa tunggu signOut (karena network mungkin down)
-      window.location.replace('/')
-    }, 1500)
+      console.warn('[App] getSession timeout setelah 5 detik')
+      // Hanya clear dan redirect kalau tidak ada user state yang sudah terisi
+      // Ini prevent false logout saat user buka tab baru (lynk.id dll)
+      const sbKeys = Object.keys(localStorage).filter(k => k.startsWith('sb-'))
+      if (sbKeys.length === 0) {
+        // Tidak ada token sama sekali → aman untuk redirect ke home
+        window.location.replace('/')
+      } else {
+        // Ada token tapi getSession hang → coba lagi tanpa redirect paksa
+        setLoading(false)
+        console.warn('[App] Token ada tapi getSession lambat — biarkan user tetap')
+      }
+    }, 5000)
 
     supabase.auth.getSession()
       .then(({ data: { session } }) => {
