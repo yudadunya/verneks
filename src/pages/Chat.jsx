@@ -666,8 +666,7 @@ Pilih yang sesuai buat kamu:`
   const doCvReview = async (jobTarget) => {
     setMode('cv-review-done'); setLoading(true)
     try {
-      const data = await apiFetch('/api/career-coach', { action: 'cv-review', cvText, jobTarget })
-      logUsage('cv-review')
+      const data = await apiFetch('/api/career-coach', { action: 'cv-review', cvText, jobTarget, userId: user?.id })
       pushBot(data.review, [{ id: 'ats', label: '🎯 Cek ATS Score juga' }, { id: '__share_cv', label: '📤 Bagikan hasil' }, { id: '__share_app', label: '👥 Ajak teman coba' }])
       // Inject hasil review ke coachHistory agar Diah Anna ingat konteksnya
       // saat user lanjut ngobrol setelah review selesai
@@ -699,8 +698,7 @@ Pilih yang sesuai buat kamu:`
   const doAts = async (jobDescription) => {
     setMode('ats-done'); setLoading(true)
     try {
-      const data = await apiFetch('/api/career-coach', { action: 'ats', cvText, jobDescription })
-      logUsage('ats')
+      const data = await apiFetch('/api/career-coach', { action: 'ats', cvText, jobDescription, userId: user?.id })
       pushBot(data.result, [{ id: 'cv-review', label: '📄 Review CV juga' }, { id: '__share_ats', label: '📤 Bagikan hasil' }, { id: '__share_app', label: '👥 Ajak teman coba' }])
       // Inject hasil ATS ke coachHistory agar Diah Anna ingat konteksnya
       setCoachHistory([
@@ -731,8 +729,7 @@ Pilih yang sesuai buat kamu:`
   const startInterviewSession = async (position, level) => {
     setMode('interview-active'); setLoading(true)
     try {
-      const data = await apiFetch('/api/career-coach', { action: 'mock-interview', subAction: 'start', position, level, messages: [] })
-      logUsage('interview')
+      const data = await apiFetch('/api/career-coach', { action: 'mock-interview', subAction: 'start', position, level, messages: [], userId: user?.id })
       setInterview(prev => ({ ...prev, messages: [{ role: 'assistant', content: data.reply }], qNum: data.questionNumber }))
       pushBot(data.reply)
     } catch (e) { pushBot(`Error: ${e.message}`); setMode('menu') }
@@ -743,12 +740,12 @@ Pilih yang sesuai buat kamu:`
     setLoading(true)
     const newMsgs = [...interview.messages, { role: 'user', content: answer }]
     try {
-      const data = await apiFetch('/api/career-coach', { action: 'mock-interview', subAction: 'answer', position: interview.position, level: interview.level, messages: newMsgs, questionNumber: interview.qNum })
+      const data = await apiFetch('/api/career-coach', { action: 'mock-interview', subAction: 'answer', position: interview.position, level: interview.level, messages: newMsgs, questionNumber: interview.qNum, userId: user?.id })
       const updatedMsgs = [...newMsgs, { role: 'assistant', content: data.reply }]
       setInterview(prev => ({ ...prev, messages: updatedMsgs, qNum: data.questionNumber }))
       if (data.isComplete) {
         pushBot(data.reply)
-        const fbData = await apiFetch('/api/career-coach', { action: 'mock-interview', subAction: 'feedback', position: interview.position, level: interview.level, messages: updatedMsgs })
+        const fbData = await apiFetch('/api/career-coach', { action: 'mock-interview', subAction: 'feedback', position: interview.position, level: interview.level, messages: updatedMsgs, userId: user?.id })
         setMode('interview-done')
         const feedbackText = fbData.feedback || 'Sesi selesai! Kamu hebat! 🎉'
         pushBot(feedbackText, [{ id: 'interview', label: '🔄 Interview lagi' }, { id: '__share_app', label: '👥 Ajak teman coba' }])
@@ -774,8 +771,7 @@ Pilih yang sesuai buat kamu:`
   const doCvMaker = async (format) => {
     setMode('cv-maker-done'); setLoading(true)
     try {
-      const data = await apiFetch('/api/career-coach', { action: 'cv-maker', mode: 'optimize', format, cvText })
-      logUsage('cv-maker')
+      const data = await apiFetch('/api/career-coach', { action: 'cv-maker', mode: 'optimize', format, cvText, userId: user?.id })
       pushBot(data.result, [
         { id: '__download_docx', label: '📥 Download Word (.docx)' },
         { id: '__share_cv', label: '📤 Bagikan CV' },
@@ -1029,7 +1025,6 @@ Pilih yang sesuai buat kamu:`
 
     const newHistory = [...coachHistory, { role: 'user', content: msg }]
     setCoachHistory(newHistory); setLoading(true); await callCoachApi(newHistory); setLoading(false)
-    if (plan === 'free') logUsage('chat')
     maybeExtractProfile()
     setTimeout(() => triggerGenomeTeaser(), 2000)
   }
@@ -1052,7 +1047,7 @@ Pilih yang sesuai buat kamu:`
 
   const callCoachApi = async (history) => {
     try {
-      const data = await apiFetch('/api/career-coach', { messages: history, userId: user?.id || null, plan: plan || 'free' })
+      const data = await apiFetch('/api/career-coach', { messages: history, userId: user?.id || null })
 
       const reply = data.reply
       if (!reply) {
@@ -1076,11 +1071,12 @@ Pilih yang sesuai buat kamu:`
         pushBot(reply, null)
       }
 
-      if (user?.id && fullHistory.filter(m => m.role === 'user').length >= 3) {
-        setTimeout(() => {
-          apiFetch('/api/extract-profile', { userId: user.id, messages: fullHistory }).catch(() => {})
-        }, 500)
-      }
+      // NOTE: extract-profile TIDAK dipanggil di sini lagi.
+      // Sebelumnya dipanggil 2x untuk setiap pesan (di sini DAN via maybeExtractProfile()
+      // yang dipanggil pemanggil fungsi ini) — duplikat ini menumpuk request background,
+      // terutama saat sesi chat panjang, bikin halaman lain terasa 'macet' saat pindah tab
+      // karena slot koneksi browser penuh oleh request yang menunggu fallback AI provider.
+      // maybeExtractProfile() di pemanggil sudah cukup, jadi cukup sekali per pesan.
     } catch { pushBot('Diah Anna lagi sibuk sebentar, coba lagi ya! 🙏') }
   }
 
