@@ -8,7 +8,7 @@
  * Models (Juni 2026):
  * - Cerebras  : gpt-oss-120b         (free, cepat, 1M token/hari)
  * - DeepSeek  : deepseek-v4-flash     (murah $0.14/1M, setara Claude Haiku)
- * - Gemini    : gemini-1.5-flash      (free tier masih ada, fallback terakhir)
+ * - Gemini    : gemini-2.5-flash      (gemini-1.5-flash & 2.0-flash sudah retired per Juni 2026)
  * - Claude    : claude-sonnet-4-6     (premium, paling pintar)
  */
 import Anthropic from '@anthropic-ai/sdk'
@@ -18,7 +18,7 @@ const MODELS = {
   cerebras: { fast: 'gpt-oss-120b',          smart: 'gpt-oss-120b' },
   deepseek: { fast: 'deepseek-v4-flash',       smart: 'deepseek-v4-flash' },
   claude:   { fast: 'claude-haiku-4-5-20251001', smart: 'claude-sonnet-4-6' },
-  gemini:   { fast: 'gemini-1.5-flash',        smart: 'gemini-1.5-flash' },
+  gemini:   { fast: 'gemini-2.5-flash-lite',   smart: 'gemini-2.5-flash' },
 }
 
 // ── Normalize messages untuk semua provider ──────────────────────────────────

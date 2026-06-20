@@ -666,7 +666,8 @@ Pilih yang sesuai buat kamu:`
   const doCvReview = async (jobTarget) => {
     setMode('cv-review-done'); setLoading(true)
     try {
-      const data = await apiFetch('/api/career-coach', { action: 'cv-review', cvText, jobTarget, userId: user?.id })
+      const data = await apiFetch('/api/career-coach', { action: 'cv-review', cvText, jobTarget })
+      logUsage('cv-review')
       pushBot(data.review, [{ id: 'ats', label: '🎯 Cek ATS Score juga' }, { id: '__share_cv', label: '📤 Bagikan hasil' }, { id: '__share_app', label: '👥 Ajak teman coba' }])
       // Inject hasil review ke coachHistory agar Diah Anna ingat konteksnya
       // saat user lanjut ngobrol setelah review selesai
@@ -698,7 +699,8 @@ Pilih yang sesuai buat kamu:`
   const doAts = async (jobDescription) => {
     setMode('ats-done'); setLoading(true)
     try {
-      const data = await apiFetch('/api/career-coach', { action: 'ats', cvText, jobDescription, userId: user?.id })
+      const data = await apiFetch('/api/career-coach', { action: 'ats', cvText, jobDescription })
+      logUsage('ats')
       pushBot(data.result, [{ id: 'cv-review', label: '📄 Review CV juga' }, { id: '__share_ats', label: '📤 Bagikan hasil' }, { id: '__share_app', label: '👥 Ajak teman coba' }])
       // Inject hasil ATS ke coachHistory agar Diah Anna ingat konteksnya
       setCoachHistory([
@@ -729,7 +731,8 @@ Pilih yang sesuai buat kamu:`
   const startInterviewSession = async (position, level) => {
     setMode('interview-active'); setLoading(true)
     try {
-      const data = await apiFetch('/api/career-coach', { action: 'mock-interview', subAction: 'start', position, level, messages: [], userId: user?.id })
+      const data = await apiFetch('/api/career-coach', { action: 'mock-interview', subAction: 'start', position, level, messages: [] })
+      logUsage('interview')
       setInterview(prev => ({ ...prev, messages: [{ role: 'assistant', content: data.reply }], qNum: data.questionNumber }))
       pushBot(data.reply)
     } catch (e) { pushBot(`Error: ${e.message}`); setMode('menu') }
@@ -740,12 +743,12 @@ Pilih yang sesuai buat kamu:`
     setLoading(true)
     const newMsgs = [...interview.messages, { role: 'user', content: answer }]
     try {
-      const data = await apiFetch('/api/career-coach', { action: 'mock-interview', subAction: 'answer', position: interview.position, level: interview.level, messages: newMsgs, questionNumber: interview.qNum, userId: user?.id })
+      const data = await apiFetch('/api/career-coach', { action: 'mock-interview', subAction: 'answer', position: interview.position, level: interview.level, messages: newMsgs, questionNumber: interview.qNum })
       const updatedMsgs = [...newMsgs, { role: 'assistant', content: data.reply }]
       setInterview(prev => ({ ...prev, messages: updatedMsgs, qNum: data.questionNumber }))
       if (data.isComplete) {
         pushBot(data.reply)
-        const fbData = await apiFetch('/api/career-coach', { action: 'mock-interview', subAction: 'feedback', position: interview.position, level: interview.level, messages: updatedMsgs, userId: user?.id })
+        const fbData = await apiFetch('/api/career-coach', { action: 'mock-interview', subAction: 'feedback', position: interview.position, level: interview.level, messages: updatedMsgs })
         setMode('interview-done')
         const feedbackText = fbData.feedback || 'Sesi selesai! Kamu hebat! 🎉'
         pushBot(feedbackText, [{ id: 'interview', label: '🔄 Interview lagi' }, { id: '__share_app', label: '👥 Ajak teman coba' }])
@@ -771,7 +774,8 @@ Pilih yang sesuai buat kamu:`
   const doCvMaker = async (format) => {
     setMode('cv-maker-done'); setLoading(true)
     try {
-      const data = await apiFetch('/api/career-coach', { action: 'cv-maker', mode: 'optimize', format, cvText, userId: user?.id })
+      const data = await apiFetch('/api/career-coach', { action: 'cv-maker', mode: 'optimize', format, cvText })
+      logUsage('cv-maker')
       pushBot(data.result, [
         { id: '__download_docx', label: '📥 Download Word (.docx)' },
         { id: '__share_cv', label: '📤 Bagikan CV' },
@@ -853,16 +857,21 @@ Pilih yang sesuai buat kamu:`
   useEffect(() => { messagesRef.current = chatMessages }, [chatMessages])
 
   // ── Simpan ringkasan sesi saat user keluar dari chat ────────────────────
-  // Trigger: tab/browser ditutup (visibilitychange ke hidden) atau pindah halaman (unmount)
+  // Trigger: tab/browser ditutup (visibilitychange ke hidden) ATAU pindah halaman (unmount)
+  // BUG FIX: kedua event bisa fire untuk sesi yang sama (tab disembunyikan, lalu app di-unmount)
+  // — pakai flag sessionSavedRef supaya hanya terkirim SEKALI per sesi, walau dua trigger jalan.
+  const sessionSavedRef = useRef(false)
   useEffect(() => {
     if (!user?.id) return
+    sessionSavedRef.current = false // reset setiap kali user/sesi berganti
 
     const saveSessionNote = () => {
+      if (sessionSavedRef.current) return // sudah terkirim untuk sesi ini — jangan ulang
       const history = getChatHistoryForExtract()
       const userCount = history.filter(m => m.role === 'user').length
       if (userCount < 2) return // sesi terlalu singkat
 
-      // Pakai fetch biasa (bukan apiFetch) — tidak perlu tunggu response, fire-and-forget
+      sessionSavedRef.current = true // tandai SEBELUM fetch, bukan setelah — cegah race antara 2 trigger
       fetch('/api/career-coach', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -873,12 +882,13 @@ Pilih yang sesuai buat kamu:`
 
     const onVisibilityChange = () => {
       if (document.visibilityState === 'hidden') saveSessionNote()
+      if (document.visibilityState === 'visible') sessionSavedRef.current = false // tab dibuka lagi → sesi baru, boleh simpan lagi nanti
     }
 
     document.addEventListener('visibilitychange', onVisibilityChange)
     return () => {
       document.removeEventListener('visibilitychange', onVisibilityChange)
-      saveSessionNote() // juga jalan saat unmount (pindah halaman dalam app)
+      saveSessionNote() // jalan saat unmount — flag di atas mencegah double-fire kalau visibilitychange sudah duluan
     }
   }, [user?.id])
 
@@ -1019,6 +1029,7 @@ Pilih yang sesuai buat kamu:`
 
     const newHistory = [...coachHistory, { role: 'user', content: msg }]
     setCoachHistory(newHistory); setLoading(true); await callCoachApi(newHistory); setLoading(false)
+    if (plan === 'free') logUsage('chat')
     maybeExtractProfile()
     setTimeout(() => triggerGenomeTeaser(), 2000)
   }
@@ -1041,7 +1052,7 @@ Pilih yang sesuai buat kamu:`
 
   const callCoachApi = async (history) => {
     try {
-      const data = await apiFetch('/api/career-coach', { messages: history, userId: user?.id || null })
+      const data = await apiFetch('/api/career-coach', { messages: history, userId: user?.id || null, plan: plan || 'free' })
 
       const reply = data.reply
       if (!reply) {
