@@ -507,8 +507,7 @@ Jika ada informasi yang kurang, buat yang masuk akal dan realistis, tandai denga
 Tulis 1-2 kalimat ringkas berisi: topik utama yang dibahas + progress/keputusan/perasaan penting user.
 Bahasa Indonesia natural. JANGAN beri pembuka, langsung isi ringkasan.
 Contoh: "User membahas kebingungan pindah karir ke data analyst, masih ragu karena belum punya portfolio. Sepakat mulai belajar SQL minggu ini."`,
-        prompt: sessionMsgs.map(m => `${m.role === 'user' ? 'User' : 'Diah Anna'}: ${m.content || m.text || ''}`).join('
-').slice(0, 3000),
+        prompt: sessionMsgs.map(m => `${m.role === 'user' ? 'User' : 'Diah Anna'}: ${m.content || m.text || ''}`).join('\n').slice(0, 3000),
         maxTokens: 120,
         tier: 'fast',
       })
