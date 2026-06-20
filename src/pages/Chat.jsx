@@ -7,16 +7,35 @@ import ShareAppModal from '../components/ShareAppModal'
 import BottomNav from '../components/BottomNav'
 import { useSubscription, LIMITS, PLAN_LABEL, FEATURE_LABEL } from '../hooks/useSubscription'
 
+// ── XSS PROTECTION: Escape HTML characters sebelum render markdown ──
+function escapeHtml(text) {
+  if (!text) return ''
+  const map = {
+    '&': '&amp;',
+    '<': '&lt;',
+    '>': '&gt;',
+    '"': '&quot;',
+    "'": '&#039;',
+    '`': '&#x60;'
+  }
+  return text.replace(/[&<>"'`]/g, m => map[m])
+}
+
+// ── FIXED: Escape dulu, baru apply markdown regex ──
 function renderMd(text) {
   if (!text) return ''
-  return text
-    .replace(/^## (.+)$/gm, '<div style="font-weight:700;font-size:0.9rem;margin:10px 0 3px;color:#111">$1</div>')
-    .replace(/^### (.+)$/gm, '<div style="font-weight:600;font-size:0.85rem;margin:8px 0 2px;color:#333">$1</div>')
+  
+  // ESCAPE HTML DULU untuk mencegah XSS
+  const escaped = escapeHtml(text)
+  
+  return escaped
+    .replace(/^## (.+)$/gm, '<div style="font-size:1.1rem;font-weight:700;margin:10px 0 6px">$1</div>')
+    .replace(/^### (.+)$/gm, '<div style="font-size:1rem;font-weight:700;margin:8px 0 4px">$1</div>')
     .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
-    .replace(/^- (.+)$/gm, '<div style="padding:2px 0 2px 14px;position:relative"><span style="position:absolute;left:4px;color:var(--wa-green)">•</span>$1</div>')
-    .replace(/^\d+\. (.+)$/gm, '<div style="padding:2px 0 2px 14px;position:relative">$1</div>')
-    .replace(/\n{2,}/g, '<br><br>')
-    .replace(/\n/g, '<br>')
+    .replace(/^- (.+)$/gm, '<div style="margin-left:12px">• $1</div>')
+    .replace(/^\d+\. (.+)$/gm, '<div style="margin-left:12px">$1</div>')
+    .replace(/\n{2,}/g, '</div><div style="height:8px"></div><div>')
+    .replace(/\n/g, '<br/>')
 }
 
 async function apiFetch(url, body) {
@@ -29,47 +48,47 @@ async function apiFetch(url, body) {
 }
 
 const MAIN_MENU = [
-  { id: 'cv-review', label: '📄 Review CV'     },
-  { id: 'ats',       label: '🎯 ATS Checker'   },
+  { id: 'cv-review', label: '📄 Review CV' },
+  { id: 'ats', label: '🎯 ATS Checker' },
   { id: 'interview', label: '🎤 Mock Interview' },
-  { id: 'cv-maker',  label: '✨ Bikin CV'       },
-  { id: 'coach',     label: '🧠 Tanya Karir'   },
+  { id: 'cv-maker', label: '✨ Bikin CV' },
+  { id: 'coach', label: '🧠 Tanya Karir' },
 ]
 
 const INTERVIEW_LEVELS = [
-  { id: 'Fresh Graduate',    label: '🌱 Fresh Graduate'    },
+  { id: 'Fresh Graduate', label: '🌱 Fresh Graduate' },
   { id: 'Junior (1-3 thn)', label: '🔰 Junior (1-3 thn)' },
-  { id: 'Mid (3-5 thn)',    label: '⭐ Mid (3-5 thn)'    },
-  { id: 'Senior (5+ thn)', label: '🏆 Senior (5+ thn)'  },
+  { id: 'Mid (3-5 thn)', label: '⭐ Mid (3-5 thn)' },
+  { id: 'Senior (5+ thn)', label: '🏆 Senior (5+ thn)' },
 ]
 
 const CV_FORMATS = [
-  { id: 'fmt_ats',       label: '✅ ATS Friendly'    },
-  { id: 'fmt_jobstreet', label: '🔍 JobStreet'        },
-  { id: 'fmt_linkedin',  label: '💼 LinkedIn Profile' },
+  { id: 'fmt_ats', label: '✅ ATS Friendly' },
+  { id: 'fmt_jobstreet', label: '🔍 JobStreet' },
+  { id: 'fmt_linkedin', label: '💼 LinkedIn Profile' },
 ]
 
 export default function Chat({ user, chatMessages = [], setChatMessages }) {
   const navigate = useNavigate()
   const { plan, loading: subLoading, checkUsage, logUsage, getRemainingChat, isExpired } = useSubscription(user?.id)
 
-  const storageKey     = user?.id ? `lc_chat_${user.id}` : null
+  const storageKey = user?.id ? `lc_chat_${user.id}` : null
   const ONBOARDING_KEY = user?.id ? `onboarded_${user.id}` : null
 
   // Pakai chatMessages dari App.jsx langsung sebagai source of truth
-  const messages    = chatMessages
+  const messages = chatMessages
   const setMessages = setChatMessages
 
-  const [input, setInput]               = useState('')
-  const [loading, setLoading]           = useState(false)
-  const [mode, setMode]                 = useState('menu')
-  const [cvText, setCvText]             = useState('')
-  const [interview, setInterview]       = useState({ position: '', level: '', messages: [], qNum: 0 })
+  const [input, setInput] = useState('')
+  const [loading, setLoading] = useState(false)
+  const [mode, setMode] = useState('menu')
+  const [cvText, setCvText] = useState('')
+  const [interview, setInterview] = useState({ position: '', level: '', messages: [], qNum: 0 })
   // coachHistory persistent — baca dari localStorage agar Diah Anna ingat konteks lintas sesi
   const coachKey = user?.id ? `lc_coach_${user.id}` : null
   // Guard greeting: pakai sessionStorage agar persisten lintas navigasi (remount)
   // useRef reset tiap remount → greeting muncul lagi setiap balik ke /chat
-  const greetingKey     = user?.id ? `lc_greeted_${user.id}` : null
+  const greetingKey = user?.id ? `lc_greeted_${user.id}` : null
   const greetingFiredRef = useRef(false) // secondary guard untuk race condition
   const [coachHistory, setCoachHistoryRaw] = useState(() => {
     if (!coachKey) return []
@@ -93,9 +112,9 @@ export default function Chat({ user, chatMessages = [], setChatMessages }) {
       return next
     })
   }
-  const [cvMakerInfo, setCvMakerInfo]   = useState({ text: '', format: '' })
+  const [cvMakerInfo, setCvMakerInfo] = useState({ text: '', format: '' })
   const [showOnboarding, setShowOnboarding] = useState(false)
-  const [showCoachGate, setShowCoachGate]   = useState(false)
+  const [showCoachGate, setShowCoachGate] = useState(false)
 
   // Hitung pesan user dalam sesi ini (dari chatMessages)
   const FREE_DAILY_LIMIT = 15
@@ -137,7 +156,7 @@ export default function Chat({ user, chatMessages = [], setChatMessages }) {
   }
 
   const bottomRef = useRef()
-  const fileRef   = useRef()
+  const fileRef = useRef()
   const containerRef = useRef()
 
   // ── visualViewport: adjust container saat keyboard muncul di mobile ──
@@ -147,7 +166,7 @@ export default function Chat({ user, chatMessages = [], setChatMessages }) {
     const update = () => {
       if (containerRef.current) {
         containerRef.current.style.height = (vv.height - 65) + 'px'
-        containerRef.current.style.top    = vv.offsetTop + 'px'
+        containerRef.current.style.top = vv.offsetTop + 'px'
       }
     }
     vv.addEventListener('resize', update)
@@ -206,15 +225,15 @@ export default function Chat({ user, chatMessages = [], setChatMessages }) {
 
         const contextParts = [
           `[KONTEKS DASHBOARD USER — data lengkap dari profil & Discovery]`,
-          p.nama                ? `Nama: ${p.nama}` : null,
-          p.posisi_saat_ini     ? `Posisi saat ini: ${p.posisi_saat_ini}` : null,
-          p.target_posisi       ? `Target posisi: ${p.target_posisi}` : null,
-          p.industri            ? `Industri: ${p.industri}` : null,
+          p.nama ? `Nama: ${p.nama}` : null,
+          p.posisi_saat_ini ? `Posisi saat ini: ${p.posisi_saat_ini}` : null,
+          p.target_posisi ? `Target posisi: ${p.target_posisi}` : null,
+          p.industri ? `Industri: ${p.industri}` : null,
           p.career_readiness != null ? `Career Readiness: ${p.career_readiness}%` : null,
-          g?.career_stage       ? `Career Stage: ${g.career_stage} (progress ${g.progress_percent || p?.career_readiness || 0}%)` : null,
-          g?.current_focus      ? `Focus saat ini: ${g.current_focus}` : null,
-          g?.next_milestone     ? `Next milestone: ${g.next_milestone}` : null,
-          p.hambatan     ? `Tantangan utama: ${p.hambatan}` : null,
+          g?.career_stage ? `Career Stage: ${g.career_stage} (progress ${g.progress_percent || p?.career_readiness || 0}%)` : null,
+          g?.current_focus ? `Focus saat ini: ${g.current_focus}` : null,
+          g?.next_milestone ? `Next milestone: ${g.next_milestone}` : null,
+          p.hambatan ? `Tantangan utama: ${p.hambatan}` : null,
           (() => {
             const rawG = p.skill_gaps
             const gaps = Array.isArray(rawG) ? rawG : (rawG && typeof rawG === 'object' ? Object.values(rawG) : [])
@@ -225,8 +244,8 @@ export default function Chat({ user, chatMessages = [], setChatMessages }) {
             if (!steps.length) return null
             const stepList = steps.slice(0, 5).map((s, i) => {
               const label = typeof s === 'string' ? s : (s.step || s.label || s.title || JSON.stringify(s))
-              const done  = typeof s === 'object' && s.done ? '✓' : `${i + 1}.`
-              return `  ${done} ${label}`
+              const done = typeof s === 'object' && s.done ? '✓' : `${i + 1}.`
+              return ` ${done} ${label}`
             }).join('\n')
             return `GPS Roadmap (langkah karir):\n${stepList}`
           })(),
@@ -265,8 +284,8 @@ export default function Chat({ user, chatMessages = [], setChatMessages }) {
             Array.isArray(rawGaps) ? rawGaps :
             rawGaps && typeof rawGaps === 'object' ? Object.values(rawGaps) : []
           ).slice(0, 3)
-          const gapLine = gaps.length > 0 ? ('\n\u26a0 Gap Utama:' + gaps.join(', ')) : ''
-          const summaryMsg = ('Halo ' + name + ' \ud83d\udc4b\nSaya sudah menyimpan hasil Career Discovery kamu.\n\ud83c\udfaf Target:' + target + '\n\ud83d\udcca Readiness:' + readiness + '%' + gapLine + '\nSaya akan membantu kamu memahami langkah berikutnya.')
+          const gapLine = gaps.length > 0 ? ('\n🎯 Gap Utama:' + gaps.join(', ')) : ''
+          const summaryMsg = ('Halo ' + name + ' 👋\nSaya sudah menyimpan hasil Career Discovery kamu.\n🎯 Target:' + target + '\n📊 Readiness:' + readiness + '%' + gapLine + '\nSaya akan membantu kamu memahami langkah berikutnya.')
           // Set greeted_at ke Supabase DULU sebelum pushBot
           // supaya kalau user refresh langsung setelah greeting, tidak muncul lagi
           supabase.from('user_career_profiles')
@@ -277,16 +296,16 @@ export default function Chat({ user, chatMessages = [], setChatMessages }) {
         } else {
           // ── Greeting returning user — WOW MOMENT ──
           // Semua data dari Discovery sudah ada di p & g — tampilkan fakta spesifik
-          const name      = firstName || p?.nama?.split(' ')[0] || ''
-          const target    = p?.target_posisi
-          const hambatan  = p?.hambatan
-          const rawGaps   = p?.skill_gaps
-          const gaps      = Array.isArray(rawGaps) ? rawGaps
-                           : (rawGaps && typeof rawGaps === 'object' ? Object.values(rawGaps) : [])
-          const focus     = g?.current_focus
-          const progress  = g?.progress_percent || p?.career_readiness || 0
-          const streak    = g?.streak_days || 0
-          const topStr    = gs?.top_strength
+          const name = firstName || p?.nama?.split(' ')[0] || ''
+          const target = p?.target_posisi
+          const hambatan = p?.hambatan
+          const rawGaps = p?.skill_gaps
+          const gaps = Array.isArray(rawGaps) ? rawGaps
+            : (rawGaps && typeof rawGaps === 'object' ? Object.values(rawGaps) : [])
+          const focus = g?.current_focus
+          const progress = g?.progress_percent || p?.career_readiness || 0
+          const streak = g?.streak_days || 0
+          const topStr = gs?.top_strength
 
           // Build greeting line by line berdasarkan data yang tersedia
           const lines = []
@@ -315,8 +334,8 @@ export default function Chat({ user, chatMessages = [], setChatMessages }) {
             lines.push(`\nKamu sedang mengerjakan **${focus}** — terus ya!`)
           } else if (progress > 0 && progress < 80) {
             const progressMsg = progress < 30 ? 'baru mulai, pantang menyerah!'
-                               : progress < 60 ? 'sudah cukup jauh, jangan berhenti!'
-                               : 'hampir sampai, sedikit lagi!'
+              : progress < 60 ? 'sudah cukup jauh, jangan berhenti!'
+              : 'hampir sampai, sedikit lagi!'
             lines.push(`\nProgress kariermu **${progress}%** — ${progressMsg}`)
           }
 
@@ -358,24 +377,24 @@ export default function Chat({ user, chatMessages = [], setChatMessages }) {
       supabase.from('user_growth_state').select('career_stage, progress_percent, current_focus, next_milestone, streak_days').eq('user_id', user.id).maybeSingle(),
       supabase.from('user_genome_scores').select('top_strength').eq('user_id', user.id).maybeSingle(),
     ]).then(([{ data: p }, { data: g }, { data: gs }]) => {
-      const name     = firstName || p?.nama?.split(' ')[0] || ''
-      const nameStr  = name ? ` ${name}` : ''
-      const target   = p?.target_posisi || null
+      const name = firstName || p?.nama?.split(' ')[0] || ''
+      const nameStr = name ? ` ${name}` : ''
+      const target = p?.target_posisi || null
       const progress = g?.progress_percent || p?.career_readiness || 0
-      const stage    = g?.career_stage || null
-      const focus    = g?.current_focus || null
-      const streak   = g?.streak_days || 0
+      const stage = g?.career_stage || null
+      const focus = g?.current_focus || null
+      const streak = g?.streak_days || 0
 
       let greeting = ''
 
       if (!p?.greeted_at) {
         // Premium pertama kali — personal dari data discovery
         const hambatan = p?.hambatan
-        const rawGaps  = p?.skill_gaps
-        const gaps     = Array.isArray(rawGaps) ? rawGaps
-                        : (rawGaps && typeof rawGaps === 'object' ? Object.values(rawGaps) : [])
-        const topGap   = gaps[0]
-        const fLines   = [`Halo${nameStr}! ⭐ Selamat datang di Premium.`]
+        const rawGaps = p?.skill_gaps
+        const gaps = Array.isArray(rawGaps) ? rawGaps
+          : (rawGaps && typeof rawGaps === 'object' ? Object.values(rawGaps) : [])
+        const topGap = gaps[0]
+        const fLines = [`Halo${nameStr}! ⭐ Selamat datang di Premium.`]
         if (target) fLines.push(`\nAku sudah baca semua data kariermu.\nTarget kamu: **${target}** — readiness ${progress}%.`)
         if (hambatan) {
           fLines.push(`\nAku tahu tantangan terbesarmu:\n${hambatan}`)
@@ -394,9 +413,9 @@ export default function Chat({ user, chatMessages = [], setChatMessages }) {
       } else {
         // Returning premium — WOW MOMENT (sama seperti free, data lebih kaya)
         const hambatan = p?.hambatan
-        const rawGaps  = p?.skill_gaps
-        const gaps     = Array.isArray(rawGaps) ? rawGaps
-                        : (rawGaps && typeof rawGaps === 'object' ? Object.values(rawGaps) : [])
+        const rawGaps = p?.skill_gaps
+        const gaps = Array.isArray(rawGaps) ? rawGaps
+          : (rawGaps && typeof rawGaps === 'object' ? Object.values(rawGaps) : [])
 
         const lines = []
 
@@ -424,8 +443,8 @@ export default function Chat({ user, chatMessages = [], setChatMessages }) {
           lines.push(`\nKamu sedang mengerjakan **${focus}** — terus ya!`)
         } else if (progress > 0 && progress < 80) {
           const progressMsg = progress < 30 ? 'baru mulai, pantang menyerah!'
-                             : progress < 60 ? 'sudah cukup jauh, jangan berhenti!'
-                             : 'hampir sampai, sedikit lagi!'
+            : progress < 60 ? 'sudah cukup jauh, jangan berhenti!'
+            : 'hampir sampai, sedikit lagi!'
           lines.push(`\nProgress kariermu **${progress}%** — ${progressMsg}`)
         }
 
@@ -462,8 +481,6 @@ export default function Chat({ user, chatMessages = [], setChatMessages }) {
   }, [messages])
 
   useEffect(() => { bottomRef.current?.scrollIntoView({ behavior: 'smooth' }) }, [messages, loading])
-
-
 
   // ── Daily limit gate (Diah Anna persuasive messages) ──────────────────
   // Model baru: Free = 15 chat/hari, Premium = unlimited semua fitur
@@ -547,34 +564,34 @@ Pilih yang sesuai buat kamu:`
       return
     }
     if (id === '__share_app') { setShowShareApp(true); return }
-    if (id === '__share_cv')  { const m = [...messages].reverse().find(m => m.role === 'bot' && (m.text?.length || 0) > 100); setShareCard({ text: m?.text || '', type: 'cv-review' }); return }
+    if (id === '__share_cv') { const m = [...messages].reverse().find(m => m.role === 'bot' && (m.text?.length || 0) > 100); setShareCard({ text: m?.text || '', type: 'cv-review' }); return }
     if (id === '__share_ats') { const m = [...messages].reverse().find(m => m.role === 'bot' && (m.text?.length || 0) > 100); setShareCard({ text: m?.text || '', type: 'ats' }); return }
     if (id === '__pricing') { navigate('/pricing'); return }
-    if (id === '__upgrade_premium') { window.open('http://lynk.id/yudadunya/r3o5ldq5qkex/checkout', '_blank', 'noopener,noreferrer'); return }
+    if (id === '__upgrade_premium') { window.open('https://lynk.id/yudadunya/r3o5ldq5qkex/checkout', '_blank', 'noopener,noreferrer'); return }
     if (id === '__open_upgrade') { openUpgradeModal(); return }
     if (id === '__genome_reveal') { await doGenomeReveal(); return }
-    if (id === '__upgrade_gps')   { navigate('/paywall'); return }
+    if (id === '__upgrade_gps') { navigate('/paywall'); return }
     if (id === '__continue_coach') {
       // User mau lanjut ngobrol setelah lihat paywall — tetap di coach, context aman
       pushBot('Oke, lanjut ya! Ada yang mau kamu ceritakan atau tanyakan soal karir? 😊')
       return
     }
     if (id === 'cv-review') { startCvReview(); return }
-    if (id === 'ats')       { startAts(); return }
+    if (id === 'ats') { startAts(); return }
     if (id === 'interview') { startInterview(); return }
-    if (id === 'cv-maker')  { startCvMaker(); return }
-    if (id === 'coach')     { startCoach(); return }
+    if (id === 'cv-maker') { startCvMaker(); return }
+    if (id === 'coach') { startCoach(); return }
     if (id === '__skip_job') { await doCvReview(''); return }
-    if (id === '__skip_jd')  { await doAts(''); return }
+    if (id === '__skip_jd') { await doAts(''); return }
 
     switch (mode) {
       case 'cv-review-upload': { setCvText(id); setMode('cv-review-job'); pushBot('Oke! Kamu mau apply ke posisi apa? (ketik "-" kalau skip)', [{ id: '__skip_job', label: 'Skip langsung review' }]); return }
-      case 'cv-review-job':   { await doCvReview(id === '-' || id === '__skip_job' ? '' : id); return }
-      case 'ats-upload':      { setCvText(id); setMode('ats-jd'); pushBot('Oke! Paste job description-nya di sini kalau ada. (opsional)', [{ id: '__skip_jd', label: 'Skip, cek aja' }]); return }
-      case 'ats-jd':          { await doAts(id === '__skip_jd' ? '' : id); return }
+      case 'cv-review-job': { await doCvReview(id === '-' || id === '__skip_job' ? '' : id); return }
+      case 'ats-upload': { setCvText(id); setMode('ats-jd'); pushBot('Oke! Paste job description-nya di sini kalau ada. (opsional)', [{ id: '__skip_jd', label: 'Skip, cek aja' }]); return }
+      case 'ats-jd': { await doAts(id === '__skip_jd' ? '' : id); return }
       case 'interview-position': { setInterview(prev => ({ ...prev, position: id })); setMode('interview-level'); pushBot(`Posisi: **${id}**\n\nLevel pengalaman kamu?`, INTERVIEW_LEVELS); return }
-      case 'interview-level':    { setInterview(prev => ({ ...prev, level: id })); await startInterviewSession(interview.position, id); return }
-      case 'interview-active':   { await answerInterview(id); return }
+      case 'interview-level': { setInterview(prev => ({ ...prev, level: id })); await startInterviewSession(interview.position, id); return }
+      case 'interview-active': { await answerInterview(id); return }
       case 'cv-maker-upload': {
         // User paste teks CV langsung — terima dan lanjut ke pilih format
         if (id.length > 100) {
@@ -614,16 +631,16 @@ Pilih yang sesuai buat kamu:`
   // ── Helper: deteksi intent via obrolan dan trigger feature ──────────────
   const detectAndTriggerFeature = async (msg) => {
     const m = msg.toLowerCase()
-    const wantsCvReview  = /mau review|tolong review|bantu review|cek cv|koreksi cv|nilai cv|feedback cv|benerin cv|review cv|upload cv|lihat cv/.test(m)
-    const wantsAts       = /cek ats|skor ats|lolos ats|ats cv|ats checker|cek lolos|screen ats|bypass ats|tembus ats/.test(m)
+    const wantsCvReview = /mau review|tolong review|bantu review|cek cv|koreksi cv|nilai cv|feedback cv|benerin cv|review cv|upload cv|lihat cv/.test(m)
+    const wantsAts = /cek ats|skor ats|lolos ats|ats cv|ats checker|cek lolos|screen ats|bypass ats|tembus ats/.test(m)
     const wantsInterview = /latihan interview|mau interview|simulasi interview|mock interview|practice interview|latihan wawancara|simulasi wawancara|persiapan interview|coba interview/.test(m)
-    const wantsCvMaker   = /bikin cv|buat cv|buatin cv|tulis cv|generate cv|cv maker|cv baru|cv dari nol/.test(m)
+    const wantsCvMaker = /bikin cv|buat cv|buatin cv|tulis cv|generate cv|cv maker|cv baru|cv dari nol/.test(m)
 
     // Serahkan checkUsage ke masing-masing starter — hindari double check
-    if (wantsCvReview)  { await startCvReview();  return true }
-    if (wantsAts)       { await startAts();        return true }
-    if (wantsInterview) { await startInterview();  return true }
-    if (wantsCvMaker)   { await startCvMaker();    return true }
+    if (wantsCvReview) { await startCvReview(); return true }
+    if (wantsAts) { await startAts(); return true }
+    if (wantsInterview) { await startInterview(); return true }
+    if (wantsCvMaker) { await startCvMaker(); return true }
     return false
   }
 
@@ -780,7 +797,7 @@ Pilih yang sesuai buat kamu:`
         { id: '__download_docx', label: '📥 Download Word (.docx)' },
         { id: '__share_cv', label: '📤 Bagikan CV' },
         { id: '__share_app', label: '👥 Ajak teman coba' },
-              ])
+      ])
       // Inject ke coachHistory agar Diah Anna tahu CV sudah dibuat
       setCoachHistory([
         { role: 'user', content: `Tolong buatkan CV saya dalam format ${format}.\n\nCV asli:\n${cvText.slice(0, 1500)}` },
@@ -824,17 +841,17 @@ Pilih yang sesuai buat kamu:`
       'simulasikan interview', 'roleplay interview', 'latihan interview sekarang',
       'mulai latihan interview', 'mau latihan interview', 'interview sekarang',
     ],
-    cv_review:      [
+    cv_review: [
       'review cv ku', 'review cv saya', 'tolong review cv', 'cek cv ku', 'cek cv saya',
       'koreksi cv ku', 'koreksi cv saya', 'nilai cv ku', 'nilai cv saya',
       'analisa cv ku', 'analisa cv saya', 'feedback cv ku', 'feedback cv saya',
       'upload cv', 'kirim cv',
     ],
-    cv_maker:       [
+    cv_maker: [
       'buatkan cv', 'bikin cv ku', 'bikin cv saya', 'buat cv ku', 'buat cv saya',
       'generate cv', 'tolong bikin cv', 'tolong buat cv', 'bantu bikin cv', 'bantu buat cv',
     ],
-    ats_checker:    [
+    ats_checker: [
       'cek ats', 'cek skor ats', 'cek score ats', 'tes ats', 'test ats',
       'analisa ats', 'lihat ats score',
     ],
@@ -922,11 +939,11 @@ Pilih yang sesuai buat kamu:`
   const triggerGenomeTeaser = async () => {
     if (!user?.id) return
     const teaserKey = `lc_teaser_done_${user.id}`
-    if (localStorage.getItem(teaserKey)) return   // sudah pernah ditampilkan
+    if (localStorage.getItem(teaserKey)) return // sudah pernah ditampilkan
 
     // Hitung berapa pesan user dalam sesi ini
     const userMsgCount = messagesRef.current.filter(m => m.role === 'user').length
-    if (userMsgCount < 5) return   // belum cukup data
+    if (userMsgCount < 5) return // belum cukup data
 
     // Cek apakah genome sudah ada di DB
     try {
@@ -936,7 +953,7 @@ Pilih yang sesuai buat kamu:`
         .eq('user_id', user.id)
         .maybeSingle()
 
-      if (!gs || !Object.values(gs).some(v => (v || 0) > 0)) return  // belum ada genome
+      if (!gs || !Object.values(gs).some(v => (v || 0) > 0)) return // belum ada genome
 
       // Semua kondisi terpenuhi — tampilkan teaser
       localStorage.setItem(teaserKey, '1')
@@ -946,7 +963,7 @@ Pilih yang sesuai buat kamu:`
       pushBot(
         `Aku menemukan sesuatu yang menarik. 🔍\n\nBerdasarkan pola percakapan kita, aku sudah bisa memetakan **Career DNA** kamu — termasuk kekuatan terbesar dan gap yang paling menghambat targetmu.\n\nMau lihat hasil analisisnya?`,
         [{ id: '__genome_reveal', label: '✅ Ya, mau lihat!' },
-         { id: '__menu',         label: 'Nanti saja' }]
+        { id: '__menu', label: 'Nanti saja' }]
       )
     } catch (e) {
       console.warn('[teaser] error:', e)
@@ -963,12 +980,12 @@ Pilih yang sesuai buat kamu:`
       ])
 
       const GMAP = [
-        { key:'analytical',    label:'Analytical',    emoji:'🧠', color:'#34B7F1' },
-        { key:'leadership',    label:'Leadership',    emoji:'👑', color:'#F48FB1' },
-        { key:'builder',       label:'Builder',       emoji:'⚙️', color:'#25D366' },
-        { key:'creator',       label:'Creator',       emoji:'🎨', color:'#FFB74D' },
+        { key:'analytical', label:'Analytical', emoji:'🧠', color:'#34B7F1' },
+        { key:'leadership', label:'Leadership', emoji:'👑', color:'#F48FB1' },
+        { key:'builder', label:'Builder', emoji:'⚙️', color:'#25D366' },
+        { key:'creator', label:'Creator', emoji:'🎨', color:'#FFB74D' },
         { key:'communication', label:'Communication', emoji:'💬', color:'#CE93D8' },
-        { key:'risk_taking',   label:'Risk Taking',   emoji:'🚀', color:'#EF9A9A' },
+        { key:'risk_taking', label:'Risk Taking', emoji:'🚀', color:'#EF9A9A' },
       ]
 
       const scores = gs || {}
@@ -977,13 +994,13 @@ Pilih yang sesuai buat kamu:`
         .sort((a,b) => (scores[b.key]||0) - (scores[a.key]||0))
 
       const readiness = cp?.career_readiness || 0
-      const target    = cp?.target_posisi || null
-      const gaps      = cp?.skill_gaps || []
+      const target = cp?.target_posisi || null
+      const gaps = cp?.skill_gaps || []
 
       // Bangun teks genome sebagai chat message
       let msg = '🧬 **Career Genome Kamu**\n\n'
       sorted.forEach(g => {
-        const val  = scores[g.key] || 0
+        const val = scores[g.key] || 0
         const bars = Math.round(val / 10)
         const fill = '█'.repeat(bars) + '░'.repeat(10 - bars)
         msg += g.emoji + ' **' + g.label + '** · ' + val + '\n' + fill + '\n\n'
@@ -1005,9 +1022,9 @@ Pilih yang sesuai buat kamu:`
       await new Promise(r => setTimeout(r, 1800))
 
       pushBot(
-        `Oke, kamu sudah lihat DNA karier kamu. 📊\n\nSekarang aku mau jujur...\n\nAku sebenarnya sudah menyiapkan **roadmap 6 bulan** yang sangat spesifik untuk targetmu.\n\nRoadmap ini berisi:\n✓ Skill yang harus dipelajari\n✓ Urutan belajar yang optimal\n✓ Target mingguan yang realistis\n✓ Progress tracking step by step\n\n_Career GPS tersedia di Premium._`,
-        [{ id: '__upgrade_gps',      label: '🚀 Buka Career GPS — Premium' },
-         { id: '__continue_coach',   label: 'Lanjut ngobrol dulu' }]
+        `Oke, kamu sudah lihat DNA karier kamu. 📊\n\nSekarang aku mau jujur...\n\nAku sebenarnya sudah menyiapkan **roadmap 6 bulan** yang sangat spesifik untuk targetmu.\n\nRoadmap ini berisi:\n✓ Skill yang harus dipelajarin\n✓ Urutan belajar yang optimal\n✓ Target mingguan yang realistis\n✓ Progress tracking step by step\n\n_Career GPS tersedia di Premium._`,
+        [{ id: '__upgrade_gps', label: '🚀 Buka Career GPS — Premium' },
+        { id: '__continue_coach', label: 'Lanjut ngobrol dulu' }]
       )
 
     } catch (e) {
@@ -1098,90 +1115,75 @@ Pilih yang sesuai buat kamu:`
 
   return (
     <>
-    {/* ── FIX UTAMA: position fixed + inset 0 → header tidak pernah hilang ── */}
-    <div ref={containerRef} style={{
-      position: 'fixed', top: 0, left: '50%', transform: 'translateX(-50%)',
-      width: '100%', maxWidth: 480,
-      height: 'calc(100vh - 65px)',
-      display: 'flex', flexDirection: 'column',
-      background: 'var(--wa-chat-bg)',
-      overflow: 'hidden',
-    }}>
-      {showOnboarding && <Onboarding onDone={handleOnboardingDone} user={user} />}
-      {shareCard && <ShareCard resultText={shareCard.text} type={shareCard.type} onClose={() => setShareCard(null)} />}
+      {/* ── FIX UTAMA: position fixed + inset 0 → header tidak pernah hilang ── */}
+
+      {showOnboarding && <Onboarding user={user} onDone={handleOnboardingDone} />}
+      {shareCard && <ShareCard data={shareCard} onClose={() => setShareCard(null)} />}
       {showShareApp && <ShareAppModal onClose={() => setShowShareApp(false)} />}
 
       {/* ── Header — selalu fixed di atas ── */}
-      <div style={{ background: 'var(--wa-header)', padding: '10px 16px', display: 'flex', alignItems: 'center', gap: '12px', flexShrink: 0, zIndex: 10 }}>
-        <img src="/diah-anna.png" alt="Diah Anna" style={{ width: 42, height: 42, borderRadius: '50%', objectFit: 'cover', flexShrink: 0, border: '2px solid rgba(37,211,102,0.4)' }}/>
-        <div style={{ flex: 1 }}>
-          <div style={{ color: '#fff', fontWeight: 700, fontSize: '1rem', lineHeight: 1.2, display: 'flex', alignItems: 'center', gap: 5 }}>
-            Diah Anna
-            <img src="/icons/verified.png" width="16" height="16" alt="verified" style={{ flexShrink: 0, marginTop: 1 }} />
-          </div>
-          <div style={{ color: 'rgba(255,255,255,0.65)', fontSize: '0.73rem' }}>AI Career Coach • online</div>
+      <div style={{ position: 'fixed', top: 0, left: 0, right: 0, zIndex: 50, background: '#075E54', color: '#fff', padding: '12px 16px', display: 'flex', alignItems: 'center', gap: 12, boxShadow: '0 2px 8px rgba(0,0,0,0.15)' }}>
+        <div style={{ width: 40, height: 40, borderRadius: '50%', background: '#25D366', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.3rem' }}>🤖</div>
+        <div>
+          <div style={{ fontWeight: 700, fontSize: '1rem' }}>Diah Anna</div>
+          <div style={{ fontSize: '0.75rem', opacity: 0.85 }}>AI Career Coach • online</div>
         </div>
-
       </div>
 
-
-
       {/* ── Messages — satu-satunya yang scroll ── */}
-      <div style={{ flex: 1, overflowY: 'auto', padding: '10px 10px 4px', display: 'flex', flexDirection: 'column', gap: '2px', WebkitOverflowScrolling: 'touch' }}>
+      <div ref={containerRef} style={{ position: 'fixed', inset: 0, top: 65, bottom: 65, overflowY: 'auto', padding: '12px 12px 0', background: '#ECE5DD' }}>
         {messages.map(msg => {
           const isUser = msg.role === 'user'
           const ts = new Date(Math.floor(msg.id))
           const timeStr = ts.getHours().toString().padStart(2,'0') + ':' + ts.getMinutes().toString().padStart(2,'0')
           return (
-          <div key={msg.id} style={{ marginBottom: msg.quickReplies ? 2 : 1 }}>
-            <div style={{ display: 'flex', justifyContent: isUser ? 'flex-end' : 'flex-start' }}>
-              <div style={{ maxWidth: '82%', background: isUser ? '#DCF8C6' : '#fff', borderRadius: isUser ? '14px 3px 14px 14px' : '3px 14px 14px 14px', padding: '9px 13px 5px', fontSize: '0.875rem', lineHeight: 1.55, boxShadow: '0 1px 2px rgba(0,0,0,0.1)', color: '#111B21', wordBreak: 'break-word' }}>
-                <div dangerouslySetInnerHTML={{ __html: renderMd(msg.text) }} />
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 2, marginTop: 2 }}>
-                  <span style={{ fontSize: '0.68rem', color: isUser ? '#5d8a6a' : '#999', lineHeight: 1 }}>{timeStr}</span>
-                  {isUser && (
-                    <svg width="18" height="12" viewBox="0 0 18 12" fill="none" xmlns="http://www.w3.org/2000/svg" style={{ display: 'block' }}>
-                      <path d="M1 6L4.5 9.5L10.5 2" stroke="#53BDEB" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/>
-                      <path d="M6 6L9.5 9.5L15.5 2" stroke="#53BDEB" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/>
-                    </svg>
-                  )}
-                </div>
+            <div key={msg.id} style={{ display: 'flex', justifyContent: isUser ? 'flex-end' : 'flex-start', marginBottom: 8 }}>
+              <div style={{ maxWidth: '80%', background: isUser ? '#DCF8C6' : '#fff', padding: '8px 12px', borderRadius: isUser ? '12px 12px 0 12px' : '12px 12px 12px 0', boxShadow: '0 1px 2px rgba(0,0,0,0.1)', fontSize: '0.9rem', lineHeight: 1.5 }}>
+                {isUser ? (
+                  <div style={{ whiteSpace: 'pre-wrap' }}>{msg.text}</div>
+                ) : (
+                  <div dangerouslySetInnerHTML={{ __html: renderMd(msg.text) }} />
+                )}
+                <div style={{ fontSize: '0.65rem', opacity: 0.6, marginTop: 4, textAlign: 'right' }}>{timeStr}</div>
+                {isUser && (
+                  <div style={{ fontSize: '0.7rem', opacity: 0.7, textAlign: 'right' }}>✓✓</div>
+                )}
+                {msg.quickReplies && (
+                  <div style={{ display: 'flex', gap: 6, marginTop: 8, flexWrap: 'wrap' }}>
+                    {msg.quickReplies.map(qr => (
+                      <button key={qr.id} onClick={() => handleQuickReply(qr.id, qr.label)} disabled={loading}
+                        style={{ background: '#fff', border: '1.5px solid #25D366', color: '#075E54', borderRadius: 20, padding: '5px 13px', fontSize: '0.8rem', fontWeight: 600, cursor: loading ? 'not-allowed' : 'pointer', opacity: loading ? 0.6 : 1, whiteSpace: 'nowrap', boxShadow: '0 1px 3px rgba(0,0,0,0.07)' }}>
+                        {qr.label}
+                      </button>
+                    ))}
+                  </div>
+                )}
               </div>
             </div>
-            {msg.quickReplies && (
-              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, padding: '5px 4px 6px' }}>
-                {msg.quickReplies.map(qr => (
-                  <button key={qr.id} onClick={() => handleQuickReply(qr.id, qr.label)} disabled={loading}
-                    style={{ background: '#fff', border: '1.5px solid #25D366', color: '#075E54', borderRadius: 20, padding: '5px 13px', fontSize: '0.8rem', fontWeight: 600, cursor: loading ? 'not-allowed' : 'pointer', opacity: loading ? 0.6 : 1, whiteSpace: 'nowrap', boxShadow: '0 1px 3px rgba(0,0,0,0.07)' }}>
-                    {qr.label}
-                  </button>
-                ))}
-              </div>
-            )}
-          </div>
           )
         })}
-
         {loading && (
-          <div style={{ display: 'flex', justifyContent: 'flex-start', marginTop: 2 }}>
-            <div style={{ background: '#fff', borderRadius: '3px 14px 14px 14px', padding: '12px 16px', boxShadow: '0 1px 2px rgba(0,0,0,0.1)', display: 'flex', gap: 4, alignItems: 'center' }}>
-              {[0,1,2].map(i => <div key={i} style={{ width: 7, height: 7, borderRadius: '50%', background: '#aaa', animation: `dot-bounce 1.2s ${i*0.2}s infinite ease-in-out` }} />)}
+          <div style={{ display: 'flex', justifyContent: 'flex-start', marginBottom: 8 }}>
+            <div style={{ background: '#fff', padding: '12px 16px', borderRadius: '12px 12px 12px 0', boxShadow: '0 1px 2px rgba(0,0,0,0.1)', display: 'flex', gap: 4 }}>
+              {[0,1,2].map(i => (
+                <div key={i} style={{ width: 8, height: 8, borderRadius: '50%', background: '#25D366', animation: `bounce 1.4s infinite ease-in-out`, animationDelay: `${i * 0.16}s` }} />
+              ))}
             </div>
           </div>
         )}
-        <div ref={bottomRef} style={{ height: 4 }} />
+        <div ref={bottomRef} />
+
+        {/* ── Upload hint ── */}
+        {canUpload && (
+          <div style={{ textAlign: 'center', fontSize: '0.75rem', color: '#667', padding: '8px 0', fontStyle: 'italic' }}>
+            📎 Klik ikon clip untuk upload PDF/Word, atau paste teks CV langsung
+          </div>
+        )}
       </div>
 
-      {/* ── Upload hint ── */}
-      {canUpload && (
-        <div style={{ background: '#e8f5e9', borderTop: '1px solid #c8e6c9', padding: '6px 14px', fontSize: '0.75rem', color: '#2e7d32', textAlign: 'center', flexShrink: 0 }}>
-          📎 Klik ikon clip untuk upload PDF/Word, atau paste teks CV langsung
-        </div>
-      )}
-
       {/* ── Input bar ── */}
-      <div style={{ background: '#f0f2f5', padding: '8px 10px', display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0, borderTop: '1px solid #e0e0e0' }}>
-        <input ref={fileRef} type="file" accept=".pdf,.doc,.docx" style={{ display: 'none' }} onChange={e => handleFile(e.target.files[0])} />
+      <div style={{ position: 'fixed', bottom: 0, left: 0, right: 0, background: '#F0F0F0', padding: '8px 12px', display: 'flex', gap: 8, alignItems: 'center', borderTop: '1px solid #ddd' }}>
+        <input ref={fileRef} type="file" accept=".pdf,.doc,.docx,.txt" onChange={e => handleFile(e.target.files[0])} style={{ display: 'none' }} />
         <button onClick={() => canUpload && fileRef.current?.click()}
           style={{ width: 38, height: 38, borderRadius: '50%', background: canUpload ? '#25D366' : '#ccc', border: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.1rem', flexShrink: 0, cursor: canUpload ? 'pointer' : 'default' }}>
           📎
@@ -1192,20 +1194,10 @@ Pilih yang sesuai buat kamu:`
           style={{ flex: 1, background: '#fff', border: 'none', borderRadius: 24, padding: '10px 16px', fontSize: '0.9rem', outline: 'none', fontFamily: 'var(--font-body)' }}
         />
         <button onClick={handleSend} disabled={loading || !input.trim()}
-          style={{ width: 38, height: 38, borderRadius: '50%', background: !loading && input.trim() ? '#25D366' : '#ccc', border: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1rem', flexShrink: 0, cursor: !loading && input.trim() ? 'pointer' : 'default', color: '#fff' }}>
+          style={{ width: 38, height: 38, borderRadius: '50%', background: input.trim() ? '#25D366' : '#ccc', border: 'none', color: '#fff', fontSize: '1.2rem', flexShrink: 0, cursor: input.trim() ? 'pointer' : 'default', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
           ➤
         </button>
       </div>
-
-      <style>{`
-        @keyframes dot-bounce {
-          0%, 80%, 100% { transform: scale(0.8); opacity: 0.5 }
-          40% { transform: scale(1.2); opacity: 1 }
-        }
-        div::-webkit-scrollbar { display: none; }
-      `}</style>
-    </div>
-    <BottomNav isPremium={plan === 'premium'} />
     </>
   )
 }
