@@ -1,11 +1,11 @@
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
-import { useSubscription } from '../hooks/useSubscription'
+// Subscription/plan sekarang datang dari prop (di-lift ke App.jsx) — lihat komentar di App.jsx.
 import BottomNav from '../components/BottomNav'
 
-export default function Profile({ user, loading = false }) {
-  const { plan } = useSubscription(user?.id)
+export default function Profile({ user, loading = false, subscription }) {
+  const { plan } = subscription
   const navigate = useNavigate()
   const [profile, setProfile]       = useState(null)
   const [growth, setGrowth]         = useState(null)

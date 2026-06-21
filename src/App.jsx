@@ -1,6 +1,7 @@
 import { BrowserRouter, Routes, Route } from 'react-router-dom'
 import { useState, useEffect, lazy, Suspense } from 'react'
 import { supabase } from './lib/supabase'
+import { useSubscription } from './hooks/useSubscription'
 
 // Lazy load semua halaman — bundle dipecah per route, hanya dimuat saat dibutuhkan
 const Home         = lazy(() => import('./pages/Home'))
@@ -44,6 +45,16 @@ export default function App() {
   const [chatMessages, setChatMessages] = useState([])
   const [showUpgrade, setShowUpgrade] = useState(false)
   const [upgradeData, setUpgradeData] = useState(null)
+
+  // ── Subscription/plan SATU SUMBER KEBENARAN ──────────────────────────────
+  // Sebelumnya: Chat.jsx, DNA.jsx, Profile.jsx, Journey.jsx, Dashboard.jsx
+  // masing-masing fetch sendiri-sendiri (5 query independen), tiap mulai
+  // dari default "free" sebelum query resolve. Akibatnya: setiap pindah
+  // halaman, sempat kelihatan "Free" sebelum balik ke "Premium" — dan kalau
+  // koneksi lambat, jendela "kelihatan Free" itu jadi lama/macet.
+  // Sekarang: di-fetch SEKALI di sini (App.jsx tidak pernah unmount saat
+  // pindah route), dipakai bersama semua halaman via prop.
+  const subscription = useSubscription(user?.id)
 
   // ── Auto-logout setelah inaktif 30 menit (seperti mobile banking) ───────
   useEffect(() => {
@@ -335,25 +346,25 @@ export default function App() {
         <Route path="/forgot-password" element={<ForgotPassword />} />
         <Route path="/reset-password"  element={<ResetPassword />} />
         <Route path="/pricing"       element={<Pricing user={user} />} />
-        <Route path="/chat"          element={<Chat user={user} chatMessages={chatMessages} setChatMessages={setChatMessages} />} />
+        <Route path="/chat"          element={<Chat user={user} chatMessages={chatMessages} setChatMessages={setChatMessages} subscription={subscription} />} />
         <Route path="/discovery"      element={<Discovery />} />
         <Route path="/genome-result"   element={<GenomeResult />} />
         <Route path="/paywall"          element={<Paywall />} />
-        <Route path="/dashboard"       element={<Dashboard user={user} loading={loading} />} />
-        <Route path="/journey"         element={<Journey user={user} loading={loading} />} />
-        <Route path="/dna"            element={<DNA user={user} loading={loading} />} />
+        <Route path="/dashboard"       element={<Dashboard user={user} loading={loading} subscription={subscription} />} />
+        <Route path="/journey"         element={<Journey user={user} loading={loading} subscription={subscription} />} />
+        <Route path="/dna"            element={<DNA user={user} loading={loading} subscription={subscription} />} />
         <Route path="/opportunities"  element={<Opportunities user={user} loading={loading} />} />
-        <Route path="/profile"        element={<Profile user={user} loading={loading} />} />
+        <Route path="/profile"        element={<Profile user={user} loading={loading} subscription={subscription} />} />
         <Route path="/blog"          element={<Blog user={user} />} />
         <Route path="/blog/:slug"    element={<BlogPost user={user} />} />
         <Route path="/adm-lc"        element={<AdminPanel />} />
         
         {/* Backward Compatibility: Semua route lama redirect ke /chat */}
-        <Route path="/cv-review"      element={<Chat user={user} chatMessages={chatMessages} setChatMessages={setChatMessages} />} />
-        <Route path="/ats-checker"    element={<Chat user={user} chatMessages={chatMessages} setChatMessages={setChatMessages} />} />
-        <Route path="/mock-interview" element={<Chat user={user} chatMessages={chatMessages} setChatMessages={setChatMessages} />} />
-        <Route path="/career-coach"   element={<Chat user={user} chatMessages={chatMessages} setChatMessages={setChatMessages} />} />
-        <Route path="/cv-maker"       element={<Chat user={user} chatMessages={chatMessages} setChatMessages={setChatMessages} />} />
+        <Route path="/cv-review"      element={<Chat user={user} chatMessages={chatMessages} setChatMessages={setChatMessages} subscription={subscription} />} />
+        <Route path="/ats-checker"    element={<Chat user={user} chatMessages={chatMessages} setChatMessages={setChatMessages} subscription={subscription} />} />
+        <Route path="/mock-interview" element={<Chat user={user} chatMessages={chatMessages} setChatMessages={setChatMessages} subscription={subscription} />} />
+        <Route path="/career-coach"   element={<Chat user={user} chatMessages={chatMessages} setChatMessages={setChatMessages} subscription={subscription} />} />
+        <Route path="/cv-maker"       element={<Chat user={user} chatMessages={chatMessages} setChatMessages={setChatMessages} subscription={subscription} />} />
       </Routes>
       </Suspense>
     </BrowserRouter>

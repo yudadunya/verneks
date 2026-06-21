@@ -261,14 +261,16 @@ function PhaseBlock({ phase, globalStartIdx, currentIdx, isPremium, expanded, on
 }
 
 // ─── MAIN PAGE ────────────────────────────────────────────────────────────────
-export default function Journey({ user, loading = false }) {
+export default function Journey({ user, loading = false, subscription }) {
   const navigate = useNavigate()
 
   const [profile,   setProfile]   = useState(null)
   const [growth,    setGrowth]    = useState(null)
   const [actions,   setActions]   = useState([])
   const [events,    setEvents]    = useState([])
-  const [isPremium, setIsPremium] = useState(null)
+  // isPremium sekarang DIDERIVE dari subscription yang di-lift ke App.jsx —
+  // bukan fetch sendiri lagi. null = masih loading, sama seperti sebelumnya.
+  const isPremium = subscription.loading ? null : subscription.plan === 'premium'
   const [dataLoading, setDataLoading] = useState(true)
   const [visible,   setVisible]   = useState(false)
   const [expanded,  setExpanded]  = useState(null) // globalIdx of expanded step
@@ -276,13 +278,6 @@ export default function Journey({ user, loading = false }) {
   useEffect(() => {
     if (loading) return
     if (!user) { navigate('/'); return }
-
-    supabase
-      .from('subscriptions').select('plan')
-      .eq('user_id', user.id).eq('status', 'active')
-      .gte('expires_at', new Date().toISOString())
-      .limit(1).maybeSingle()
-      .then(({ data }) => setIsPremium(!!data?.plan && data.plan !== 'free'))
 
     Promise.all([
       supabase.from('user_career_profiles')

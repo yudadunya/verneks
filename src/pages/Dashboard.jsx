@@ -564,7 +564,7 @@ function PremiumDashboard({ user, profile, genome, growth, actions, events, week
 }
 
 // ─── MAIN DASHBOARD ───────────────────────────────────────────────────────────
-export default function Dashboard({ user, loading = false }) {
+export default function Dashboard({ user, loading = false, subscription }) {
   const navigate  = useNavigate()
   const [profile, setProfile]   = useState(null)
   const [genome, setGenome]     = useState(null)
@@ -572,7 +572,9 @@ export default function Dashboard({ user, loading = false }) {
   const [actions, setActions]   = useState([])
   const [events, setEvents]     = useState([])
   const [weeklyReview, setWeeklyReview] = useState(null)
-  const [isPremium, setIsPremium] = useState(false)
+  // isPremium sekarang DIDERIVE dari subscription yang di-lift ke App.jsx —
+  // bukan query terpisah di Promise.all bawah ini lagi.
+  const isPremium = !subscription.loading && subscription.plan === 'premium'
   const [dataLoading, setDataLoading] = useState(true)
 
   useEffect(() => {
@@ -582,15 +584,13 @@ export default function Dashboard({ user, loading = false }) {
       supabase.from('user_career_profiles').select('*').eq('user_id', user.id).maybeSingle(),
       supabase.from('user_genome_scores').select('*').eq('user_id', user.id).maybeSingle(),
       supabase.from('user_growth_state').select('*').eq('user_id', user.id).maybeSingle(),
-      supabase.from('subscriptions').select('plan').eq('user_id', user.id).eq('status', 'active').gte('expires_at', new Date().toISOString()).limit(1).maybeSingle(),
       supabase.from('user_next_actions').select('*').eq('user_id', user.id).order('created_at', { ascending: false }).limit(3),
       supabase.from('career_events').select('*').eq('user_id', user.id).order('created_at', { ascending: false }).limit(5),
       supabase.from('user_weekly_reviews').select('summary, week_start').eq('user_id', user.id).order('week_start', { ascending: false }).limit(1).maybeSingle(),
-    ]).then(([{ data: p }, { data: g }, { data: gw }, { data: sub }, { data: acts }, { data: evs }, { data: wr }]) => {
+    ]).then(([{ data: p }, { data: g }, { data: gw }, { data: acts }, { data: evs }, { data: wr }]) => {
       setProfile(p)
       setGenome(g)
       setGrowth(gw)
-      setIsPremium(!!sub?.plan && sub.plan !== 'free')
       setActions(acts || [])
       setEvents(evs || [])
       setWeeklyReview(wr || null)

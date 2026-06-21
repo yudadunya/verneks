@@ -5,7 +5,7 @@ import Onboarding from '../components/Onboarding'
 import ShareCard from '../components/ShareCard'
 import ShareAppModal from '../components/ShareAppModal'
 import BottomNav from '../components/BottomNav'
-import { useSubscription, LIMITS, PLAN_LABEL, FEATURE_LABEL } from '../hooks/useSubscription'
+// Subscription/plan sekarang datang dari prop (di-lift ke App.jsx) — lihat komentar di komponen.
 
 function renderMd(text) {
   if (!text) return ''
@@ -49,9 +49,11 @@ const CV_FORMATS = [
   { id: 'fmt_linkedin',  label: '💼 LinkedIn Profile' },
 ]
 
-export default function Chat({ user, chatMessages = [], setChatMessages }) {
+export default function Chat({ user, chatMessages = [], setChatMessages, subscription }) {
   const navigate = useNavigate()
-  const { plan, loading: subLoading, checkUsage, logUsage, getRemainingChat, isExpired } = useSubscription(user?.id)
+  // Subscription sekarang dari App.jsx (single source of truth) — bukan fetch sendiri.
+  // Lihat catatan di App.jsx soal kenapa ini di-lift.
+  const { plan, loading: subLoading, checkUsage, logUsage, getRemainingChat, isExpired } = subscription
 
   const storageKey     = user?.id ? `lc_chat_${user.id}` : null
   const ONBOARDING_KEY = user?.id ? `onboarded_${user.id}` : null
@@ -869,17 +871,12 @@ Pilih yang sesuai buat kamu:`
 
       sessionSavedRef.current = true // tandai SEBELUM fetch, bukan setelah — cegah race antara 2 trigger
 
-      // Flush extract-profile sekarang juga — jaga-jaga ada 1-3 pesan terakhir
-      // yang belum kena throttle (kelipatan 4) tapi sesi sudah mau berakhir.
-      if (userCount - lastExtractCountRef.current > 0) {
-        lastExtractCountRef.current = userCount
-        fetch('/api/extract-profile', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ userId: user.id, messages: history }),
-          keepalive: true,
-        }).catch(() => {})
-      }
+      // NOTE: flush extract-profile terpisah DICABUT — tidak perlu.
+      // extract-profile selalu kirim SELURUH riwayat (bukan delta), jadi
+      // pesan yang "terlewat" karena throttle otomatis tertangkap di siklus
+      // ekstraksi normal berikutnya (sesi depan, pesan ke-3+). Menambah fetch
+      // terpisah di sini cuma menambah beban koneksi PAS momen pindah halaman —
+      // justru kontributor ke masalah "stuck saat pindah navbar".
 
       fetch('/api/career-coach', {
         method: 'POST',

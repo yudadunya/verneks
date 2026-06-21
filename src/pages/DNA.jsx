@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
-import { useSubscription } from '../hooks/useSubscription'
+// Subscription/plan sekarang datang dari prop (di-lift ke App.jsx) — lihat komentar di App.jsx.
 import BottomNav from '../components/BottomNav'
 
 // ─── DATA MAPS ────────────────────────────────────────────────────────────────
@@ -132,8 +132,8 @@ function Tag({ label, emoji, color, bg, border }) {
 }
 
 // ─── MAIN ─────────────────────────────────────────────────────────────────────
-export default function DNA({ user, loading = false }) {
-  const { plan } = useSubscription(user?.id)
+export default function DNA({ user, loading = false, subscription }) {
+  const { plan } = subscription
   const navigate  = useNavigate()
   const [scores, setScores]   = useState(null)
   const [profile, setProfile] = useState(null)
