@@ -868,6 +868,19 @@ Pilih yang sesuai buat kamu:`
       if (userCount < 2) return // sesi terlalu singkat
 
       sessionSavedRef.current = true // tandai SEBELUM fetch, bukan setelah — cegah race antara 2 trigger
+
+      // Flush extract-profile sekarang juga — jaga-jaga ada 1-3 pesan terakhir
+      // yang belum kena throttle (kelipatan 4) tapi sesi sudah mau berakhir.
+      if (userCount - lastExtractCountRef.current > 0) {
+        lastExtractCountRef.current = userCount
+        fetch('/api/extract-profile', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ userId: user.id, messages: history }),
+          keepalive: true,
+        }).catch(() => {})
+      }
+
       fetch('/api/career-coach', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -895,12 +908,24 @@ Pilih yang sesuai buat kamu:`
   }
 
   // Ekstrak profil — jalan di background, silent fail
+  // THROTTLE: dulu jalan TIAP pesan setelah pesan ke-3 (boros — 18x panggilan
+  // AI untuk percakapan 20 pesan, padahal fakta seperti nama/target karir
+  // jarang berubah tiap kalimat). Sekarang: tiap 4 pesan user SETELAH floor awal,
+  // supaya tetap responsif terhadap info baru tanpa boros di tengah obrolan panjang.
+  const lastExtractCountRef = useRef(0)
   const extractAndSaveProfile = async (extraMessages = []) => {
     if (!user?.id) return
     try {
       const combined = [...getChatHistoryForExtract(), ...extraMessages]
       const userCount = combined.filter(m => m.role === 'user').length
       if (userCount < 3) return
+
+      // Selalu jalan pertama kali (userCount === 3), setelah itu tiap +4 pesan.
+      const isFirstRun = lastExtractCountRef.current === 0
+      const hasEnoughNewMessages = userCount - lastExtractCountRef.current >= 4
+      if (!isFirstRun && !hasEnoughNewMessages) return
+
+      lastExtractCountRef.current = userCount
       await apiFetch('/api/extract-profile', { userId: user.id, messages: combined })
     } catch (e) {
       console.warn('[profile] extract error (silent):', e)
