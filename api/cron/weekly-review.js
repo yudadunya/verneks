@@ -31,7 +31,7 @@ export default async function handler(req, res) {
     // Ambil user aktif (sudah selesai Discovery)
     const { data: users, error } = await supabase
       .from('user_career_profiles')
-      .select('user_id, nama, target_posisi, career_readiness, gps_steps, running_insight')
+      .select('user_id, nama, target_posisi, career_readiness, gps_steps, running_insight, running_insight_updated_at')
       .not('career_readiness', 'is', null)
       .limit(50)
 
@@ -89,11 +89,17 @@ Tulis catatan refleksi mingguan yang personal untuk user ini.`,
           summary: summary.trim(),
         }, { onConflict: 'user_id,week_start' })
 
-        // ── Distilasi running_insight — INI yang bikin pemahaman terakumulasi ──
-        // Bukan menambah catatan baru, tapi MENULIS ULANG pemahaman lama +
-        // observasi minggu ini jadi satu ringkasan utuh yang lebih dalam.
-        // Tanpa ini, Diah Anna cuma "ingat" 3 sesi terakhir selamanya, tidak
-        // peduli sudah berapa lama user pakai aplikasi.
+        // ── Distilasi running_insight — FALLBACK saja ──
+        // Mekanisme UTAMA ada di career-coach.js (action: save-session-note),
+        // jalan langsung tiap sesi chat selesai — tidak perlu nunggu cron ini.
+        // Cron ini cuma jaga-jaga kalau trigger per-sesi gagal/ter-skip
+        // (misal: tab ditutup paksa, koneksi putus pas mau kirim) — supaya
+        // user yang aktif tidak pernah lebih dari 1 minggu tanpa update insight.
+        const alreadyUpdatedThisWeek = user.running_insight_updated_at
+          && new Date(user.running_insight_updated_at) >= sevenDaysAgo
+        if (alreadyUpdatedThisWeek) {
+          // Sudah ter-update via trigger per-sesi minggu ini — skip, tidak perlu dobel
+        } else
         try {
           const newInsight = await generateText({
             system: `Kamu menyusun "running insight" — pemahaman yang TERUS DIPERBARUI tentang satu user, dipakai AI career coach (Diah Anna) di setiap percakapan.

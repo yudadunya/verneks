@@ -517,6 +517,48 @@ Contoh: "User membahas kebingungan pindah karir ke data analyst, masih ragu kare
         summary: summary.trim(),
       })
 
+      // ── Update running_insight SEKARANG, jangan tunggu cron mingguan ──
+      // Sesi yang baru selesai adalah titik paling natural untuk re-distilasi —
+      // user baru bahas sesuatu, lebih masuk akal update saat itu daripada
+      // nunggu Senin. Cron mingguan tetap ada sebagai fallback kalau trigger
+      // ini gagal/ter-skip untuk alasan apapun (lihat catatan di weekly-review.js).
+      try {
+        const { data: profile } = await supabase
+          .from('user_career_profiles')
+          .select('running_insight')
+          .eq('user_id', userId)
+          .maybeSingle()
+
+        const newInsight = await generateText({
+          system: `Kamu menyusun "running insight" — pemahaman yang TERUS DIPERBARUI tentang satu user, dipakai AI career coach (Diah Anna) di setiap percakapan.
+
+ATURAN PENTING:
+- Ini BUKAN log atau riwayat — ini KESIMPULAN yang disuling dari seluruh riwayat.
+- Gabungkan insight LAMA dengan observasi sesi ini — pertahankan yang masih relevan, perbarui yang berubah, buang yang basi.
+- Fokus pada: gaya komunikasi (formal/santai, butuh dorongan/butuh ditantang langsung, suka detail/suka ringkas), pola emosional yang berulang, hal yang konsisten vs yang berubah dari waktu ke waktu.
+- JANGAN ulangi fakta yang sudah ada di profil (target karir, posisi, dll) — itu sudah tersedia di tempat lain.
+- Maksimal 4 kalimat. Bahasa Indonesia natural, padat, tanpa pembuka.
+- Kalau sesi ini tidak menambah pemahaman baru yang berarti, pertahankan insight lama apa adanya — jangan dipaksakan berubah.`,
+          prompt: `Insight lama tentang user ini:
+${profile?.running_insight || '(belum ada — ini observasi pertama)'}
+
+Ringkasan sesi yang baru selesai:
+${summary.trim()}
+
+Tulis ulang running insight yang sudah digabung dan disuling.`,
+          maxTokens: 200,
+          tier: 'fast',
+        })
+
+        await supabase.from('user_career_profiles').update({
+          running_insight: newInsight.trim(),
+          running_insight_updated_at: new Date().toISOString(),
+        }).eq('user_id', userId)
+      } catch (e) {
+        // Distilasi gagal tidak boleh gagalkan penyimpanan session note yang sudah berhasil
+        console.error('[save-session-note] distilasi insight gagal:', e.message)
+      }
+
       return res.status(200).json({ success: true })
     } catch (error) {
       console.error('[save-session-note] error:', error)
