@@ -326,9 +326,14 @@ export default function App() {
             }
           }
 
-          // Redirect deterministik — selalu arahkan ke halaman yang benar.
-          // Tidak lagi bergantung pada path/hash/search dari URL OAuth callback,
-          // jadi tidak ada lagi kondisi "stuck di /discovery setelah login".
+          // FIX: Redirect HANYA dari halaman publik (fresh login), BUKAN saat buka ulang app.
+          // Supabase v2 emit SIGNED_IN juga saat session restore (buka tab baru, refresh) —
+          // bukan hanya saat user baru login. Kalau redirect logic ini jalan saat user
+          // sudah di /chat, query career_readiness yang lambat/gagal → hasCareerData=false
+          // → redirect /discovery → reload → SIGNED_IN fire lagi → blank loop.
+          const PUBLIC_PAGES = ['/', '/login', '/register', '/forgot-password', '/reset-password']
+          if (!PUBLIC_PAGES.includes(window.location.pathname)) return
+
           const target = hasCareerData ? '/chat' : '/discovery'
           if (window.location.pathname !== target) {
             window.location.replace(target)
