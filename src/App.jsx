@@ -1,33 +1,7 @@
 import { BrowserRouter, Routes, Route } from 'react-router-dom'
-import { useState, useEffect, lazy, Suspense, Component } from 'react'
+import { useState, useEffect, lazy, Suspense } from 'react'
 import { supabase } from './lib/supabase'
 import { useSubscription } from './hooks/useSubscription'
-
-// ── Error Boundary global — catch React crash → tampilkan UI helpful ──────
-// Tanpa ini: uncaught render error = blank putih total tanpa info
-class ErrorBoundary extends Component {
-  constructor(props) { super(props); this.state = { hasError: false, error: null } }
-  static getDerivedStateFromError(error) { return { hasError: true, error } }
-  componentDidCatch(error, info) { console.error('[ErrorBoundary]', error, info) }
-  render() {
-    if (!this.state.hasError) return this.props.children
-    return (
-      <div style={{ display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', height:'100vh', gap:16, background:'#075E54', padding:24, textAlign:'center' }}>
-        <div style={{ fontSize:'2rem' }}>⚠️</div>
-        <div style={{ color:'#fff', fontWeight:700, fontSize:'1.1rem' }}>Ups, ada yang error</div>
-        <div style={{ color:'rgba(255,255,255,0.7)', fontSize:'0.82rem', maxWidth:280 }}>
-          {this.state.error?.message || 'Terjadi kesalahan tak terduga'}
-        </div>
-        <button
-          onClick={() => { this.setState({ hasError: false }); window.location.reload() }}
-          style={{ marginTop:8, padding:'10px 24px', background:'#25D366', color:'#fff', border:'none', borderRadius:20, fontWeight:700, cursor:'pointer', fontSize:'0.9rem' }}
-        >
-          Muat Ulang
-        </button>
-      </div>
-    )
-  }
-}
 
 // Lazy load semua halaman — bundle dipecah per route, hanya dimuat saat dibutuhkan
 const Home         = lazy(() => import('./pages/Home'))
@@ -56,26 +30,12 @@ import UpgradeModal from './components/UpgradeModal'
 function loadMessages(userId) {
   if (!userId) return []
   try {
-    const key = `lc_chat_${userId}`
-    const saved = localStorage.getItem(key)
+    const saved = localStorage.getItem(`lc_chat_${userId}`)
     if (saved) {
-      // FIX: kalau data > 500KB, terlalu besar → buang dan mulai fresh
-      // ini yang bikin app stuck saat load (parse JSON 1MB+ di main thread)
-      if (saved.length > 500_000) {
-        console.warn('[loadMessages] localStorage terlalu besar, dibersihkan')
-        localStorage.removeItem(key)
-        return []
-      }
       const parsed = JSON.parse(saved)
-      if (Array.isArray(parsed) && parsed.length > 0) {
-        // Tetap limit ke 100 untuk safety
-        return parsed.slice(-100)
-      }
+      if (Array.isArray(parsed) && parsed.length > 0) return parsed
     }
-  } catch {
-    // JSON corrupt → hapus
-    try { localStorage.removeItem(`lc_chat_${userId}`) } catch {}
-  }
+  } catch {}
   return []
 }
 
@@ -115,26 +75,14 @@ export default function App() {
       }, INACTIVE_LIMIT)
     }
 
-    // FIX: throttle resetTimer agar tidak clearTimeout ribuan kali/menit
-    // mousemove tanpa throttle = overhead tinggi, bikin chat terasa lag
-    let lastReset = 0
-    const resetTimerThrottled = () => {
-      const now = Date.now()
-      if (now - lastReset < 10_000) return // max 1x per 10 detik
-      lastReset = now
-      resetTimer()
-    }
-
-    // Event yang dianggap aktif — mousemove pakai versi throttled
-    const events = ['mousedown', 'keydown', 'scroll', 'touchstart', 'click']
+    // Event yang dianggap aktif
+    const events = ['mousedown', 'mousemove', 'keydown', 'scroll', 'touchstart', 'click']
     events.forEach(e => window.addEventListener(e, resetTimer, { passive: true }))
-    window.addEventListener('mousemove', resetTimerThrottled, { passive: true })
     resetTimer() // mulai timer
 
     return () => {
       clearTimeout(inactiveTimer)
       events.forEach(e => window.removeEventListener(e, resetTimer))
-      window.removeEventListener('mousemove', resetTimerThrottled)
     }
   }, [user])
 
@@ -151,25 +99,42 @@ export default function App() {
   }, [])
 
   useEffect(() => {
-    // FIX: clearSWAndCache DIHAPUS dari sini.
-    // Sebelumnya ada di index.html + main.jsx + sini (3 tempat) →
-    // race condition unregister SW saat chunk JS lazy load sedang didownload
-    // → chunk dibatalkan → React gagal render halaman → blank putih.
-    // Index.html sudah handle ini sebelum JS load, tidak perlu duplikat.
+    // Paksa clear SW cache dan unregister semua SW lama
+    const clearSWAndCache = async () => {
+      try {
+        if ('serviceWorker' in navigator) {
+          const regs = await navigator.serviceWorker.getRegistrations()
+          console.log('[App] SW registrations:', regs.length)
+          await Promise.all(regs.map(r => r.unregister()))
+        }
+        if ('caches' in window) {
+          const keys = await caches.keys()
+          console.log('[App] Cache keys:', keys)
+          await Promise.all(keys.map(k => caches.delete(k)))
+        }
+      } catch (e) { console.warn('[App] clearSW error:', e) }
+    }
+    clearSWAndCache()
 
     console.log('[App] Starting getSession...')
+    console.log('[App] sb- keys in localStorage:', Object.keys(localStorage).filter(k => k.startsWith('sb-')))
 
-    // Race: getSession vs timeout 5 detik
+    // Race: getSession vs timeout 2.5 detik
+    // Kalau timeout menang → clear session corrupt & tampilkan home
     let settled = false
 
     const timeoutId = setTimeout(() => {
       if (settled) return
       settled = true
       console.warn('[App] getSession timeout setelah 5 detik')
+      // Hanya clear dan redirect kalau tidak ada user state yang sudah terisi
+      // Ini prevent false logout saat user buka tab baru (lynk.id dll)
       const sbKeys = Object.keys(localStorage).filter(k => k.startsWith('sb-'))
       if (sbKeys.length === 0) {
+        // Tidak ada token sama sekali → aman untuk redirect ke home
         window.location.replace('/')
       } else {
+        // Ada token tapi getSession hang → coba lagi tanpa redirect paksa
         setLoading(false)
         console.warn('[App] Token ada tapi getSession lambat — biarkan user tetap')
       }
@@ -326,14 +291,9 @@ export default function App() {
             }
           }
 
-          // FIX: Redirect HANYA dari halaman publik (fresh login), BUKAN saat buka ulang app.
-          // Supabase v2 emit SIGNED_IN juga saat session restore (buka tab baru, refresh) —
-          // bukan hanya saat user baru login. Kalau redirect logic ini jalan saat user
-          // sudah di /chat, query career_readiness yang lambat/gagal → hasCareerData=false
-          // → redirect /discovery → reload → SIGNED_IN fire lagi → blank loop.
-          const PUBLIC_PAGES = ['/', '/login', '/register', '/forgot-password', '/reset-password']
-          if (!PUBLIC_PAGES.includes(window.location.pathname)) return
-
+          // Redirect deterministik — selalu arahkan ke halaman yang benar.
+          // Tidak lagi bergantung pada path/hash/search dari URL OAuth callback,
+          // jadi tidak ada lagi kondisi "stuck di /discovery setelah login".
           const target = hasCareerData ? '/chat' : '/discovery'
           if (window.location.pathname !== target) {
             window.location.replace(target)
@@ -378,7 +338,6 @@ export default function App() {
   return (
     <>
     <BrowserRouter>
-      <ErrorBoundary>
       <Suspense fallback={PageLoader}>
       <Routes>
         <Route path="/"              element={<Home user={user} />} />
@@ -408,7 +367,6 @@ export default function App() {
         <Route path="/cv-maker"       element={<Chat user={user} chatMessages={chatMessages} setChatMessages={setChatMessages} subscription={subscription} />} />
       </Routes>
       </Suspense>
-      </ErrorBoundary>
     </BrowserRouter>
     {showUpgrade && user && (
       <UpgradeModal
