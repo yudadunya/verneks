@@ -458,9 +458,11 @@ export default function Chat({ user, chatMessages = [], setChatMessages, subscri
   }, [isExpired, user?.id])
 
   // ── Simpan ke localStorage setiap messages berubah ───────────────────
+  // FIX: slice(-100) mencegah localStorage overflow → penyebab utama "stuck"
+  // coachHistory sudah slice(-30), messages (UI) perlu batas juga
   useEffect(() => {
     if (!storageKey || messages.length === 0) return
-    try { localStorage.setItem(storageKey, JSON.stringify(messages)) } catch {}
+    try { localStorage.setItem(storageKey, JSON.stringify(messages.slice(-100))) } catch {}
   }, [messages])
 
   useEffect(() => { bottomRef.current?.scrollIntoView({ behavior: 'smooth' }) }, [messages, loading])
@@ -528,9 +530,13 @@ Pilih yang sesuai buat kamu:`
         setMode('cv-maker-format')
         pushBot('CV lama berhasil dibaca! ✨\n\nSekarang pilih format CV baru yang kamu mau — AI akan tulis ulang jadi lebih optimal:', CV_FORMATS)
       }
-    } catch (e) { pushBot(`Gagal baca file: ${e.message}\n\nCoba paste teks CV kamu langsung ya.`) }
-    setLoading(false)
-    if (fileRef.current) fileRef.current.value = ''
+    } catch (e) {
+      pushBot(`Gagal baca file: ${e.message}\n\nCoba paste teks CV kamu langsung ya.`)
+    } finally {
+      // FIX: finally agar loading tidak stuck walau ada unexpected error
+      setLoading(false)
+      if (fileRef.current) fileRef.current.value = ''
+    }
   }
 
   const handleQuickReply = (id, label) => { pushUser(label); route(id, label) }
@@ -608,7 +614,8 @@ Pilih yang sesuai buat kamu:`
           ? [...coachHistory, { role: 'user', content: id }]
           : [{ role: 'user', content: id }]
         setCoachHistory(startHistory)
-        setLoading(true); await callCoachApi(startHistory); setLoading(false)
+        setLoading(true)
+        try { await callCoachApi(startHistory) } finally { setLoading(false) } // FIX
       }
     }
   }
@@ -694,7 +701,7 @@ Pilih yang sesuai buat kamu:`
         }).catch(() => {})
       }, 1000)
     } catch (e) { pushBot(`Aduh, ada error: ${e.message}\n\nCoba lagi ya! 🙏`); setMode('menu') }
-    setLoading(false)
+    finally { setLoading(false) } // FIX: finally agar loading tidak stuck
   }
 
   const doAts = async (jobDescription) => {
@@ -725,7 +732,7 @@ Pilih yang sesuai buat kamu:`
         }).catch(() => {})
       }, 1000)
     } catch (e) { pushBot(`Error: ${e.message}`); setMode('menu') }
-    setLoading(false)
+    finally { setLoading(false) } // FIX
   }
 
   const startInterviewSession = async (position, level) => {
@@ -735,7 +742,7 @@ Pilih yang sesuai buat kamu:`
       setInterview(prev => ({ ...prev, messages: [{ role: 'assistant', content: data.reply }], qNum: data.questionNumber }))
       pushBot(data.reply)
     } catch (e) { pushBot(`Error: ${e.message}`); setMode('menu') }
-    setLoading(false)
+    finally { setLoading(false) } // FIX
   }
 
   const answerInterview = async (answer) => {
@@ -767,7 +774,7 @@ Pilih yang sesuai buat kamu:`
         ]).catch(() => {})
       } else { pushBot(data.reply) }
     } catch (e) { pushBot(`Error: ${e.message}`) }
-    setLoading(false)
+    finally { setLoading(false) } // FIX
   }
 
   const doCvMaker = async (format) => {
@@ -791,7 +798,7 @@ Pilih yang sesuai buat kamu:`
         { role: 'assistant', content: data.result.slice(0, 600) }
       ]).catch(() => {})
     } catch (e) { pushBot(`Error: ${e.message}`); setMode('menu') }
-    setLoading(false)
+    finally { setLoading(false) } // FIX
   }
 
   // Download hasil CV sebagai .docx
@@ -1031,8 +1038,7 @@ Pilih yang sesuai buat kamu:`
     } catch (e) {
       pushBot('Gagal memuat data, coba lagi ya! 🙏')
       console.warn('[genome-reveal]', e)
-    }
-    setLoading(false)
+    } finally { setLoading(false) } // FIX
   }
 
   const doCoach = async (msg) => {
@@ -1046,7 +1052,9 @@ Pilih yang sesuai buat kamu:`
     }
 
     const newHistory = [...coachHistory, { role: 'user', content: msg }]
-    setCoachHistory(newHistory); setLoading(true); await callCoachApi(newHistory); setLoading(false)
+    setCoachHistory(newHistory)
+    setLoading(true)
+    try { await callCoachApi(newHistory) } finally { setLoading(false) } // FIX
     maybeExtractProfile()
     setTimeout(() => triggerGenomeTeaser(), 2000)
   }

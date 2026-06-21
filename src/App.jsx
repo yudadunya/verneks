@@ -30,12 +30,26 @@ import UpgradeModal from './components/UpgradeModal'
 function loadMessages(userId) {
   if (!userId) return []
   try {
-    const saved = localStorage.getItem(`lc_chat_${userId}`)
+    const key = `lc_chat_${userId}`
+    const saved = localStorage.getItem(key)
     if (saved) {
+      // FIX: kalau data > 500KB, terlalu besar → buang dan mulai fresh
+      // ini yang bikin app stuck saat load (parse JSON 1MB+ di main thread)
+      if (saved.length > 500_000) {
+        console.warn('[loadMessages] localStorage terlalu besar, dibersihkan')
+        localStorage.removeItem(key)
+        return []
+      }
       const parsed = JSON.parse(saved)
-      if (Array.isArray(parsed) && parsed.length > 0) return parsed
+      if (Array.isArray(parsed) && parsed.length > 0) {
+        // Tetap limit ke 100 untuk safety
+        return parsed.slice(-100)
+      }
     }
-  } catch {}
+  } catch {
+    // JSON corrupt → hapus
+    try { localStorage.removeItem(`lc_chat_${userId}`) } catch {}
+  }
   return []
 }
 
@@ -75,14 +89,26 @@ export default function App() {
       }, INACTIVE_LIMIT)
     }
 
-    // Event yang dianggap aktif
-    const events = ['mousedown', 'mousemove', 'keydown', 'scroll', 'touchstart', 'click']
+    // FIX: throttle resetTimer agar tidak clearTimeout ribuan kali/menit
+    // mousemove tanpa throttle = overhead tinggi, bikin chat terasa lag
+    let lastReset = 0
+    const resetTimerThrottled = () => {
+      const now = Date.now()
+      if (now - lastReset < 10_000) return // max 1x per 10 detik
+      lastReset = now
+      resetTimer()
+    }
+
+    // Event yang dianggap aktif — mousemove pakai versi throttled
+    const events = ['mousedown', 'keydown', 'scroll', 'touchstart', 'click']
     events.forEach(e => window.addEventListener(e, resetTimer, { passive: true }))
+    window.addEventListener('mousemove', resetTimerThrottled, { passive: true })
     resetTimer() // mulai timer
 
     return () => {
       clearTimeout(inactiveTimer)
       events.forEach(e => window.removeEventListener(e, resetTimer))
+      window.removeEventListener('mousemove', resetTimerThrottled)
     }
   }, [user])
 
