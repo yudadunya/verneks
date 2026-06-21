@@ -31,7 +31,7 @@ export default async function handler(req, res) {
     // Ambil user aktif (sudah selesai Discovery)
     const { data: users, error } = await supabase
       .from('user_career_profiles')
-      .select('user_id, nama, target_posisi, career_readiness, gps_steps')
+      .select('user_id, nama, target_posisi, career_readiness, gps_steps, running_insight')
       .not('career_readiness', 'is', null)
       .limit(50)
 
@@ -88,6 +88,43 @@ Tulis catatan refleksi mingguan yang personal untuk user ini.`,
           week_start: weekStart,
           summary: summary.trim(),
         }, { onConflict: 'user_id,week_start' })
+
+        // ── Distilasi running_insight — INI yang bikin pemahaman terakumulasi ──
+        // Bukan menambah catatan baru, tapi MENULIS ULANG pemahaman lama +
+        // observasi minggu ini jadi satu ringkasan utuh yang lebih dalam.
+        // Tanpa ini, Diah Anna cuma "ingat" 3 sesi terakhir selamanya, tidak
+        // peduli sudah berapa lama user pakai aplikasi.
+        try {
+          const newInsight = await generateText({
+            system: `Kamu menyusun "running insight" — pemahaman yang TERUS DIPERBARUI tentang satu user, dipakai AI career coach (Diah Anna) di setiap percakapan.
+
+ATURAN PENTING:
+- Ini BUKAN log atau riwayat — ini KESIMPULAN yang disuling dari seluruh riwayat.
+- Gabungkan insight LAMA dengan observasi minggu ini — pertahankan yang masih relevan, perbarui yang sudah berubah, buang yang basi.
+- Fokus pada: gaya komunikasi (formal/santai, butuh dorongan/butuh ditantang langsung, suka detail/suka ringkas), pola emosional yang berulang, hal yang konsisten vs yang berubah dari waktu ke waktu.
+- JANGAN ulangi fakta yang sudah ada di profil (target karir, posisi, dll) — itu sudah tersedia di tempat lain.
+- Maksimal 4 kalimat. Bahasa Indonesia natural, padat, tanpa pembuka.
+- Kalau belum ada cukup data untuk menyimpulkan sesuatu yang baru, pertahankan insight lama apa adanya.`,
+            prompt: `Insight lama tentang user ini:
+${user.running_insight || '(belum ada — ini observasi pertama)'}
+
+Observasi baru dari minggu ini:
+${notes.map(n => `- ${n.summary}`).join('\n') || '(tidak ada sesi chat minggu ini)'}
+${milestonesDone.length ? `\nMilestone selesai: ${milestonesDone.map(m => m.event_payload?.title).join(', ')}` : ''}
+
+Tulis ulang running insight yang sudah digabung dan disuling.`,
+            maxTokens: 200,
+            tier: 'fast',
+          })
+
+          await supabase.from('user_career_profiles').update({
+            running_insight: newInsight.trim(),
+            running_insight_updated_at: new Date().toISOString(),
+          }).eq('user_id', user.user_id)
+        } catch (e) {
+          // Distilasi gagal tidak boleh gagalkan weekly review user-facing yang sudah berhasil
+          console.error(`[weekly-review] distilasi insight gagal untuk ${user.user_id}:`, e.message)
+        }
 
         results.push({ userId: user.user_id, status: 'generated' })
       } catch (e) {

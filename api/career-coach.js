@@ -623,7 +623,10 @@ Contoh: "User membahas kebingungan pindah karir ke data analyst, masih ragu kare
 
   const memoryContext = `
 # MEMORY CONTEXT (Data Real-time User Ini)
-Nama: ${careerProfile?.nama || 'User'}
+${careerProfile?.running_insight ? `## Pemahaman tentang user ini (gunakan ini untuk menyesuaikan GAYA bicara, bukan cuma isi):
+${careerProfile.running_insight}
+
+` : ''}Nama: ${careerProfile?.nama || 'User'}
 Target Karier: ${careerProfile?.target_posisi || 'Belum ditentukan'}
 Posisi Saat Ini: ${careerProfile?.posisi_saat_ini || 'Belum ditentukan'}
 Industri: ${careerProfile?.industri || 'Belum ditentukan'}
