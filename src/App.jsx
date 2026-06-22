@@ -3,7 +3,7 @@ import { useState, useEffect, lazy, Suspense } from 'react'
 import { supabase } from './lib/supabase'
 import { useSubscription } from './hooks/useSubscription'
 
-// Lazy load semua halaman — bundle dipecah per route, hanya dimuat saat dibutuhkan
+// Lazy load semua halaman
 const Home         = lazy(() => import('./pages/Home'))
 const Login        = lazy(() => import('./pages/Login'))
 const Register     = lazy(() => import('./pages/Register'))
@@ -23,10 +23,8 @@ const Opportunities = lazy(() => import('./pages/Opportunities'))
 const Profile      = lazy(() => import('./pages/Profile'))
 const AdminPanel   = lazy(() => import('./pages/AdminPanel'))
 
-// UpgradeModal tetap static — dipakai global di semua halaman
 import UpgradeModal from './components/UpgradeModal'
 
-// Helper baca localStorage
 function loadMessages(userId) {
   if (!userId) return []
   try {
@@ -39,6 +37,129 @@ function loadMessages(userId) {
   return []
 }
 
+// ── Sinkronisasi data Discovery → Supabase setelah SIGNED_IN ────────────────
+// PENTING: fungsi ini dipanggil DI LUAR callback onAuthStateChange (lewat
+// setTimeout 0), supaya auth-lock Supabase sudah dilepas. Memanggil
+// supabase.* di dalam callback auth menyebabkan deadlock navigator.locks
+// → seluruh app freeze (terutama saat buka app dengan sesi masih aktif).
+async function syncDiscoveryData(u, setChatMessages) {
+  setChatMessages(loadMessages(u.id))
+
+  const discoveryResult = localStorage.getItem('lc_discovery_result')
+  const discoveryMessages = localStorage.getItem('lc_discovery_messages')
+  let hasCareerData = false
+
+  if (discoveryResult) {
+    try {
+      const result = JSON.parse(discoveryResult)
+
+      const { data: existing } = await supabase
+        .from('user_career_profiles')
+        .select('career_readiness')
+        .eq('user_id', u.id)
+        .maybeSingle()
+
+      if (existing?.career_readiness == null) {
+        const p  = result.profile_preview || {}
+        const gs = result.genome_scores   || {}
+        const gw = result.growth_state    || {}
+
+        const { error: profileErr } = await supabase.from('user_career_profiles').upsert({
+          user_id:          u.id,
+          nama:             p.nama             || null,
+          target_posisi:    p.target_posisi    || null,
+          posisi_saat_ini:  p.posisi_saat_ini  || null,
+          industri:         p.industri         || null,
+          hambatan:         p.hambatan_utama   || p.hambatan || null,
+          motivasi:         p.motivasi         || null,
+          gaya_kerja:       p.gaya_kerja       || null,
+          career_readiness: result.career_readiness || 0,
+          skill_gaps:       result.gap_skills  || [],
+          gps_steps:        result.gps_steps   || [],
+          mentor_message:   result.mentor_message || null,
+          summary:          result.wow_insight  || result.mentor_message || null,
+          last_updated:     new Date().toISOString(),
+        }, { onConflict: 'user_id' })
+        if (profileErr) console.warn('[discovery-save] profile error:', profileErr.message)
+
+        if (Object.values(gs).some(v => v > 0)) {
+          supabase.from('user_genome_scores').upsert({
+            user_id:      u.id,
+            ...gs,
+            top_strength: result.top_strength || null,
+            updated_at:   new Date().toISOString(),
+          }, { onConflict: 'user_id' }).catch(e => console.warn('[genome-save]', e.message))
+        }
+
+        if (gw.career_stage) {
+          supabase.from('user_growth_state').upsert({
+            user_id:          u.id,
+            career_stage:     gw.career_stage,
+            progress_percent: gw.progress_percent || result.career_readiness || 0,
+            current_focus:    gw.current_focus || null,
+            updated_at:       new Date().toISOString(),
+          }, { onConflict: 'user_id' }).catch(e => console.warn('[growth-save]', e.message))
+        }
+
+        if (discoveryMessages) {
+          try {
+            const msgs = JSON.parse(discoveryMessages)
+            const apiMsgs = msgs
+              .filter(m => m.role === 'user' || m.role === 'bot')
+              .map(m => ({ role: m.role === 'bot' ? 'assistant' : 'user', content: m.text || '' }))
+              .filter(m => m.content)
+            fetch('/api/extract-profile', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ userId: u.id, messages: apiMsgs })
+            }).catch(e => console.warn('[extract-profile]', e))
+          } catch {}
+        }
+      }
+
+      if (result.gps_steps?.length > 0) {
+        const { data: existingMs } = await supabase
+          .from('user_milestones').select('id').eq('user_id', u.id).limit(1)
+        if (!existingMs?.length) {
+          const rows = result.gps_steps.map((step, i) => ({
+            user_id:      u.id,
+            title:        step.title || step,
+            description:  step.description || null,
+            step_index:   i,
+            is_completed: step.done || false,
+          }))
+          await supabase.from('user_milestones').insert(rows)
+        }
+      }
+
+      hasCareerData = true
+    } catch (e) {
+      console.warn('[discovery-save] error:', e.message)
+    }
+    localStorage.removeItem('lc_discovery_result')
+    localStorage.removeItem('lc_discovery_messages')
+    sessionStorage.removeItem(`lc_job_matches_${u.id}`)
+  }
+
+  if (!hasCareerData) {
+    try {
+      const { data: cp } = await supabase
+        .from('user_career_profiles')
+        .select('career_readiness')
+        .eq('user_id', u.id)
+        .maybeSingle()
+      hasCareerData = cp?.career_readiness != null
+    } catch (err) {
+      console.warn('[App redirect] cek career_readiness gagal:', err.message)
+    }
+  }
+
+  const target = hasCareerData ? '/chat' : '/discovery'
+  if (window.location.pathname !== target) {
+    window.location.replace(target)
+  }
+}
+
 export default function App() {
   const [user, setUser]             = useState(null)
   const [loading, setLoading]       = useState(true)
@@ -46,37 +167,25 @@ export default function App() {
   const [showUpgrade, setShowUpgrade] = useState(false)
   const [upgradeData, setUpgradeData] = useState(null)
 
-  // ── Subscription/plan SATU SUMBER KEBENARAN ──────────────────────────────
-  // Sebelumnya: Chat.jsx, DNA.jsx, Profile.jsx, Journey.jsx, Dashboard.jsx
-  // masing-masing fetch sendiri-sendiri (5 query independen), tiap mulai
-  // dari default "free" sebelum query resolve. Akibatnya: setiap pindah
-  // halaman, sempat kelihatan "Free" sebelum balik ke "Premium" — dan kalau
-  // koneksi lambat, jendela "kelihatan Free" itu jadi lama/macet.
-  // Sekarang: di-fetch SEKALI di sini (App.jsx tidak pernah unmount saat
-  // pindah route), dipakai bersama semua halaman via prop.
   const subscription = useSubscription(user?.id)
 
-  // ── Auto-logout setelah inaktif 30 menit (seperti mobile banking) ───────
+  // ── Auto-logout setelah inaktif 5 menit ──────────────────────────────────
+  // Depend ke user?.id (bukan objek user), supaya TOKEN_REFRESHED otomatis
+  // tiap ~1 jam tidak terus-menerus teardown/re-setup timer ini.
   useEffect(() => {
-    if (!user) return
+    if (!user?.id) return
 
-    const INACTIVE_LIMIT = 5 * 60 * 1000 // 5 menit
+    const INACTIVE_LIMIT = 5 * 60 * 1000
     let inactiveTimer
 
     const resetTimer = () => {
       clearTimeout(inactiveTimer)
       inactiveTimer = setTimeout(async () => {
         console.warn('[App] Auto-logout: inaktif 5 menit')
-
-        // Race signOut() vs timeout 3 detik — signOut() adalah panggilan
-        // network ke Supabase, bisa hang persis seperti getSession() yang
-        // pernah kita perbaiki. Kalau hang, JANGAN biarkan logout macet
-        // total — paksa lanjut cleanup + redirect tetap terjadi.
         await Promise.race([
           supabase.auth.signOut().catch(() => {}),
           new Promise(resolve => setTimeout(resolve, 3000)),
         ])
-
         Object.keys(localStorage)
           .filter(k => k.startsWith('sb-') || k.startsWith('lc_'))
           .forEach(k => localStorage.removeItem(k))
@@ -84,29 +193,22 @@ export default function App() {
       }, INACTIVE_LIMIT)
     }
 
-    // Event yang dianggap aktif
     const events = ['mousedown', 'mousemove', 'keydown', 'scroll', 'touchstart', 'click']
     events.forEach(e => window.addEventListener(e, resetTimer, { passive: true }))
-
-    // Reset timer juga saat ada balasan baru dari Diah Anna — supaya user
-    // yang sedang membaca jawaban panjang/hasil CV tidak ke-logout di tengah
-    // hanya karena belum sempat gerak mouse/keyboard.
     window.addEventListener('diah-anna-replied', resetTimer)
 
-    resetTimer() // mulai timer
+    resetTimer()
 
     return () => {
       clearTimeout(inactiveTimer)
       events.forEach(e => window.removeEventListener(e, resetTimer))
       window.removeEventListener('diah-anna-replied', resetTimer)
     }
-  }, [user])
+  }, [user?.id])
 
   // Global upgrade modal trigger
   useEffect(() => {
     const handler = (e) => {
-      // Hanya update data kalau event membawa detail (dari Dashboard)
-      // Kalau dari BottomNav (tanpa detail) — pakai data terakhir yang tersimpan
       if (e.detail) setUpgradeData(e.detail)
       setShowUpgrade(true)
     }
@@ -115,218 +217,69 @@ export default function App() {
   }, [])
 
   useEffect(() => {
-    // Paksa clear SW cache dan unregister semua SW lama
     const clearSWAndCache = async () => {
       try {
         if ('serviceWorker' in navigator) {
           const regs = await navigator.serviceWorker.getRegistrations()
-          console.log('[App] SW registrations:', regs.length)
           await Promise.all(regs.map(r => r.unregister()))
         }
         if ('caches' in window) {
           const keys = await caches.keys()
-          console.log('[App] Cache keys:', keys)
           await Promise.all(keys.map(k => caches.delete(k)))
         }
       } catch (e) { console.warn('[App] clearSW error:', e) }
     }
     clearSWAndCache()
 
-    console.log('[App] Starting getSession...')
-    console.log('[App] sb- keys in localStorage:', Object.keys(localStorage).filter(k => k.startsWith('sb-')))
-
-    // Race: getSession vs timeout 5 detik
-    // PENTING: `timeoutFired` cuma kontrol apakah TIMEOUT boleh bertindak
-    // (redirect/unblock). Hasil ASLI dari getSession() — begitu datang,
-    // kapanpun — SELALU diterapkan. Sebelumnya kedua arah dicampur jadi satu
-    // flag `settled`, akibatnya kalau timeout nyala duluan (getSession cuma
-    // lambat, bukan hang), hasil asli yang datang belakangan malah DIBUANG —
-    // user permanen ke-null walau sesi sebenarnya valid, sampai refresh manual.
     let timeoutFired = false
 
     const timeoutId = setTimeout(() => {
       timeoutFired = true
       console.warn('[App] getSession timeout setelah 5 detik')
-      // Hanya clear dan redirect kalau tidak ada user state yang sudah terisi
-      // Ini prevent false logout saat user buka tab baru (lynk.id dll)
       const sbKeys = Object.keys(localStorage).filter(k => k.startsWith('sb-'))
       if (sbKeys.length === 0) {
-        // Tidak ada token sama sekali → aman untuk redirect ke home
         window.location.replace('/')
       } else {
-        // Ada token tapi getSession lambat — unblock loading SEKARANG,
-        // tapi getSession() asli di bawah tetap jalan di background dan
-        // akan update user begitu selesai (lihat .then() di bawah).
         setLoading(false)
-        console.warn('[App] Token ada tapi getSession lambat — biarkan user tetap')
       }
     }, 5000)
 
     supabase.auth.getSession()
       .then(({ data: { session } }) => {
         clearTimeout(timeoutId)
-        console.log('[App] getSession resolved, user:', session?.user?.email ?? 'null')
         const u = session?.user ?? null
         setUser(u)
         if (u) setChatMessages(loadMessages(u.id))
         setLoading(false)
-        if (timeoutFired && u) {
-          console.log('[App] getSession akhirnya selesai setelah timeout — user diterapkan')
-        }
       })
       .catch(() => {
         clearTimeout(timeoutId)
-        // Kalau timeout sudah duluan unblock loading dengan asumsi user tetap,
-        // jangan paksa null di sini — biarkan apa adanya, hindari false-logout.
         if (!timeoutFired) {
           setUser(null)
           setLoading(false)
         }
       })
 
-    const { data: { subscription: authListenerSub } } = supabase.auth.onAuthStateChange(async (_event, session) => {
+    // ── onAuthStateChange — callback TIDAK async ──────────────────────────
+    // Semua kerja Supabase di-defer keluar callback via setTimeout(0) agar
+    // auth-lock dilepas → tidak ada deadlock/freeze saat sesi aktif.
+    const { data: { subscription: authListenerSub } } = supabase.auth.onAuthStateChange((_event, session) => {
       if (_event === 'PASSWORD_RECOVERY') {
         window.location.href = '/reset-password'
         return
       }
       const u = session?.user ?? null
       setUser(u)
+
       if (u) {
         setChatMessages(loadMessages(u.id))
         if (_event === 'SIGNED_IN') {
-          // Sync discovery result ke Supabase
-          const discoveryResult = localStorage.getItem('lc_discovery_result')
-          const discoveryMessages = localStorage.getItem('lc_discovery_messages')
-          let hasCareerData = false
-
-          if (discoveryResult) {
-            try {
-              const result = JSON.parse(discoveryResult)
-
-              // Cek dulu — kalau user sudah punya data, jangan overwrite
-              const { data: existing } = await supabase
-                .from('user_career_profiles')
-                .select('career_readiness')
-                .eq('user_id', u.id)
-                .maybeSingle()
-
-              if (existing?.career_readiness == null) {
-                // User baru — simpan data Discovery ke Supabase
-                const p  = result.profile_preview || {}
-                const gs = result.genome_scores   || {}
-                const gw = result.growth_state    || {}
-
-                // 1. Simpan profil — await agar data pasti tersimpan sebelum redirect
-                const { error: profileErr } = await supabase.from('user_career_profiles').upsert({
-                  user_id:          u.id,
-                  nama:             p.nama             || null,
-                  target_posisi:    p.target_posisi    || null,
-                  posisi_saat_ini:  p.posisi_saat_ini  || null,
-                  industri:         p.industri         || null,
-                  hambatan:         p.hambatan_utama   || p.hambatan || null,
-                  motivasi:         p.motivasi         || null,
-                  gaya_kerja:       p.gaya_kerja       || null,
-                  career_readiness: result.career_readiness || 0,
-                  skill_gaps:       result.gap_skills  || [],
-                  gps_steps:        result.gps_steps   || [],
-                  mentor_message:   result.mentor_message || null,
-                  summary:          result.wow_insight  || result.mentor_message || null,
-                  last_updated:     new Date().toISOString(),
-                }, { onConflict: 'user_id' })
-                if (profileErr) console.warn('[discovery-save] profile error:', profileErr.message)
-
-
-                // 2. Simpan genome scores
-                if (Object.values(gs).some(v => v > 0)) {
-                  supabase.from('user_genome_scores').upsert({
-                    user_id:      u.id,
-                    ...gs,
-                    top_strength: result.top_strength || null,
-                    updated_at:   new Date().toISOString(),
-                  }, { onConflict: 'user_id' }).catch(e => console.warn('[genome-save]', e.message))
-                }
-
-                // 3. Simpan growth state
-                if (gw.career_stage) {
-                  supabase.from('user_growth_state').upsert({
-                    user_id:          u.id,
-                    career_stage:     gw.career_stage,
-                    progress_percent: gw.progress_percent || result.career_readiness || 0,
-                    current_focus:    gw.current_focus || null,
-                    updated_at:       new Date().toISOString(),
-                  }, { onConflict: 'user_id' }).catch(e => console.warn('[growth-save]', e.message))
-                }
-
-                // 4. Kirim messages ke extract-profile
-                if (discoveryMessages) {
-                  try {
-                    const msgs = JSON.parse(discoveryMessages)
-                    const apiMsgs = msgs
-                      .filter(m => m.role === 'user' || m.role === 'bot')
-                      .map(m => ({ role: m.role === 'bot' ? 'assistant' : 'user', content: m.text || '' }))
-                      .filter(m => m.content)
-                    fetch('/api/extract-profile', {
-                      method: 'POST',
-                      headers: { 'Content-Type': 'application/json' },
-                      body: JSON.stringify({ userId: u.id, messages: apiMsgs })
-                    }).catch(e => console.warn('[extract-profile]', e))
-                  } catch {}
-                }
-              } // end if no existing data
-
-              // Init milestones dari GPS steps kalau belum ada
-              if (result.gps_steps?.length > 0) {
-                supabase.from('user_milestones').select('id').eq('user_id', u.id).limit(1)
-                  .then(({ data: existing }) => {
-                    if (!existing?.length) {
-                      const rows = result.gps_steps.map((step, i) => ({
-                        user_id:      u.id,
-                        title:        step.title || step,
-                        description:  step.description || null,
-                        step_index:   i,
-                        is_completed: step.done || false,
-                      }))
-                      supabase.from('user_milestones').insert(rows).then()
-                    }
-                  })
-              }
-
-              // Data baru disimpan ATAU sudah ada sebelumnya — user kini punya career data
-              hasCareerData = true
-
-            } catch (e) {
-              console.warn('[discovery-save] error:', e.message)
-            }
-            localStorage.removeItem('lc_discovery_result')
-            localStorage.removeItem('lc_discovery_messages')
-            sessionStorage.removeItem(`lc_job_matches_${u.id}`)
-          }
-
-          // Returning user tanpa discoveryResult — cek langsung ke Supabase
-          if (!hasCareerData) {
-            try {
-              const { data: cp } = await supabase
-                .from('user_career_profiles')
-                .select('career_readiness')
-                .eq('user_id', u.id)
-                .maybeSingle()
-              hasCareerData = cp?.career_readiness != null
-            } catch (err) {
-              console.warn('[App redirect] cek career_readiness gagal:', err.message)
-            }
-          }
-
-          // Redirect deterministik — selalu arahkan ke halaman yang benar.
-          // Tidak lagi bergantung pada path/hash/search dari URL OAuth callback,
-          // jadi tidak ada lagi kondisi "stuck di /discovery setelah login".
-          const target = hasCareerData ? '/chat' : '/discovery'
-          if (window.location.pathname !== target) {
-            window.location.replace(target)
-          }
+          setTimeout(() => {
+            syncDiscoveryData(u, setChatMessages)
+          }, 0)
         }
       } else {
         setChatMessages([])
-        // Hapus greeting flags agar greeting muncul lagi saat login berikutnya
         Object.keys(sessionStorage)
           .filter(k => k.startsWith('lc_greeted_'))
           .forEach(k => sessionStorage.removeItem(k))
@@ -347,7 +300,6 @@ export default function App() {
     </div>
   )
 
-  // Fallback spinner saat lazy chunk loading
   const PageLoader = (
     <div style={{
       display: 'flex', flexDirection: 'column', alignItems: 'center',
@@ -383,8 +335,8 @@ export default function App() {
         <Route path="/blog"          element={<Blog user={user} />} />
         <Route path="/blog/:slug"    element={<BlogPost user={user} />} />
         <Route path="/adm-lc"        element={<AdminPanel />} />
-        
-        {/* Backward Compatibility: Semua route lama redirect ke /chat */}
+
+        {/* Backward Compatibility */}
         <Route path="/cv-review"      element={<Chat user={user} chatMessages={chatMessages} setChatMessages={setChatMessages} subscription={subscription} />} />
         <Route path="/ats-checker"    element={<Chat user={user} chatMessages={chatMessages} setChatMessages={setChatMessages} subscription={subscription} />} />
         <Route path="/mock-interview" element={<Chat user={user} chatMessages={chatMessages} setChatMessages={setChatMessages} subscription={subscription} />} />
