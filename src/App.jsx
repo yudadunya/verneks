@@ -60,14 +60,23 @@ export default function App() {
   useEffect(() => {
     if (!user) return
 
-    const INACTIVE_LIMIT = 30 * 60 * 1000 // 30 menit
+    const INACTIVE_LIMIT = 5 * 60 * 1000 // 5 menit
     let inactiveTimer
 
     const resetTimer = () => {
       clearTimeout(inactiveTimer)
       inactiveTimer = setTimeout(async () => {
-        console.warn('[App] Auto-logout: inaktif 30 menit')
-        await supabase.auth.signOut()
+        console.warn('[App] Auto-logout: inaktif 5 menit')
+
+        // Race signOut() vs timeout 3 detik — signOut() adalah panggilan
+        // network ke Supabase, bisa hang persis seperti getSession() yang
+        // pernah kita perbaiki. Kalau hang, JANGAN biarkan logout macet
+        // total — paksa lanjut cleanup + redirect tetap terjadi.
+        await Promise.race([
+          supabase.auth.signOut().catch(() => {}),
+          new Promise(resolve => setTimeout(resolve, 3000)),
+        ])
+
         Object.keys(localStorage)
           .filter(k => k.startsWith('sb-') || k.startsWith('lc_'))
           .forEach(k => localStorage.removeItem(k))
@@ -78,11 +87,18 @@ export default function App() {
     // Event yang dianggap aktif
     const events = ['mousedown', 'mousemove', 'keydown', 'scroll', 'touchstart', 'click']
     events.forEach(e => window.addEventListener(e, resetTimer, { passive: true }))
+
+    // Reset timer juga saat ada balasan baru dari Diah Anna — supaya user
+    // yang sedang membaca jawaban panjang/hasil CV tidak ke-logout di tengah
+    // hanya karena belum sempat gerak mouse/keyboard.
+    window.addEventListener('diah-anna-replied', resetTimer)
+
     resetTimer() // mulai timer
 
     return () => {
       clearTimeout(inactiveTimer)
       events.forEach(e => window.removeEventListener(e, resetTimer))
+      window.removeEventListener('diah-anna-replied', resetTimer)
     }
   }, [user])
 

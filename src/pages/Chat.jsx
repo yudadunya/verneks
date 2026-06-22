@@ -178,6 +178,8 @@ export default function Chat({ user, chatMessages = [], setChatMessages, subscri
   // ── pushBot & pushUser didefinisikan DULU sebelum dipakai di useEffect ──
   const pushBot = useCallback((text, quickReplies = null) => {
     setMessages(prev => [...prev, { id: Date.now() + Math.random(), role: 'bot', text, quickReplies }])
+    // Sinyal ke App.jsx — reset timer auto-logout, user sedang aktif baca balasan.
+    window.dispatchEvent(new CustomEvent('diah-anna-replied'))
   }, [])
 
   const pushUser = useCallback((text) => {
