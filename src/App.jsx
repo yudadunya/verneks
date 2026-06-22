@@ -3,7 +3,7 @@ import { useState, useEffect, lazy, Suspense } from 'react'
 import { supabase } from './lib/supabase'
 import { useSubscription } from './hooks/useSubscription'
 
-// Lazy load semua halaman
+// Lazy load semua halaman ok
 const Home         = lazy(() => import('./pages/Home'))
 const Login        = lazy(() => import('./pages/Login'))
 const Register     = lazy(() => import('./pages/Register'))
