@@ -4,7 +4,21 @@ import { supabase } from '../lib/supabase'
 // Subscription/plan sekarang datang dari prop (di-lift ke App.jsx) — lihat komentar di App.jsx.
 import BottomNav from '../components/BottomNav'
 
-export default function Profile({ user, loading = false, subscription }) {
+// Default aman kalau prop subscription literal undefined (mismatch deploy,
+// race Suspense, atau sebab lain) — JANGAN biarkan ini crash hard.
+// loading:true sengaja, supaya UI tahu status sebenarnya belum jelas,
+// bukan asumsi pasti 'free' yang bisa salah kalau user aslinya premium.
+const DEFAULT_SUBSCRIPTION = {
+  plan: 'free',
+  loading: true,
+  checkUsage: async () => false,
+  logUsage: () => {},
+  fetchPlan: () => {},
+  getRemainingChat: async () => 0,
+  isExpired: false,
+}
+
+export default function Profile({ user, loading = false, subscription = DEFAULT_SUBSCRIPTION }) {
   const { plan } = subscription
   const navigate = useNavigate()
   const [profile, setProfile]       = useState(null)

@@ -261,7 +261,21 @@ function PhaseBlock({ phase, globalStartIdx, currentIdx, isPremium, expanded, on
 }
 
 // ─── MAIN PAGE ────────────────────────────────────────────────────────────────
-export default function Journey({ user, loading = false, subscription }) {
+// Default aman kalau prop subscription literal undefined (mismatch deploy,
+// race Suspense, atau sebab lain) — JANGAN biarkan ini crash hard.
+// loading:true sengaja, supaya UI tahu status sebenarnya belum jelas,
+// bukan asumsi pasti 'free' yang bisa salah kalau user aslinya premium.
+const DEFAULT_SUBSCRIPTION = {
+  plan: 'free',
+  loading: true,
+  checkUsage: async () => false,
+  logUsage: () => {},
+  fetchPlan: () => {},
+  getRemainingChat: async () => 0,
+  isExpired: false,
+}
+
+export default function Journey({ user, loading = false, subscription = DEFAULT_SUBSCRIPTION }) {
   const navigate = useNavigate()
 
   const [profile,   setProfile]   = useState(null)

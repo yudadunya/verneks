@@ -49,7 +49,21 @@ const CV_FORMATS = [
   { id: 'fmt_linkedin',  label: '💼 LinkedIn Profile' },
 ]
 
-export default function Chat({ user, chatMessages = [], setChatMessages, subscription }) {
+// Default aman kalau prop subscription literal undefined (mismatch deploy,
+// race Suspense, atau sebab lain) — JANGAN biarkan ini crash hard.
+// loading:true sengaja, supaya UI tahu status sebenarnya belum jelas,
+// bukan asumsi pasti 'free' yang bisa salah kalau user aslinya premium.
+const DEFAULT_SUBSCRIPTION = {
+  plan: 'free',
+  loading: true,
+  checkUsage: async () => false,
+  logUsage: () => {},
+  fetchPlan: () => {},
+  getRemainingChat: async () => 0,
+  isExpired: false,
+}
+
+export default function Chat({ user, chatMessages = [], setChatMessages, subscription = DEFAULT_SUBSCRIPTION }) {
   const navigate = useNavigate()
   // Subscription sekarang dari App.jsx (single source of truth) — bukan fetch sendiri.
   // Lihat catatan di App.jsx soal kenapa ini di-lift.
