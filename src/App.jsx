@@ -1,7 +1,6 @@
 import { BrowserRouter, Routes, Route } from 'react-router-dom'
 import { useState, useEffect, lazy, Suspense } from 'react'
 import { supabase } from './lib/supabase'
-import { useSubscription } from './hooks/useSubscription'
 
 // Lazy load semua halaman — bundle dipecah per route, hanya dimuat saat dibutuhkan
 const Home         = lazy(() => import('./pages/Home'))
@@ -45,16 +44,6 @@ export default function App() {
   const [chatMessages, setChatMessages] = useState([])
   const [showUpgrade, setShowUpgrade] = useState(false)
   const [upgradeData, setUpgradeData] = useState(null)
-
-  // ── Subscription/plan SATU SUMBER KEBENARAN ──────────────────────────────
-  // Sebelumnya: Chat.jsx, DNA.jsx, Profile.jsx, Journey.jsx, Dashboard.jsx
-  // masing-masing fetch sendiri-sendiri (5 query independen), tiap mulai
-  // dari default "free" sebelum query resolve. Akibatnya: setiap pindah
-  // halaman, sempat kelihatan "Free" sebelum balik ke "Premium" — dan kalau
-  // koneksi lambat, jendela "kelihatan Free" itu jadi lama/macet.
-  // Sekarang: di-fetch SEKALI di sini (App.jsx tidak pernah unmount saat
-  // pindah route), dipakai bersama semua halaman via prop.
-  const subscription = useSubscription(user?.id)
 
   // ── Auto-logout setelah inaktif 30 menit (seperti mobile banking) ───────
   useEffect(() => {
@@ -119,13 +108,17 @@ export default function App() {
     console.log('[App] Starting getSession...')
     console.log('[App] sb- keys in localStorage:', Object.keys(localStorage).filter(k => k.startsWith('sb-')))
 
-    // Race: getSession vs timeout 2.5 detik
-    // Kalau timeout menang → clear session corrupt & tampilkan home
-    let settled = false
+    // Race: getSession vs timeout 5 detik
+    // PENTING: `settled` cuma kontrol apakah TIMEOUT boleh bertindak (redirect/unblock).
+    // Hasil ASLI dari getSession() — begitu datang, kapanpun — SELALU diterapkan.
+    // Sebelumnya kedua arah dicampur jadi satu flag, akibatnya kalau timeout
+    // nyala duluan (getSession cuma lambat, bukan hang), hasil asli yang
+    // datang belakangan malah DIBUANG — user permanen ke-null walau sesi
+    // sebenarnya valid, sampai refresh manual.
+    let timeoutFired = false
 
     const timeoutId = setTimeout(() => {
-      if (settled) return
-      settled = true
+      timeoutFired = true
       console.warn('[App] getSession timeout setelah 5 detik')
       // Hanya clear dan redirect kalau tidak ada user state yang sudah terisi
       // Ini prevent false logout saat user buka tab baru (lynk.id dll)
@@ -134,7 +127,9 @@ export default function App() {
         // Tidak ada token sama sekali → aman untuk redirect ke home
         window.location.replace('/')
       } else {
-        // Ada token tapi getSession hang → coba lagi tanpa redirect paksa
+        // Ada token tapi getSession lambat — unblock loading SEKARANG,
+        // tapi getSession() asli di bawah tetap jalan di background dan
+        // akan update user begitu selesai (lihat .then() di bawah).
         setLoading(false)
         console.warn('[App] Token ada tapi getSession lambat — biarkan user tetap')
       }
@@ -142,21 +137,24 @@ export default function App() {
 
     supabase.auth.getSession()
       .then(({ data: { session } }) => {
-        if (settled) return
-        settled = true
         clearTimeout(timeoutId)
         console.log('[App] getSession resolved, user:', session?.user?.email ?? 'null')
         const u = session?.user ?? null
         setUser(u)
         if (u) setChatMessages(loadMessages(u.id))
         setLoading(false)
+        if (timeoutFired && u) {
+          console.log('[App] getSession akhirnya selesai setelah timeout — user diterapkan')
+        }
       })
       .catch(() => {
-        if (settled) return
-        settled = true
         clearTimeout(timeoutId)
-        setUser(null)
-        setLoading(false)
+        // Kalau timeout sudah duluan unblock loading dengan asumsi user tetap,
+        // jangan paksa null di sini — biarkan apa adanya, hindari false-logout.
+        if (!timeoutFired) {
+          setUser(null)
+          setLoading(false)
+        }
       })
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
@@ -346,25 +344,25 @@ export default function App() {
         <Route path="/forgot-password" element={<ForgotPassword />} />
         <Route path="/reset-password"  element={<ResetPassword />} />
         <Route path="/pricing"       element={<Pricing user={user} />} />
-        <Route path="/chat"          element={<Chat user={user} chatMessages={chatMessages} setChatMessages={setChatMessages} subscription={subscription} />} />
+        <Route path="/chat"          element={<Chat user={user} chatMessages={chatMessages} setChatMessages={setChatMessages} />} />
         <Route path="/discovery"      element={<Discovery />} />
         <Route path="/genome-result"   element={<GenomeResult />} />
         <Route path="/paywall"          element={<Paywall />} />
-        <Route path="/dashboard"       element={<Dashboard user={user} loading={loading} subscription={subscription} />} />
-        <Route path="/journey"         element={<Journey user={user} loading={loading} subscription={subscription} />} />
-        <Route path="/dna"            element={<DNA user={user} loading={loading} subscription={subscription} />} />
+        <Route path="/dashboard"       element={<Dashboard user={user} loading={loading} />} />
+        <Route path="/journey"         element={<Journey user={user} loading={loading} />} />
+        <Route path="/dna"            element={<DNA user={user} loading={loading} />} />
         <Route path="/opportunities"  element={<Opportunities user={user} loading={loading} />} />
-        <Route path="/profile"        element={<Profile user={user} loading={loading} subscription={subscription} />} />
+        <Route path="/profile"        element={<Profile user={user} loading={loading} />} />
         <Route path="/blog"          element={<Blog user={user} />} />
         <Route path="/blog/:slug"    element={<BlogPost user={user} />} />
         <Route path="/adm-lc"        element={<AdminPanel />} />
         
         {/* Backward Compatibility: Semua route lama redirect ke /chat */}
-        <Route path="/cv-review"      element={<Chat user={user} chatMessages={chatMessages} setChatMessages={setChatMessages} subscription={subscription} />} />
-        <Route path="/ats-checker"    element={<Chat user={user} chatMessages={chatMessages} setChatMessages={setChatMessages} subscription={subscription} />} />
-        <Route path="/mock-interview" element={<Chat user={user} chatMessages={chatMessages} setChatMessages={setChatMessages} subscription={subscription} />} />
-        <Route path="/career-coach"   element={<Chat user={user} chatMessages={chatMessages} setChatMessages={setChatMessages} subscription={subscription} />} />
-        <Route path="/cv-maker"       element={<Chat user={user} chatMessages={chatMessages} setChatMessages={setChatMessages} subscription={subscription} />} />
+        <Route path="/cv-review"      element={<Chat user={user} chatMessages={chatMessages} setChatMessages={setChatMessages} />} />
+        <Route path="/ats-checker"    element={<Chat user={user} chatMessages={chatMessages} setChatMessages={setChatMessages} />} />
+        <Route path="/mock-interview" element={<Chat user={user} chatMessages={chatMessages} setChatMessages={setChatMessages} />} />
+        <Route path="/career-coach"   element={<Chat user={user} chatMessages={chatMessages} setChatMessages={setChatMessages} />} />
+        <Route path="/cv-maker"       element={<Chat user={user} chatMessages={chatMessages} setChatMessages={setChatMessages} />} />
       </Routes>
       </Suspense>
     </BrowserRouter>
