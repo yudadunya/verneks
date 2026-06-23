@@ -389,7 +389,9 @@ export default async function handler(req, res) {
     gps_steps: gpsSteps,
     streak_days: growthState?.streak_days || 0,
     progress_percentage: growthState?.progress_percent || careerProfile?.career_readiness || 0,
-    running_insight: growthState?.running_insight || null
+    // FIX: running_insight ditulis oleh weekly-review.js ke user_career_profiles,
+    // BUKAN ke user_growth_state. Sumber lama (growthState) selalu null.
+    running_insight: careerProfile?.running_insight || null
   }
 
   // ════════════════════════════════════════════
@@ -400,7 +402,13 @@ export default async function handler(req, res) {
       const coaching = generateDailyCoaching(structuralMemory, activeDashboardMission);
 
       let openingMessage = `Halo ${structuralMemory.name} 👋\n\n`;
-      openingMessage += `Aku masih ingat tujuan besarmu:\n${structuralMemory.target_position}.\n\n`;
+      openingMessage += `Aku masih ingat tujuan besarmu:\n${structuralMemory.target_position}.\n`;
+      // FIX: target_reason (emotional driver dari onboarding) sekarang ikut ditampilkan,
+      // sebelumnya dikumpulkan tapi tidak pernah dipakai di greeting.
+      if (structuralMemory.target_reason && structuralMemory.target_reason !== 'Belum diketahui') {
+        openingMessage += `Karena ${structuralMemory.target_reason}.\n`;
+      }
+      openingMessage += `\n`;
       openingMessage += `🔥 Kamu sudah konsisten selama ${structuralMemory.streak_days} hari.\n`;
       openingMessage += `📈 Progress kesiapanmu saat ini ${structuralMemory.progress_percentage}%.\n\n`;
       openingMessage += `🎯 Fokus terpenting saat ini:\n${coaching.daily_focus}.\n\n`;
