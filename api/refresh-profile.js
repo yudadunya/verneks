@@ -1,6 +1,21 @@
+```
+Ekspresi reguler (*regex*) pada bagian akhir `.replace(/```$/,'')` tidak menggunakan flag pencarian global atau pengabaian spasi (`\s*`). Jika Claude atau DeepSeek mengembalikan teks dengan spasi atau baris kosong setelah penutup backtick markdown (misalnya `}\n \n``` `), pembersihan ini akan gagal total dan memicu error `JSON parse failed`.
+2.  **Pemetaan Kolom yang Tidak Selaras dengan Skema Database**:
+Pada blok pembaruan data, Anda menulis:
+```javascript
+    summary: result.wow_insight || p.summary,
+    ```
+    Namun, di dalam skema database tabel `user_career_profiles` pada file `extract-profile.js` sebelumnya, kolom `summary` digunakan untuk menyimpan **2-3 paragraf narasi briefing coaching**, sedangkan teks insight tajam disimpan pada kolom terpisah (seperti `wow_insight` atau di dalam objek `career_dna`). Menimpa kolom deskripsi briefing coaching (`summary`) dengan sebaris kalimat pendek `wow_insight` dapat merusak memori jangka panjang Diah Anna saat membaca riwayat pengguna tersebut di masa mendatang.
+
+---
+
+### Kode Perbaikan Resmi (`api/refresh-profile.js`)
+
+Jika modul ini masih aktif digunakan untuk menangani pengguna lama, sangat disarankan memperbarui kodenya ke versi aman berikut untuk mencegah kegagalan *parsing* JSON:
+
+```javascript
 // api/refresh-profile.js
 // Backfill user lama: generate wow_insight, motivasi inference, dan update greeted_at = null
-// Dipanggil otomatis dari DNA.jsx atau Dashboard kalau summary kosong
 import { generateText } from './lib/ai.js'
 import { createClient } from '@supabase/supabase-js'
 
@@ -25,18 +40,18 @@ export default async function handler(req, res) {
 
     if (error || !p) return res.status(404).json({ error: 'Profile not found' })
 
-    // Kalau summary sudah ada dan greeted_at null → tidak perlu refresh
-    if (p.summary && !p.greeted_at) {
+    // Kalau data baru sudah lengkap dan greeted_at sudah null → tidak perlu refresh
+    if (p.summary && p.career_dna?.wow_insight && !p.greeted_at) {
       return res.status(200).json({ skipped: true, reason: 'already_fresh' })
     }
 
-    const rawGaps = p.skill_gaps
+    const rawGaps = p.skill_gaps || p.skill_utama
     const gaps = Array.isArray(rawGaps) ? rawGaps
       : rawGaps && typeof rawGaps === 'object' ? Object.values(rawGaps) : []
 
     const prompt = `Kamu adalah Diah Anna, career coach dari Verneks.
 
-Berdasarkan data profil user ini, hasilkan 3 hal dalam JSON:
+Berdasarkan data profil user ini, hasilkan analisis mendalam dalam bentuk JSON:
 
 Data profil:
 - Nama: ${p.nama || 'User'}
@@ -48,34 +63,48 @@ Data profil:
 - Skill Gaps: ${gaps.join(', ') || '-'}
 - Mentor Message sebelumnya: ${p.mentor_message || '-'}
 
-Hasilkan JSON (tanpa backtick, tanpa teks lain):
+Hasilkan JSON VALID (tanpa backtick markdown, tanpa teks pengantar atau penjelasan tambahan):
 {
   "wow_insight": "1 observasi tajam dan personal tentang situasi user ini — sesuatu yang mengejutkan dan spesifik berdasarkan kombinasi data di atas. Bukan klise. Mulai dengan 'Yang menarik dari situasi kamu...' atau 'Ada pola yang aku lihat...'",
   "motivasi_inferred": "motivasi terdalam yang bisa diinferensikan dari target dan hambatan mereka — kenapa mereka kejar ini",
-  "updated_mentor_message": "Pesan baru dari Diah Anna — 3 kalimat. Sebut nama, akui 1 kekuatan, hint roadmap. Bahasa natural seperti teman senior."
+  "updated_mentor_message": "Pesan baru dari Diah Anna — 3 kalimat. Sebut nama, akui 1 kekuatan, hint roadmap. Bahasa Indonesia natural seperti teman senior.",
+  "summary_brief": "2 paragraf narasi briefing karir baru untuk kebutuhan instruksi internal sistem."
 }`
 
     const raw = await generateText({
-      system: 'Kembalikan HANYA JSON valid tanpa teks lain.',
+      system: 'Kamu adalah robot ekstraksi JSON database murni. Output kamu HANYA boleh berupa objek JSON valid yang diawali dengan { dan diakhiri dengan }.',
       prompt,
-      maxTokens: 500,
+      maxTokens: 750,
       tier: 'smart',
       plan: 'premium',
     })
 
     let result
     try {
-      const clean = raw.trim().replace(/^```json\s*/i, '').replace(/```$/,'').trim()
+      const clean = raw.trim()
+        .replace(/^```json\s*/i, '')
+        .replace(/^```\s*/i, '')
+        .replace(/\s*
+```$/, '')
+        .trim()
       result = JSON.parse(clean)
-    } catch {
-      return res.status(500).json({ error: 'JSON parse failed' })
+    } catch (parseErr) {
+      console.error('[refresh-profile] JSON parse failed:', raw)
+      return res.status(500).json({ error: 'JSON parse failed: ' + parseErr.message })
     }
 
-    // Update profil dengan data baru
+    // Siapkan data pembaruan tanpa merusak struktur kolom summary asli
+    const currentDna = typeof p.career_dna === 'object' && p.career_dna !== null ? p.career_dna : {}
+    
     const updates = {
-      summary: result.wow_insight || p.summary,
+      summary: result.summary_brief || p.summary,
       mentor_message: result.updated_mentor_message || p.mentor_message,
-      greeted_at: null, // Reset supaya user dapat greeting Discovery yang proper
+      greeted_at: null, // Reset token sapaan untuk rute Discovery baru
+      career_dna: {
+        ...currentDna,
+        wow_insight: result.wow_insight || currentDna.wow_insight
+      },
+      last_updated: new Date().toISOString()
     }
 
     if (result.motivasi_inferred && !p.motivasi) {
