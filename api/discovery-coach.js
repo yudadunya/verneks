@@ -82,7 +82,7 @@ export default async function handler(req, res) {
 
   try {
     const apiMessages = messages.map(m => ({
-      role: m.role === 'bot' ? 'assistant' : 'user',
+      role: m.role === 'bot' || m.role === 'assistant' ? 'assistant' : 'user',
       content: m.text || m.content || ''
     })).filter(m => m.content)
 
@@ -91,16 +91,25 @@ export default async function handler(req, res) {
       messages: apiMessages,
       maxTokens: 220,
       tier: 'fast',
+      plan: 'free' // Sesuai komentar: mode discovery tidak butuh auth / free tier
     })
 
     const userCount = messages.filter(m => m.role === 'user').length
+    
+    // Diselaraskan dengan instruksi prompt (Diah Anna mulai menutup di pertanyaan ke 7-8)
     return res.status(200).json({
       reply,
-      showResultButton: userCount >= 6,
+      showResultButton: userCount >= 7,
       discoveryComplete: userCount >= 8,
     })
   } catch (e) {
     console.error('[discovery-coach]', e)
-    return res.status(500).json({ error: e.message })
+    
+    // Menyediakan respon fallback yang aman dan natural jika seluruh API LLM down
+    return res.status(200).json({
+      reply: "Eh, sori banget koneksiku mendadak agak terganggu nih. Boleh coba ketik ulang kalimat terakhirmu tadi? Aku pengen denger kelanjutannya. 😊",
+      showResultButton: false,
+      discoveryComplete: false
+    })
   }
 }
