@@ -348,15 +348,15 @@ export default async function handler(req, res) {
         supabase.from('user_career_profiles').select('*').eq('user_id', userId).maybeSingle(),
         supabase.from('user_growth_state').select('*').eq('user_id', userId).maybeSingle(),
         supabase.from('user_genome_scores').select('*').eq('user_id', userId).maybeSingle(),
-        supabase.from('user_session_notes').select('summary, created_at').eq('user_id', userId).order('created_at', { ascending: false }).limit(3),
+        supabase.from('user_session_notes').select('summary, created_at').eq('user_id', userId).order('created_at', { ascending: false }).limit(2),
         supabase.from('career_events').select('event_type, event_payload, created_at').eq('user_id', userId).eq('event_type', 'milestone_completed').order('created_at', { ascending: false }).limit(3),
         supabase.from('dashboard_missions').select('*').eq('user_id', userId).eq('status', 'active').order('created_at', { ascending: false }).limit(1).maybeSingle(),
       ])
-      careerProfile    = profileRes.data
-      growthState       = growthRes.data
-      genomeData        = genomeRes.data
-      sessionNotes      = notesRes.data || []
-      recentMilestones  = eventsRes.data || []
+      careerProfile          = profileRes.data
+      growthState            = growthRes.data
+      genomeData             = genomeRes.data
+      sessionNotes           = notesRes.data || []
+      recentMilestones       = eventsRes.data || []
       activeDashboardMission = dashboardRes.data
     } catch (e) {
       console.error('[career-coach] load error:', e.message)
@@ -438,6 +438,25 @@ export default async function handler(req, res) {
   const usage = await checkAndLogUsage(userId, plan, 'chat')
   if (!usage.allowed) return res.status(403).json({ error: 'Kuota chat hari ini sudah habis.', limitReached: true })
 
+  // ── Deep memory blocks (dari update-memory.js) ───────────────────────────
+  const diahAnnaMemory   = careerProfile?.diah_anna_memory   || null
+  const userDepthProfile = careerProfile?.user_depth_profile || {}
+  const depthScore       = careerProfile?.depth_score        || 0
+
+  const deepMemoryBlock = diahAnnaMemory ? `
+# APA YANG KAMU INGAT TENTANG USER INI
+${diahAnnaMemory}
+` : ''
+
+  const depthProfileBlock = depthScore > 0 ? `
+# POLA MENDALAM USER (depth score: ${depthScore}/100)
+Gaya coaching yang cocok: ${userDepthProfile.coach_style_fit || 'belum terdeteksi'}
+Kondisi emosi terakhir: ${userDepthProfile.last_emotional_state || 'tidak diketahui'}
+Yang memotivasi: ${(userDepthProfile.emotional_triggers?.motivators || []).join(', ') || '-'}
+Yang menghambat: ${(userDepthProfile.emotional_triggers?.blockers || []).join(', ') || '-'}
+Tema berulang: ${(userDepthProfile.recurring_themes || []).join(', ') || '-'}
+` : ''
+
   const memoryContext = `
 # MEMORY CONTEXT (Data Real-time User)
 Nama: ${structuralMemory.name}
@@ -453,7 +472,7 @@ Next Milestone: ${structuralMemory.next_milestone || 'Belum ditentukan'}
 Top Genome Dimensions: ${topGenomeDimensions}
 ${sessionNotes.length > 0 ? `\nCatatan Sesi Sebelumnya:\n${sessionNotes.map(n => `- ${n.summary}`).join('\n')}` : ''}
 ${recentMilestones.length > 0 ? `\nMilestone Baru Diselesaikan:\n${recentMilestones.map(m => `- ${m.event_payload?.title}`).join('\n')}` : ''}
-`
+${deepMemoryBlock}${depthProfileBlock}`
 
   try {
     const systemContent = `
@@ -467,6 +486,7 @@ ${plan === 'premium' ? USER_STATE_INSTRUCTIONS.premium : USER_STATE_INSTRUCTIONS
 ${RESPONSE_FRAMEWORK}
 
 PENTING: Integrasikan seluruh fakta memori di atas secara mengalir tanpa menggunakan kalimat template kaku. JANGAN beralih menjadi pasif atau melemparkan kendali obrolan kembali kepada user tanpa memberikan value tindakan/opini yang solid.
+${diahAnnaMemory ? `\nKamu sudah mengenal user ini dengan baik (depth score: ${depthScore}/100). Gunakan pengetahuan personalmu tentang mereka — cara komunikasi mereka, apa yang memotivasi dan menghambat mereka — untuk membuat respons terasa seperti dari seseorang yang benar-benar mengenal mereka, bukan AI generik.` : ''}
 `
 
     const reply = await generateChat({

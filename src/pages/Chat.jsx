@@ -98,6 +98,38 @@ export default function Chat({ user, chatMessages = [], setChatMessages, subscri
   const fileRef   = useRef()
   const containerRef = useRef()
 
+  // ── Deep Memory: flag guard supaya tidak double-fire ─────────────────────
+  const memoryFiredRef = useRef(false)
+
+  // Kirim memory update ke server pakai sendBeacon (reliable saat tab ditutup)
+  // atau fetch biasa (saat logout manual)
+  const sendMemoryUpdate = useCallback((triggerType = 'visibility') => {
+    if (!user?.id) return
+    if (memoryFiredRef.current) return
+    if (coachHistory.filter(m => m.role === 'user').length < 3) return
+
+    memoryFiredRef.current = true
+
+    const payload = JSON.stringify({
+      userId:   user.id,
+      messages: coachHistory.slice(-20),
+      trigger:  triggerType,
+    })
+
+    // sendBeacon: dijamin terkirim walau tab ditutup (tapi tidak bisa await)
+    if (triggerType !== 'logout' && navigator.sendBeacon) {
+      navigator.sendBeacon('/api/update-memory', new Blob([payload], { type: 'application/json' }))
+    } else {
+      // Logout manual: pakai fetch biasa karena kita masih punya waktu
+      fetch('/api/update-memory', {
+        method:  'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body:    payload,
+        keepalive: true,
+      }).catch(() => {})
+    }
+  }, [user?.id, coachHistory])
+
   const pushBot = useCallback((text, quickReplies = null) => {
     setMessages(prev => [...prev, { id: Date.now() + Math.random(), role: 'bot', text, quickReplies }])
     window.dispatchEvent(new CustomEvent('diah-anna-replied'))
@@ -211,6 +243,37 @@ export default function Chat({ user, chatMessages = [], setChatMessages, subscri
     update()
     return () => { vv.removeEventListener('resize', update); vv.removeEventListener('scroll', update) }
   }, [])
+
+  // ── Deep Memory triggers ──────────────────────────────────────────────────
+  // Reset flag tiap sesi baru (user berubah)
+  useEffect(() => {
+    memoryFiredRef.current = false
+  }, [user?.id])
+
+  useEffect(() => {
+    // visibilitychange: tab ditutup, pindah tab, lock screen, dll
+    const onVisibilityChange = () => {
+      if (document.visibilityState === 'hidden') {
+        sendMemoryUpdate('visibility')
+      }
+    }
+    // beforeunload: close browser / refresh paksa — backup
+    const onBeforeUnload = () => {
+      sendMemoryUpdate('beforeunload')
+    }
+
+    // logout manual: Profile.jsx dispatch event ini sebelum signOut
+    const onLogout = () => sendMemoryUpdate('logout')
+
+    document.addEventListener('visibilitychange', onVisibilityChange)
+    window.addEventListener('beforeunload', onBeforeUnload)
+    window.addEventListener('diah-anna-logout-memory', onLogout)
+    return () => {
+      document.removeEventListener('visibilitychange', onVisibilityChange)
+      window.removeEventListener('beforeunload', onBeforeUnload)
+      window.removeEventListener('diah-anna-logout-memory', onLogout)
+    }
+  }, [sendMemoryUpdate])
 
   const handleSend = () => {
     const msg = input.trim()

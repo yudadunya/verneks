@@ -55,6 +55,12 @@ export default function Profile({ user, loading = false, subscription = DEFAULT_
     }
     localStorage.removeItem('lc_discovery_messages')
     localStorage.removeItem('lc_discovery_result')
+
+    // Trigger memory update sebelum logout — Chat.jsx yang handle pengiriman
+    window.dispatchEvent(new CustomEvent('diah-anna-logout-memory'))
+    // Beri waktu 800ms supaya fetch sempat terkirim sebelum session di-clear
+    await new Promise(r => setTimeout(r, 800))
+
     await supabase.auth.signOut()
 
     // Clear SW cache supaya tidak stuck loading setelah logout
