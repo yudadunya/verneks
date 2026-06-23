@@ -12,7 +12,7 @@ function renderMd(text) {
     .replace(/^## (.+)$/gm, '<div style="font-weight:700;font-size:0.9rem;margin:10px 0 3px;color:#111">$1</div>')
     .replace(/^### (.+)$/gm, '<div style="font-weight:600;font-size:0.85rem;margin:8px 0 2px;color:#333">$1</div>')
     .replace(/\*\*(.+?)\*\"/g, '<strong>$1</strong>')
-    .replace(/^- (.+)$/gm, '<div style="padding:2px 0 2px 14px;position:relative"><span style="position:absolute;left:4px;color:var(--wa-green)">•</span>$1</div>')
+    .replace(/- (.+)$/gm, '<div style="padding:2px 0 2px 14px;position:relative"><span style="position:absolute;left:4px;color:var(--wa-green)">•</span>$1</div>')
     .replace(/^\d+\. (.+)$/gm, '<div style="padding:2px 0 2px 14px;position:relative">$1</div>')
     .replace(/\n{2,}/g, '<br><br>')
     .replace(/\n/g, '<br>')
@@ -172,7 +172,7 @@ export default function Chat({ user, chatMessages = [], setChatMessages, subscri
     }
   }
 
-  // 3. Proactive V2 Greeting
+  // 3. Proactive V2 Greeting (COMPACT & PSYCHOLOGICAL UPDATE)
   useEffect(() => {
     if (!user || subLoading || greetingFiredRef.current || (greetingKey && sessionStorage.getItem(greetingKey))) return 
 
@@ -187,38 +187,50 @@ export default function Chat({ user, chatMessages = [], setChatMessages, subscri
     ]).then(([{ data: growth }, { data: profile }]) => {
       
       const focusObj = getNextFocus(profile, growth)
-      const runningInsight = profile?.career_dna?.running_insight || profile?.running_insight
-      const targetReason = profile?.career_dna?.target_reason || profile?.target_reason
+      
+      // Mengambil insight kekuatan & gap secara dinamis
+      const runningInsight = profile?.career_dna?.running_insight || profile?.running_insight || 'eksekusi dan manajemen taktis'
+      const rawGaps = profile?.skill_gaps
+      const gaps = Array.isArray(rawGaps) ? rawGaps : (rawGaps && typeof rawGaps === 'object' ? Object.values(rawGaps) : [])
+      const mainGap = gaps.length > 0 ? gaps.slice(0, 2).join(' dan ') : 'manajemen proyek dan perencanaan strategis'
 
-      const lines = []
-      lines.push(`Halo ${firstName || profile?.nama || 'Kamu'} 👋\n`)
-      lines.push(`Aku masih ingat tujuan besarmu:\n**Menjadi ${profile?.target_posisi || 'Profesional Unggul'}**.${targetReason ? ` (_${targetReason}_)` : ''}\n`)
-      
-      if (growth?.streak_days && growth.streak_days > 0) {
-        lines.push(`🔥 Kamu sudah konsisten selama ${growth.streak_days} hari.`)
-      }
-      
+      const streak = growth?.streak_days || 1
       const progressVal = profile?.career_readiness || growth?.progress_percent || 0
-      lines.push(`📈 Progress kesiapanmu saat ini **${progressVal}%**.\n`)
-      
-      if (runningInsight) {
-        lines.push(`💡 **Yang aku pelajari tentangmu:**\n${runningInsight}\n`)
-      }
+      const targetPos = profile?.target_posisi || 'Profesional Unggul'
 
-      lines.push(`🎯 **Fokus terpenting saat ini:**\n**${focusObj.label}**`)
-      lines.push(`_${focusObj.reason}_\n`)
-      lines.push(`Menurutmu, apa tantangan paling nyata yang menahan perkembanganmu di area **${focusObj.label}** minggu ini?`)
+      // Konstruksi Pesan Greeting Bergaya WhatsApp Khas Diah Anna
+      const greetingText = `Halo ${firstName || profile?.nama || 'Sobat'} 👋
 
-      pushBot(lines.join('\n'))
+Aku masih ingat tujuan besarmu:
+Menjadi ${targetPos}.
+
+🔥 Streak ${streak} hari.
+📈 Progress kariermu ${progressVal}%.
+
+💡 Yang Aku Pelajari Tentangmu
+
+Kamu kuat dalam ${runningInsight}.
+
+Saat ini gap terbesar menuju targetmu adalah ${mainGap}.
+
+🎯 Misi Minggu Ini
+
+Selesaikan Modul ${focusObj.label}.
+
+Langkah ini akan memberikan dampak terbesar terhadap targetmu saat ini.
+
+Menurutmu apa yang paling menghambat penyelesaian misi tersebut?`
+
+      pushBot(greetingText)
 
       if (coachHistory.length === 0) {
         setCoachHistory([
-          { role: 'user', content: `[SYSTEM ENGINE V2 CONTEXT INJECTION]\nTarget: ${profile?.target_posisi}\nFocus: ${focusObj.label}\nGap: ${focusObj.reason}` },
+          { role: 'user', content: `[SYSTEM ENGINE V2 CONTEXT INJECTION]\nTarget: ${targetPos}\nFocus: ${focusObj.label}\nGap: ${mainGap}` },
           { role: 'assistant', content: `Paham. Agenda pergerakan kita terkunci pada akselerasi ${focusObj.label}.` }
         ])
       }
     }).catch(err => {
-      pushBot(`Halo ${firstName || 'Kamu'} 👋\n\nMari kita kunci kembali fokus pergerakan karirmu hari ini. Sampaikan kendala eksekusi yang kamu hadapi lapangan agar bisa langsung kita bedah taktiknya.`)
+      pushBot(`Halo ${firstName || 'Sobat'} 👋\n\nMari kita kunci kembali fokus pergerakan karirmu hari ini. Sampaikan kendala eksekusi yang kamu hadapi di lapangan agar bisa langsung kita bedah taktiknya.`)
     })
   }, [user?.id, plan, subLoading])
 
