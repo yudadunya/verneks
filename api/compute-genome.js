@@ -113,8 +113,7 @@ ATURAN ANALISIS WAJIB:
     })
 
     let clean = raw.trim()
-      .replace(/^
-```json\s*/i, '').replace(/^```\s*/i, '')
+      .replace(/^```json\s*/i, '').replace(/^```\s*/i, '')
       .replace(/\s*```$/, '').trim()
 
     const firstBrace = clean.indexOf('{')

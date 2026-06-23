@@ -1,19 +1,3 @@
-```
-Ekspresi reguler (*regex*) pada bagian akhir `.replace(/```$/,'')` tidak menggunakan flag pencarian global atau pengabaian spasi (`\s*`). Jika Claude atau DeepSeek mengembalikan teks dengan spasi atau baris kosong setelah penutup backtick markdown (misalnya `}\n \n``` `), pembersihan ini akan gagal total dan memicu error `JSON parse failed`.
-2.  **Pemetaan Kolom yang Tidak Selaras dengan Skema Database**:
-Pada blok pembaruan data, Anda menulis:
-```javascript
-    summary: result.wow_insight || p.summary,
-    ```
-    Namun, di dalam skema database tabel `user_career_profiles` pada file `extract-profile.js` sebelumnya, kolom `summary` digunakan untuk menyimpan **2-3 paragraf narasi briefing coaching**, sedangkan teks insight tajam disimpan pada kolom terpisah (seperti `wow_insight` atau di dalam objek `career_dna`). Menimpa kolom deskripsi briefing coaching (`summary`) dengan sebaris kalimat pendek `wow_insight` dapat merusak memori jangka panjang Diah Anna saat membaca riwayat pengguna tersebut di masa mendatang.
-
----
-
-### Kode Perbaikan Resmi (`api/refresh-profile.js`)
-
-Jika modul ini masih aktif digunakan untuk menangani pengguna lama, sangat disarankan memperbarui kodenya ke versi aman berikut untuk mencegah kegagalan *parsing* JSON:
-
-```javascript
 // api/refresh-profile.js
 // Backfill user lama: generate wow_insight, motivasi inference, dan update greeted_at = null
 import { generateText } from './lib/ai.js'
@@ -84,8 +68,7 @@ Hasilkan JSON VALID (tanpa backtick markdown, tanpa teks pengantar atau penjelas
       const clean = raw.trim()
         .replace(/^```json\s*/i, '')
         .replace(/^```\s*/i, '')
-        .replace(/\s*
-```$/, '')
+        .replace(/\s*```$/, '')
         .trim()
       result = JSON.parse(clean)
     } catch (parseErr) {
@@ -95,7 +78,7 @@ Hasilkan JSON VALID (tanpa backtick markdown, tanpa teks pengantar atau penjelas
 
     // Siapkan data pembaruan tanpa merusak struktur kolom summary asli
     const currentDna = typeof p.career_dna === 'object' && p.career_dna !== null ? p.career_dna : {}
-    
+
     const updates = {
       summary: result.summary_brief || p.summary,
       mentor_message: result.updated_mentor_message || p.mentor_message,
