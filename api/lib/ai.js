@@ -1,5 +1,5 @@
 /**
- * _lib/ai.js — Universal AI wrapper untuk Verneks
+ * _lib/ai.js — Universal AI wrapper untuk Verneks (Updated)
  *
  * Routing:
  * - plan='premium' → Claude (Sonnet) utama, fallback ke DeepSeek → Cerebras
@@ -95,43 +95,42 @@ function callDeepSeek({ system, messages, maxTokens, model }) {
   })
 }
 
-// ── Gemini ───────────────────────────────────────────────────────────────────
+// ── Gemini (Didesain ulang menggunakan generateContent agar lebih stabil) ─────
 async function callGemini({ system, messages, maxTokens, model }) {
   const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY)
   const m = genAI.getGenerativeModel({
     model: model || MODELS.gemini.fast,
     systemInstruction: system,
   })
+  
   const normalized = normalizeMessages(messages)
-  const history = []
-  for (const msg of normalized.slice(0, -1)) {
-    const role = msg.role === 'assistant' ? 'model' : 'user'
-    const last = history[history.length - 1]
-    if (history.length === 0 && role === 'model') continue
-    if (last && last.role === role) {
-      last.parts[0].text += '\n' + msg.content
-    } else {
-      history.push({ role, parts: [{ text: msg.content }] })
-    }
-  }
-  const lastMsg = normalized[normalized.length - 1]
-  const chat = m.startChat({ history })
-  const result = await chat.sendMessage(lastMsg?.content || '')
+  const contents = normalized.map(msg => ({
+    role: msg.role === 'assistant' ? 'model' : 'user',
+    parts: [{ text: msg.content }]
+  }))
+
+  const result = await m.generateContent({
+    contents,
+    generationConfig: { maxOutputTokens: maxTokens }
+  })
   return result.response.text() || ''
 }
 
-async function callGeminiText({ system, prompt, model }) {
+async function callGeminiText({ system, prompt, maxTokens, model }) {
   const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY)
   const m = genAI.getGenerativeModel({
     model: model || MODELS.gemini.fast,
     systemInstruction: system,
   })
-  const result = await m.generateContent(prompt)
+  const result = await m.generateContent({
+    contents: [{ role: 'user', parts: [{ text: prompt }] }],
+    generationConfig: { maxOutputTokens: maxTokens }
+  })
   return result.response.text()
 }
 
 // ── Retry helper ─────────────────────────────────────────────────────────────
-async function withRetry(fn, maxRetries = 2) {
+async function withRetry(fn, maxRetries = 1) {
   let lastErr
   for (let i = 0; i <= maxRetries; i++) {
     try { return await fn() } catch (e) { lastErr = e }
@@ -169,7 +168,7 @@ async function callFreeText({ system, prompt, maxTokens, tier }) {
     } catch (e2) {
       console.warn('[ai] DeepSeek gagal, fallback ke Gemini:', e2.message)
       try {
-        return await callGeminiText({ system, prompt, model: MODELS.gemini[tier] })
+        return await callGeminiText({ system, prompt, maxTokens, model: MODELS.gemini[tier] })
       } catch (e3) {
         throw new Error(`Semua provider gagal. Cerebras: ${e1.message} | DeepSeek: ${e2.message} | Gemini: ${e3.message}`)
       }
@@ -187,7 +186,7 @@ async function callPremiumChat({ system, messages, maxTokens, tier }) {
       return await callDeepSeek({ system, messages, maxTokens, model: MODELS.deepseek.smart })
     } catch (e2) {
       console.warn('[ai] DeepSeek gagal, fallback ke Cerebras:', e2.message)
-      return callCerebras({ system, messages, maxTokens, model: MODELS.cerebras[tier] })
+      return await callCerebras({ system, messages, maxTokens, model: MODELS.cerebras[tier] })
     }
   }
 }
@@ -202,7 +201,7 @@ async function callPremiumText({ system, prompt, maxTokens, tier }) {
       return await callDeepSeek({ system, messages, maxTokens, model: MODELS.deepseek.fast })
     } catch (e2) {
       console.warn('[ai] DeepSeek gagal, fallback ke Cerebras:', e2.message)
-      return callCerebras({ system, messages, maxTokens, model: MODELS.cerebras[tier] })
+      return await callCerebras({ system, messages, maxTokens, model: MODELS.cerebras[tier] })
     }
   }
 }
