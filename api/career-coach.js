@@ -344,18 +344,22 @@ export default async function handler(req, res) {
 
   if (userId) {
     try {
-      const [profileRes, growthRes, genomeRes, notesRes, eventsRes, dashboardRes] = await Promise.all([
+      const yesterday = new Date(Date.now() - 86400000).toISOString().slice(0, 10)
+
+      const [profileRes, growthRes, genomeRes, capsuleRes, eventsRes, dashboardRes] = await Promise.all([
         supabase.from('user_career_profiles').select('*').eq('user_id', userId).maybeSingle(),
         supabase.from('user_growth_state').select('*').eq('user_id', userId).maybeSingle(),
         supabase.from('user_genome_scores').select('*').eq('user_id', userId).maybeSingle(),
-        supabase.from('user_session_notes').select('summary, created_at').eq('user_id', userId).order('created_at', { ascending: false }).limit(2),
+        // Ambil capsule kemarin saja (bukan semua history) — hemat token
+        supabase.from('memory_capsule_log').select('capsule_text, capsule_date').eq('user_id', userId).eq('capsule_date', yesterday).maybeSingle(),
         supabase.from('career_events').select('event_type, event_payload, created_at').eq('user_id', userId).eq('event_type', 'milestone_completed').order('created_at', { ascending: false }).limit(3),
         supabase.from('dashboard_missions').select('*').eq('user_id', userId).eq('status', 'active').order('created_at', { ascending: false }).limit(1).maybeSingle(),
       ])
+
       careerProfile          = profileRes.data
       growthState            = growthRes.data
       genomeData             = genomeRes.data
-      sessionNotes           = notesRes.data || []
+      sessionNotes           = capsuleRes.data ? [{ summary: capsuleRes.data.capsule_text }] : []
       recentMilestones       = eventsRes.data || []
       activeDashboardMission = dashboardRes.data
     } catch (e) {

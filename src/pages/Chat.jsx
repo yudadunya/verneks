@@ -64,10 +64,11 @@ export default function Chat({ user, chatMessages = [], setChatMessages, subscri
   const [cvText, setCvText]             = useState('')
   const [interview, setInterview]       = useState({ position: '', level: '', messages: [], qNum: 0 })
   
-  const coachKey = user?.id ? `lc_coach_${user.id}` : null
-  const greetingKey     = user?.id ? `lc_greeted_${user.id}` : null
-  const greetingFiredRef = useRef(false) 
-  
+  const coachKey         = user?.id ? `lc_coach_${user.id}` : null
+  const greetingFiredRef = useRef(false)
+  const saveTimerRef     = useRef(null)
+
+  // ── coachHistory: init dari localStorage (buffer cepat) ──────────────────
   const [coachHistory, setCoachHistoryRaw] = useState(() => {
     if (!coachKey) return []
     try {
@@ -80,15 +81,30 @@ export default function Chat({ user, chatMessages = [], setChatMessages, subscri
     return []
   })
 
-  const setCoachHistory = (updater) => {
+  const [historyLoaded, setHistoryLoaded] = useState(false)
+
+  // ── Save helper ───────────────────────────────────────────────────────────
+  const saveHistoryToSupabase = useCallback((msgs, useBeacon = false) => {
+    if (!user?.id || !msgs?.length) return
+    const payload = JSON.stringify({ userId: user.id, messages: msgs.slice(-50) })
+    if (useBeacon && navigator.sendBeacon) {
+      navigator.sendBeacon('/api/chat-history', new Blob([payload], { type: 'application/json' }))
+    } else {
+      fetch('/api/chat-history', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: payload, keepalive: true }).catch(() => {})
+    }
+  }, [user?.id])
+
+  const setCoachHistory = useCallback((updater) => {
     setCoachHistoryRaw(prev => {
       const next = typeof updater === 'function' ? updater(prev) : updater
       if (coachKey) {
-        try { localStorage.setItem(coachKey, JSON.stringify(next.slice(-30))) } catch {}
+        try { localStorage.setItem(coachKey, JSON.stringify(next.slice(-50))) } catch {}
       }
+      if (saveTimerRef.current) clearTimeout(saveTimerRef.current)
+      saveTimerRef.current = setTimeout(() => saveHistoryToSupabase(next), 2000)
       return next
     })
-  }
+  }, [coachKey, saveHistoryToSupabase])
   
   const [showOnboarding, setShowOnboarding] = useState(false)
   const [shareCard, setShareCard] = useState(null)
@@ -101,34 +117,80 @@ export default function Chat({ user, chatMessages = [], setChatMessages, subscri
   // ── Deep Memory: flag guard supaya tidak double-fire ─────────────────────
   const memoryFiredRef = useRef(false)
 
-  // Kirim memory update ke server pakai sendBeacon (reliable saat tab ditutup)
-  // atau fetch biasa (saat logout manual)
-  const sendMemoryUpdate = useCallback((triggerType = 'visibility') => {
+  // ── Load history dari Supabase saat mount ────────────────────────────────
+  useEffect(() => {
+    if (!user?.id || historyLoaded) return
+    setHistoryLoaded(true)
+
+    fetch(`/api/chat-history?userId=${user.id}&daysBack=1`)
+      .then(r => r.json())
+      .then(data => {
+        if (data.error) return
+
+        if (Array.isArray(data.today) && data.today.length > 0) {
+          // Ada history hari ini → restore + skip greeting
+          setCoachHistoryRaw(data.today)
+          if (coachKey) {
+            try { localStorage.setItem(coachKey, JSON.stringify(data.today.slice(-50))) } catch {}
+          }
+          const displayMsgs = data.today
+            .filter(m => m.role !== 'system')
+            .map(m => ({
+              id:   m.id || (Date.now() + Math.random()),
+              role: m.role === 'assistant' ? 'bot' : m.role,
+              text: m.text || m.content || '',
+            }))
+          if (displayMsgs.length > 0) {
+            setMessages(displayMsgs)
+            if (storageKey) {
+              try { localStorage.setItem(storageKey, JSON.stringify(displayMsgs)) } catch {}
+            }
+          }
+          // ✓ Ada history → jangan greeting
+          greetingFiredRef.current = true
+        }
+        // today kosong → biarkan greeting useEffect jalan normal
+      })
+      .catch(() => {})
+  }, [user?.id])
+
+  // ── End-session trigger: kirim ke /api/end-session ───────────────────────
+  const memoryFiredRef = useRef(false)
+
+  const sendEndSession = useCallback((triggerType = 'visibility') => {
     if (!user?.id) return
     if (memoryFiredRef.current) return
     if (coachHistory.filter(m => m.role === 'user').length < 3) return
-
     memoryFiredRef.current = true
 
     const payload = JSON.stringify({
       userId:   user.id,
-      messages: coachHistory.slice(-20),
+      messages: coachHistory.slice(-50),
       trigger:  triggerType,
     })
 
-    // sendBeacon: dijamin terkirim walau tab ditutup (tapi tidak bisa await)
     if (triggerType !== 'logout' && navigator.sendBeacon) {
-      navigator.sendBeacon('/api/update-memory', new Blob([payload], { type: 'application/json' }))
+      navigator.sendBeacon('/api/end-session', new Blob([payload], { type: 'application/json' }))
     } else {
-      // Logout manual: pakai fetch biasa karena kita masih punya waktu
-      fetch('/api/update-memory', {
-        method:  'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body:    payload,
-        keepalive: true,
-      }).catch(() => {})
+      fetch('/api/end-session', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: payload, keepalive: true }).catch(() => {})
     }
   }, [user?.id, coachHistory])
+
+  // Reset flag tiap user baru
+  useEffect(() => { memoryFiredRef.current = false }, [user?.id])
+
+  useEffect(() => {
+    const onHide      = () => { saveHistoryToSupabase(coachHistory, true); sendEndSession('visibility') }
+    const onUnload    = () => { saveHistoryToSupabase(coachHistory, true); sendEndSession('beforeunload') }
+    const onLogout    = () => { saveHistoryToSupabase(coachHistory, false); sendEndSession('logout') }
+    document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'hidden') onHide() })
+    window.addEventListener('beforeunload', onUnload)
+    window.addEventListener('diah-anna-logout-memory', onLogout)
+    return () => {
+      window.removeEventListener('beforeunload', onUnload)
+      window.removeEventListener('diah-anna-logout-memory', onLogout)
+    }
+  }, [coachHistory, sendEndSession, saveHistoryToSupabase])
 
   const pushBot = useCallback((text, quickReplies = null) => {
     setMessages(prev => [...prev, { id: Date.now() + Math.random(), role: 'bot', text, quickReplies }])
@@ -195,32 +257,27 @@ export default function Chat({ user, chatMessages = [], setChatMessages, subscri
     }
   }
 
-  // 3. Proactive V2 Greeting — single source of truth: server-side init-chat.
-  // Sebelumnya logic next-focus & teks greeting ditulis ulang di client,
-  // sekarang sepenuhnya delegasi ke api/career-coach.js (action: init-chat)
-  // supaya tidak ada drift antara prioritas next-focus client vs server.
+  // 3. Proactive greeting — 1x per hari
+  // Trigger hanya kalau historyLoaded=true DAN greetingFiredRef masih false
+  // greetingFiredRef di-set true oleh load useEffect kalau ada history hari ini
   useEffect(() => {
-    if (!user || subLoading || greetingFiredRef.current || (greetingKey && sessionStorage.getItem(greetingKey))) return
+    if (!user || subLoading || !historyLoaded || greetingFiredRef.current) return
 
     greetingFiredRef.current = true
-    if (greetingKey) sessionStorage.setItem(greetingKey, '1')
-
     const firstName = (user.user_metadata?.name || user.user_metadata?.full_name || '').split(' ')[0]
 
     apiFetch('/api/career-coach', { action: 'init-chat', userId: user.id })
       .then(data => {
         pushBot(data.openingMessage)
-        if (coachHistory.length === 0) {
-          setCoachHistory([
-            { role: 'user', content: '[SYSTEM ENGINE V2 CONTEXT INJECTION] Sesi baru dimulai, greeting proaktif sudah dikirim oleh server.' },
-            { role: 'assistant', content: data.openingMessage }
-          ])
-        }
+        setCoachHistory([
+          { role: 'user',      content: '[SYSTEM] Sesi baru dimulai.', text: '[SYSTEM] Sesi baru dimulai.' },
+          { role: 'assistant', content: data.openingMessage,           text: data.openingMessage },
+        ])
       })
       .catch(() => {
-        pushBot(`Halo ${firstName || 'Sobat'} 👋\n\nMari kita kunci kembali fokus pergerakan karirmu hari ini. Sampaikan kendala eksekusi yang kamu hadapi di lapangan agar bisa langsung kita bedah taktiknya.`)
+        pushBot(`Halo ${firstName || 'Sobat'} 👋\n\nMari kita lanjut pergerakan karirmu hari ini. Ada yang ingin kamu bahas?`)
       })
-  }, [user?.id, plan, subLoading])
+  }, [user?.id, subLoading, historyLoaded])
 
   useEffect(() => {
     if (!storageKey || messages.length === 0) return
@@ -278,15 +335,18 @@ export default function Chat({ user, chatMessages = [], setChatMessages, subscri
   const handleSend = () => {
     const msg = input.trim()
     if (!msg || loading) return
-    setInput(''); pushUser(msg); 
-    const newHistory = [...coachHistory, { role: 'user', content: msg }]
+    setInput(''); pushUser(msg)
+    const msgId   = Date.now()
+    const newHistory = [...coachHistory, { id: msgId, role: 'user', content: msg, text: msg }]
     setCoachHistory(newHistory)
     setLoading(true)
-    
+
     apiFetch('/api/career-coach', { messages: newHistory, userId: user?.id })
       .then(data => {
+        const replyId = Date.now() + 1
         pushBot(data.reply)
-        setCoachHistory([...newHistory, { role: 'assistant', content: data.reply }])
+        const fullHistory = [...newHistory, { id: replyId, role: 'assistant', content: data.reply, text: data.reply }]
+        setCoachHistory(fullHistory)
         apiFetch('/api/extract-profile', { userId: user?.id, messages: newHistory }).catch(() => {})
       })
       .catch(() => pushBot('Terjadi kepadatan jalur komunikasi. Sampaikan ulang poin terakhirmu.'))
@@ -310,6 +370,7 @@ export default function Chat({ user, chatMessages = [], setChatMessages, subscri
       </div>
 
       <div style={{ flex: 1, overflowY: 'auto', padding: '10px 10px 4px', display: 'flex', flexDirection: 'column', gap: '2px' }}>
+
         {messages.map(msg => {
           const isUser = msg.role === 'user'
           return (

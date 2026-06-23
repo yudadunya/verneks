@@ -80,6 +80,14 @@
     {
       "path": "/api/cron/weekly-review",
       "schedule": "0 1 * * 1"
+    },
+    {
+      "path": "/api/cron/compress-memory",
+      "schedule": "0 2 * * 1"
+    },
+    {
+      "path": "/api/cron/cleanup-chat-history",
+      "schedule": "0 3 * * *"
     }
   ]
 }
