@@ -37,7 +37,7 @@ ${convoText}
 
 ---
 
-KEMBALIKAN JSON VALID BERIKUT (tanpa backtick, tanpa teks lain):
+KEMBALIKAN JSON VALID BERIKUT (tanpa backtick markdown, tanpa teks pengantar/penutup, tanpa teks lain apa pun):
 
 {
   "profile_preview": {
@@ -66,7 +66,7 @@ KEMBALIKAN JSON VALID BERIKUT (tanpa backtick, tanpa teks lain):
     "root_cause": "1 kalimat root cause terdalam — seringkali bukan soal skill teknis",
     "breakthrough_key": "1 hal yang kalau diselesaikan, akan membuka jalan paling cepat ke target mereka"
   },
-  "wow_insight": "1 observasi tajam dan mengejutkan tentang user berdasarkan percakapan — sesuatu yang mereka mungkin belum sadari sendiri. Spesifik, personal, bukan klise. Contoh: 'Yang menarik dari situasi kamu adalah hambatan terbesarmu bukan soal skill — tapi soal [sesuatu spesifik]. Dan justru itu yang bisa jadi keunggulan tersembunyimu.'",
+  "wow_insight": "1 observasi tajam dan mengejutkan tentang user berdasarkan percakapan — sesuatu yang mereka mungkin belum sadari sendiri. Spesifik, personal, bukan klise.",
   "mentor_message": "Pesan personal dari Diah Anna — 3-4 kalimat. HARUS: 1) Sebut nama jika ada, 2) Akui 1 kekuatan spesifik yang terdeteksi, 3) Sebutkan hambatan utama dengan cara yang empati bukan menghakimi, 4) Beri hint tentang roadmap yang sudah disiapkan. Bahasa Indonesia natural seperti teman senior, BUKAN seperti laporan sistem.",
   "gps_steps": [
     { "title": "Career Assessment", "done": true, "description": "Kamu sudah tahu siapa dirimu dan mau ke mana" },
@@ -87,42 +87,34 @@ KEMBALIKAN JSON VALID BERIKUT (tanpa backtick, tanpa teks lain):
 
 ---
 
-ATURAN ANALISIS:
+ATURAN ANALISIS WAJIB:
+1. JANGAN PERNAH menyertakan karakter newline asli (pindah baris dengan menekan tombol Enter) di dalam nilai teks JSON. Jika ingin membuat baris baru pada 'wow_insight' atau 'mentor_message', gunakan string literal \\n secara eksplisit.
+2. genome_scores (0-100, berdasarkan PERCAKAPAN bukan asumsi):
+   - analytical: suka data, logika, riset, problem solving sistematis
+   - leadership: pernah memimpin, inisiatif tinggi, suka pengaruhi orang
+   - builder: eksekutor, suka bikin sesuatu, teknis, hands-on
+   - creator: kreatif, inovatif, ekspresif, suka ide baru
+   - communication: artikulatif, presentasi, networking, persuasif
+   - risk_taking: berani ambil risiko, entrepreneurial, nyaman dengan uncertainty
 
-genome_scores (0-100, berdasarkan PERCAKAPAN bukan asumsi):
-- analytical: suka data, logika, riset, problem solving sistematis
-- leadership: pernah memimpin, inisiatif tinggi, suka pengaruhi orang
-- builder: eksekutor, suka bikin sesuatu, teknis, hands-on
-- creator: kreatif, inovatif, ekspresif, suka ide baru
-- communication: artikulatif, presentasi, networking, persuasif
-- risk_taking: berani ambil risiko, entrepreneurial, nyaman dengan uncertainty
-
-career_readiness (0-100):
-- Bukan hanya soal skill — tapi kesiapan TOTAL: skill + mindset + clarity + resources
-- Kalau baru mulai: 15-35%
-- Kalau sudah ada pengalaman relevan: 35-60%
-- Kalau hampir siap: 60-85%
-- Jangan terlalu tinggi atau terlalu rendah — harus terasa earned
-
-eta_months: estimasi bulan untuk mencapai target dengan konsistensi normal. Realistis, bukan optimistis.
-
-career_stage: Career Explorer / Career Builder / Career Professional / Career Expert / Career Leader
-
-wow_insight: INI YANG PALING PENTING. Harus membuat user berpikir "bagaimana dia bisa tahu ini?" Berdasarkan pola yang muncul dari percakapan — bukan dari data yang eksplisit disebutkan.
-
-mentor_message: Tulis seperti Diah Anna yang genuinely care. Bukan seperti sistem yang generate laporan.`
+3. career_readiness (0-100): Kesiapan TOTAL (skill + mindset + clarity + resources). Baru mulai: 15-35%, Ada pengalaman: 35-60%, Hampir siap: 60-85%. Realistis, bukan optimistis.
+4. career_stage: Career Explorer / Career Builder / Career Professional / Career Expert / Career Leader
+5. wow_insight: Harus membuat user berpikir 'bagaimana dia bisa tahu ini?' Berdasarkan pola laten yang muncul dari percakapan.
+6. mentor_message: Tulis seperti Diah Anna yang genuinely care, gaya bahasa santai/hangat layaknya pesan WhatsApp dari senior.`
 
   try {
     const raw = await generateText({
-      system: 'Kamu adalah Career Genome Analyzer Verneks. Kembalikan HANYA JSON valid, tanpa teks lain, tanpa backtick markdown.',
+      // Diperketat dengan aturan larangan keras markdown block agar aman bagi DeepSeek / Claude
+      system: 'Kamu adalah mesin JSON murni. Kamu HANYA boleh mengeluarkan output berupa string JSON valid yang diawali dengan { dan diakhiri dengan }. Dilarang keras menyertakan backtick markdown (```json), teks penjelasan, atau karakter raw newline di luar format string JSON.',
       prompt,
-      maxTokens: 2000,
+      maxTokens: 2200, // Dinaikkan sedikit untuk mencegah truncation pada pesan mentor yang panjang
       tier: 'smart',
-      plan: 'premium', // Analisis ini terlalu penting untuk model yang lebih lemah
+      plan: 'premium', 
     })
 
     let clean = raw.trim()
-      .replace(/^```json\s*/i, '').replace(/^```\s*/i, '')
+      .replace(/^
+```json\s*/i, '').replace(/^```\s*/i, '')
       .replace(/\s*```$/, '').trim()
 
     const firstBrace = clean.indexOf('{')
@@ -135,7 +127,7 @@ mentor_message: Tulis seperti Diah Anna yang genuinely care. Bukan seperti siste
     try {
       result = JSON.parse(clean)
     } catch (parseErr) {
-      console.warn('[compute-genome] JSON truncated, attempting repair...')
+      console.warn('[compute-genome] JSON truncated atau rusak, menjalankan algoritma perbaikan...')
       let repaired = clean
       let depth = 0, inStr = false, escape = false
       for (const ch of repaired) {
@@ -160,9 +152,9 @@ mentor_message: Tulis seperti Diah Anna yang genuinely care. Bukan seperti siste
       for (let i = 0; i < opens;    i++) repaired += '}'
       try {
         result = JSON.parse(repaired)
-        console.log('[compute-genome] JSON repair berhasil')
+        console.log('[compute-genome] JSON repair berhasil dieksekusi')
       } catch {
-        throw new Error('JSON tidak bisa direpair: ' + parseErr.message)
+        throw new Error('Struktur JSON rusak parah dan tidak bisa direpair otomatis: ' + parseErr.message)
       }
     }
 
