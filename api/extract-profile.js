@@ -1,4 +1,4 @@
-// career-memory-engine-v3.js
+// api/extract-profile.js — Career Memory Engine V3
 import { generateText } from './lib/ai.js'
 import { createClient } from '@supabase/supabase-js'
 
@@ -51,7 +51,7 @@ export default async function handler(req, res) {
 
 Baca percakapan antara user dan Diah Anna (career coach AI), lalu ekstrak dan analisis semua informasi karir user.
 
-Kembalikan HANYA JSON VALID, tidak ada teks lain, tidak ada backtick, tidak ada preamble.
+Kembalikan HANYA JSON VALID, tidak ada teks pengantar/penutup, tidak ada backtick markdown (\`\`\`json), tidak ada preamble.
 
 {
   "profile": {
@@ -109,36 +109,30 @@ Kembalikan HANYA JSON VALID, tidak ada teks lain, tidak ada backtick, tidak ada 
   }
 }
 
-ATURAN genome_scores (nilai 0-100, berdasarkan sinyal percakapan):
-- analytical: suka data, logika, riset, problem solving
-- leadership: cerita memimpin, inisiatif, punya tim, visioner
-- builder: eksekutor, suka bikin sesuatu, teknis, detail
-- creator: kreatif, inovatif, suka ide baru, estetika
-- communication: artikulatif, suka presentasi, jaringan, persuasi
-- risk_taking: berani ambil keputusan besar, entrepreneurial, toleran ketidakpastian
-Kalau belum cukup sinyal untuk dimensi tertentu, nilai 0.
-
-ATURAN career_stage (pilih SATU):
-- Career Explorer: baru mulai, masih mencari arah, fresh grad atau < 2 tahun
-- Career Builder: sudah punya arah, sedang membangun skill/pengalaman, 2-5 tahun
-- Career Professional: sudah establish, sedang scale up karir, 5-10 tahun
-- Career Expert: spesialis, diakui di bidangnya, > 10 tahun atau sudah senior
-- Career Leader: memimpin tim/organisasi, punya influence besar
-
-ATURAN progress_percent: estimasi seberapa jauh user dari target karir mereka (0-100).
+ATURAN STRICT FORMATTING & ANALISIS:
+1. JANGAN PERNAH membuat karakter raw newline (pindah baris dengan tombol Enter) di dalam isi value string teks JSON, khususnya pada bagian 'summary'. Gunakan literal \\n jika ingin memisahkan paragraf.
+2. genome_scores (nilai 0-100, berdasarkan sinyal percakapan):
+   - analytical: data, logika, riset, problem solving
+   - leadership: cerita memimpin, inisiatif, punya tim, visioner
+   - builder: eksekutor, suka bikin sesuatu, teknis, detail
+   - creator: kreatif, inovatif, suka ide baru, estetika
+   - communication: artikulatif, suka presentasi, jaringan, persuasi
+   - risk_taking: berani ambil keputusan besar, entrepreneurial, toleran ketidakpastian
+3. career_stage (pilih SATU): Career Explorer / Career Builder / Career Professional / Career Expert / Career Leader
+4. progress_percent: estimasi seberapa jauh user dari target karir mereka (0-100).
 ${existingContext}`
 
     const raw = await generateText({
-      system: systemPrompt,
+      system: 'Kamu adalah mesin database JSON murni. Output-mu HANYA berisi string JSON valid tanpa embel-embel markdown block, teks pendahuluan, atau teks penutup apa pun.',
       prompt: `Percakapan:\n${convoText}`,
-      maxTokens: 1500,
+      maxTokens: 1800, // Dinaikkan untuk memberi ruang aman pada text summary multi-paragraf
       tier: 'smart',
-      plan: 'premium', // Memory engine selalu pakai model terbaik — data terlalu penting
+      plan: 'premium',
     })
 
     let memory
     try {
-      const clean = raw.trim().replace(/```json/g, '').replace(/```/g, '').trim()
+      const clean = raw.trim().replace(/^```json\s*/i, '').replace(/^```\s*/i, '').replace(/\s*```$/, '').trim()
       memory = JSON.parse(clean)
     } catch (e) {
       console.error('[memory-engine-v3] parse failed:', raw?.slice(0, 300))
@@ -148,36 +142,36 @@ ${existingContext}`
     const p = memory.profile || {}
 
     // ── Merge dengan data lama — jangan overwrite dengan null ──
-    const mergeVal = (newVal, oldVal) => (newVal !== null && newVal !== undefined) ? newVal : (oldVal ?? null)
+    const mergeVal = (newVal, oldVal) => (newVal !== null && newVal !== undefined && newVal !== '') ? newVal : (oldVal ?? null)
 
     // ── 1. Upsert user_career_profiles ──
     await supabase.from('user_career_profiles').upsert({
-      user_id:           userId,
-      nama:              mergeVal(p.nama, existingProfile?.nama),
-      usia:              mergeVal(p.usia, existingProfile?.usia),
-      domisili:          mergeVal(p.domisili, existingProfile?.domisili),
-      pendidikan:        mergeVal(p.pendidikan, existingProfile?.pendidikan),
-      jurusan:           mergeVal(p.jurusan, existingProfile?.jurusan),
-      posisi_saat_ini:   mergeVal(p.posisi_saat_ini, existingProfile?.posisi_saat_ini),
-      perusahaan:        mergeVal(p.perusahaan, existingProfile?.perusahaan),
-      industri:          mergeVal(p.industri, existingProfile?.industri),
-      lama_pengalaman:   mergeVal(p.lama_pengalaman, existingProfile?.lama_pengalaman),
-      skill_utama:       [...new Set([...(existingProfile?.skill_utama || []), ...(p.skill_utama || [])])].slice(0, 15),
-      gaji_sekarang:     mergeVal(p.gaji_sekarang, existingProfile?.gaji_sekarang),
-      target_posisi:     mergeVal(p.target_posisi, existingProfile?.target_posisi),
-      target_industri:   mergeVal(p.target_industri, existingProfile?.target_industri),
-      target_gaji:       mergeVal(p.target_gaji, existingProfile?.target_gaji),
-      perusahaan_impian: mergeVal(p.perusahaan_impian, existingProfile?.perusahaan_impian),
-      timeline_karir:    mergeVal(p.timeline_karir, existingProfile?.timeline_karir),
-      hambatan:          mergeVal(p.hambatan || p.tantangan_karir, existingProfile?.hambatan),
-      motivasi:          mergeVal(p.motivasi, existingProfile?.motivasi),
-      progress_lamaran:  mergeVal(p.progress_lamaran, existingProfile?.progress_lamaran),
-      gaya_kerja:        mergeVal(p.gaya_kerja, existingProfile?.gaya_kerja),
-      emotional_state:   mergeVal(p.emotional_state, existingProfile?.emotional_state),
-      summary:           p.summary || existingProfile?.summary,
-      career_dna:        memory.career_dna || existingProfile?.career_dna,
-      topik_dibahas:     [...new Set([...(existingProfile?.topik_dibahas || []), ...(p.topik_dibahas || [])])].slice(0, 30),
-      sesi_count: (existingProfile?.sesi_count || 0) + 1,
+      user_id:              userId,
+      nama:                 mergeVal(p.nama, existingProfile?.nama),
+      usia:                 mergeVal(p.usia, existingProfile?.usia),
+      domisili:             mergeVal(p.domisili, existingProfile?.domisili),
+      pendidikan:           mergeVal(p.pendidikan, existingProfile?.pendidikan),
+      jurusan:              mergeVal(p.jurusan, existingProfile?.jurusan),
+      posisi_saat_ini:      mergeVal(p.posisi_saat_ini, existingProfile?.posisi_saat_ini),
+      perusahaan:           mergeVal(p.perusahaan, existingProfile?.perusahaan),
+      industri:             mergeVal(p.industri, existingProfile?.industri),
+      lama_pengalaman:      mergeVal(p.lama_pengalaman, existingProfile?.lama_pengalaman),
+      skill_utama:          [...new Set([...(existingProfile?.skill_utama || []), ...(p.skill_utama || [])])].slice(0, 15),
+      gaji_sekarang:        mergeVal(p.gaji_sekarang, existingProfile?.gaji_sekarang),
+      target_posisi:        mergeVal(p.target_posisi, existingProfile?.target_posisi),
+      target_industri:      mergeVal(p.target_industri, existingProfile?.target_industri),
+      target_gaji:          mergeVal(p.target_gaji, existingProfile?.target_gaji),
+      perusahaan_impian:    mergeVal(p.perusahaan_impian, existingProfile?.perusahaan_impian),
+      timeline_karir:       mergeVal(p.timeline_karir, existingProfile?.timeline_karir),
+      hambatan:             mergeVal(p.hambatan || p.tantangan_karir, existingProfile?.hambatan),
+      motivasi:             mergeVal(p.motivasi, existingProfile?.motivasi),
+      progress_lamaran:     mergeVal(p.progress_lamaran, existingProfile?.progress_lamaran),
+      gaya_kerja:           mergeVal(p.gaya_kerja, existingProfile?.gaya_kerja),
+      emotional_state:      mergeVal(p.emotional_state, existingProfile?.emotional_state),
+      summary:              p.summary || existingProfile?.summary,
+      career_dna:           memory.career_dna || existingProfile?.career_dna,
+      topik_dibahas:        [...new Set([...(existingProfile?.topik_dibahas || []), ...(p.topik_dibahas || [])])].slice(0, 30),
+      sesi_count:           (existingProfile?.sesi_count || 0) + 1,
       profile_completeness: (() => {
         const fields = [p.nama, p.posisi_saat_ini, p.target_posisi, p.industri,
           p.lama_pengalaman, p.target_gaji, p.motivasi, p.tantangan_karir,
@@ -185,11 +179,11 @@ ${existingContext}`
         const filled = fields.filter(Boolean).length
         return Math.round((filled / fields.length) * 100)
       })(),
-      genome_updated_at: new Date().toISOString(),
-      last_updated:      new Date().toISOString(),
+      genome_updated_at:    new Date().toISOString(),
+      last_updated:         new Date().toISOString(),
     }, { onConflict: 'user_id' })
 
-    // ── 2. Upsert user_genome_scores — merge, ambil nilai tertinggi ──
+    // ── 2. Upsert user_genome_scores ──
     const gs = memory.genome_scores || {}
     const { data: existingGenome } = await supabase
       .from('user_genome_scores').select('*').eq('user_id', userId).maybeSingle()
@@ -197,8 +191,6 @@ ${existingContext}`
     const mergeScore = (newVal, oldVal) => {
       const n = newVal || 0
       const o = oldVal || 0
-      // Kalau nilai baru 0 (tidak cukup sinyal), pertahankan nilai lama
-      // Kalau nilai baru > 0, ambil rata-rata berbobot (70% baru, 30% lama)
       if (n === 0) return o
       if (o === 0) return n
       return Math.round(n * 0.7 + o * 0.3)
@@ -212,7 +204,8 @@ ${existingContext}`
       creator:       mergeScore(gs.creator,       existingGenome?.creator),
       communication: mergeScore(gs.communication, existingGenome?.communication),
       risk_taking:   mergeScore(gs.risk_taking,   existingGenome?.risk_taking),
-      top_strength:  memory.profile?.career_dna ? Object.entries(gs).sort((a,b) => b[1]-a[1])[0]?.[0] || existingGenome?.top_strength : existingGenome?.top_strength,
+      // PERBAIKAN BUG: Akses ke root memory.career_dna, bukan memory.profile.career_dna
+      top_strength:  memory.career_dna ? Object.entries(gs).sort((a,b) => b[1]-a[1])[0]?.[0] || existingGenome?.top_strength : existingGenome?.top_strength,
       updated_at:    new Date().toISOString(),
     }, { onConflict: 'user_id' })
 
@@ -233,16 +226,18 @@ ${existingContext}`
       updated_at:      new Date().toISOString(),
     }, { onConflict: 'user_id' })
 
-    // ── 4. Insert next action (hanya kalau ada) ──
+    // ── 4. Upsert Next Action (Mencegah duplikasi data menumpuk) ──
     if (memory.next_action?.title) {
-      await supabase.from('user_next_actions').insert({
+      await supabase.from('user_next_actions').upsert({
         user_id:        userId,
         title:          memory.next_action.title,
         description:    memory.next_action.description,
         estimated_days: memory.next_action.estimated_days || 7,
         is_done:        false,
-        created_at:     new Date().toISOString(),
-      })
+        updated_at:     new Date().toISOString(),
+      }, { onConflict: 'user_id, is_done' }) 
+      // Catatan: Pastikan Anda memiliki constraint unik gabungan (user_id, is_done) di Supabase Anda, 
+      // atau gunakan tabel penampung aksi aktif tunggal.
     }
 
     // ── 5. Log career event ──
