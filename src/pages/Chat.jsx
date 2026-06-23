@@ -114,9 +114,6 @@ export default function Chat({ user, chatMessages = [], setChatMessages, subscri
   const fileRef   = useRef()
   const containerRef = useRef()
 
-  // ── Deep Memory: flag guard supaya tidak double-fire ─────────────────────
-  const memoryFiredRef = useRef(false)
-
   // ── Load history dari Supabase saat mount ────────────────────────────────
   useEffect(() => {
     if (!user?.id || historyLoaded) return
