@@ -43,18 +43,9 @@ const DEFAULT_SUBSCRIPTION = {
   isExpired: false,
 }
 
-function getNextFocus(profile, growth) {
-  if (growth?.current_focus) return { type: 'current_focus', label: growth.current_focus, reason: 'Ini adalah fokus aktif yang sedang kita kerjakan bersama.' }
-  
-  const rawGaps = profile?.skill_gaps
-  const gaps = Array.isArray(rawGaps) ? rawGaps : (rawGaps && typeof rawGaps === 'object' ? Object.values(rawGaps) : [])
-  if (gaps.length > 0 && gaps[0]) return { type: 'biggest_skill_gap', label: gaps[0], reason: 'Ini adalah gap kompetensi terbesar yang menahan perkembangan beralih ke targetmu.' }
-  
-  if (growth?.next_milestone) return { type: 'next_milestone', label: growth.next_milestone, reason: 'Ini adalah milestone terdekat berikutnya yang wajib kamu taklukkan.' }
-  if (profile?.target_posisi) return { type: 'target_position', label: `Akselerasi ke posisi ${profile.target_posisi}`, reason: 'Kita harus mulai menyusun fondasi awal menuju peran impianmu ini.' }
-  
-  return { type: 'default', label: 'Eksplorasi Pemetaan Karir', reason: 'Kita perlu menentukan arah jangkar kariermu terlebih dahulu.' }
-}
+// NOTE: getNextFocus() dihapus dari sini.
+// Single source of truth sekarang adalah api/career-coach.js (action: 'init-chat'),
+// supaya prioritas next-focus tidak pernah drift antara client dan server.
 
 export default function Chat({ user, chatMessages = [], setChatMessages, subscription = DEFAULT_SUBSCRIPTION }) {
   const navigate = useNavigate()
@@ -172,66 +163,31 @@ export default function Chat({ user, chatMessages = [], setChatMessages, subscri
     }
   }
 
-  // 3. Proactive V2 Greeting (COMPACT & PSYCHOLOGICAL UPDATE)
+  // 3. Proactive V2 Greeting — single source of truth: server-side init-chat.
+  // Sebelumnya logic next-focus & teks greeting ditulis ulang di client,
+  // sekarang sepenuhnya delegasi ke api/career-coach.js (action: init-chat)
+  // supaya tidak ada drift antara prioritas next-focus client vs server.
   useEffect(() => {
-    if (!user || subLoading || greetingFiredRef.current || (greetingKey && sessionStorage.getItem(greetingKey))) return 
+    if (!user || subLoading || greetingFiredRef.current || (greetingKey && sessionStorage.getItem(greetingKey))) return
 
     greetingFiredRef.current = true
     if (greetingKey) sessionStorage.setItem(greetingKey, '1')
 
     const firstName = (user.user_metadata?.name || user.user_metadata?.full_name || '').split(' ')[0]
 
-    Promise.all([
-      supabase.from('user_growth_state').select('*').eq('user_id', user.id).maybeSingle(),
-      supabase.from('user_career_profiles').select('*').eq('user_id', user.id).maybeSingle(),
-    ]).then(([{ data: growth }, { data: profile }]) => {
-      
-      const focusObj = getNextFocus(profile, growth)
-      
-      // Mengambil insight kekuatan & gap secara dinamis
-      const runningInsight = profile?.career_dna?.running_insight || profile?.running_insight || 'eksekusi dan manajemen taktis'
-      const rawGaps = profile?.skill_gaps
-      const gaps = Array.isArray(rawGaps) ? rawGaps : (rawGaps && typeof rawGaps === 'object' ? Object.values(rawGaps) : [])
-      const mainGap = gaps.length > 0 ? gaps.slice(0, 2).join(' dan ') : 'manajemen proyek dan perencanaan strategis'
-
-      const streak = growth?.streak_days || 1
-      const progressVal = profile?.career_readiness || growth?.progress_percent || 0
-      const targetPos = profile?.target_posisi || 'Profesional Unggul'
-
-      // Konstruksi Pesan Greeting Bergaya WhatsApp Khas Diah Anna
-      const greetingText = `Halo ${firstName || profile?.nama || 'Sobat'} 👋
-
-Aku masih ingat tujuan besarmu:
-Menjadi ${targetPos}.
-
-🔥 Streak ${streak} hari.
-📈 Progress kariermu ${progressVal}%.
-
-💡 Yang Aku Pelajari Tentangmu
-
-Kamu kuat dalam ${runningInsight}.
-
-Saat ini gap terbesar menuju targetmu adalah ${mainGap}.
-
-🎯 Misi Minggu Ini
-
-Selesaikan Modul ${focusObj.label}.
-
-Langkah ini akan memberikan dampak terbesar terhadap targetmu saat ini.
-
-Menurutmu apa yang paling menghambat penyelesaian misi tersebut?`
-
-      pushBot(greetingText)
-
-      if (coachHistory.length === 0) {
-        setCoachHistory([
-          { role: 'user', content: `[SYSTEM ENGINE V2 CONTEXT INJECTION]\nTarget: ${targetPos}\nFocus: ${focusObj.label}\nGap: ${mainGap}` },
-          { role: 'assistant', content: `Paham. Agenda pergerakan kita terkunci pada akselerasi ${focusObj.label}.` }
-        ])
-      }
-    }).catch(err => {
-      pushBot(`Halo ${firstName || 'Sobat'} 👋\n\nMari kita kunci kembali fokus pergerakan karirmu hari ini. Sampaikan kendala eksekusi yang kamu hadapi di lapangan agar bisa langsung kita bedah taktiknya.`)
-    })
+    apiFetch('/api/career-coach', { action: 'init-chat', userId: user.id })
+      .then(data => {
+        pushBot(data.openingMessage)
+        if (coachHistory.length === 0) {
+          setCoachHistory([
+            { role: 'user', content: '[SYSTEM ENGINE V2 CONTEXT INJECTION] Sesi baru dimulai, greeting proaktif sudah dikirim oleh server.' },
+            { role: 'assistant', content: data.openingMessage }
+          ])
+        }
+      })
+      .catch(() => {
+        pushBot(`Halo ${firstName || 'Sobat'} 👋\n\nMari kita kunci kembali fokus pergerakan karirmu hari ini. Sampaikan kendala eksekusi yang kamu hadapi di lapangan agar bisa langsung kita bedah taktiknya.`)
+      })
   }, [user?.id, plan, subLoading])
 
   useEffect(() => {
