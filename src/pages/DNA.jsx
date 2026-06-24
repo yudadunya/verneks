@@ -516,6 +516,38 @@ export default function DNA({ user, loading = false, subscription = DEFAULT_SUBS
         </>)}
       </div>
 
+      {/* ── CTA Upgrade (free only) — high-intent moment setelah lihat DNA ── */}
+      {plan !== 'premium' && (
+        <div
+          onClick={() => window.dispatchEvent(new CustomEvent('show-upgrade', { detail: {} }))}
+          style={{
+            margin: '0 16px 16px', borderRadius: 16, padding: '16px',
+            background: 'linear-gradient(135deg,rgba(123,107,255,0.12),rgba(37,211,102,0.08))',
+            border: '1px solid rgba(123,107,255,0.25)',
+            cursor: 'pointer',
+          }}
+        >
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 10 }}>
+            <img src="/diah-anna.png" alt="Diah Anna" style={{ width: 32, height: 32, borderRadius: '50%', objectFit: 'cover', flexShrink: 0 }} />
+            <div>
+              <div style={{ color: '#fff', fontWeight: 700, fontSize: '0.82rem' }}>Diah Anna bisa coaching kamu lebih dalam</div>
+              <div style={{ color: 'rgba(255,255,255,0.5)', fontSize: '0.72rem' }}>Berdasarkan DNA Karir yang baru kamu lihat</div>
+            </div>
+          </div>
+          <div style={{ color: 'rgba(255,255,255,0.65)', fontSize: '0.78rem', lineHeight: 1.6, marginBottom: 12 }}>
+            Upgrade Premium untuk coaching personal tanpa batas, roadmap 6 bulan spesifik ke target karirmu, dan Diah Anna yang makin mengenalmu setiap sesi.
+          </div>
+          <div style={{
+            width: '100%', padding: '11px',
+            background: 'linear-gradient(135deg,#7B6BFF,#25D366)',
+            color: '#fff', fontWeight: 700, fontSize: '0.85rem',
+            borderRadius: 12, textAlign: 'center',
+          }}>
+            Mulai Coaching Premium ✨
+          </div>
+        </div>
+      )}
+
       <BottomNav isPremium={plan === 'premium'} />
     </div>
   )

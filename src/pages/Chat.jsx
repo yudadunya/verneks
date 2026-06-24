@@ -50,7 +50,15 @@ const DEFAULT_SUBSCRIPTION = {
 export default function Chat({ user, chatMessages = [], setChatMessages, subscription = DEFAULT_SUBSCRIPTION }) {
   const navigate = useNavigate()
   const location = useLocation()
-  const { plan, loading: subLoading, checkUsage, isExpired } = subscription
+  const { plan, loading: subLoading, checkUsage, isExpired, getRemainingChat } = subscription
+
+  // ── Sisa chat hari ini (untuk CTA banner) ────────────────────────────────
+  const [chatRemaining, setChatRemaining] = useState(null)
+
+  useEffect(() => {
+    if (plan === 'premium' || !user?.id) return
+    getRemainingChat().then(n => setChatRemaining(n))
+  }, [user?.id, plan])
 
   const storageKey     = user?.id ? `lc_chat_${user.id}` : null
   const ONBOARDING_KEY = user?.id ? `onboarded_${user.id}` : null
@@ -329,6 +337,8 @@ export default function Chat({ user, chatMessages = [], setChatMessages, subscri
         setCoachHistory(fullHistory)
         // Simpan langsung ke Supabase setelah Diah Anna reply — jangan tunggu debounce
         saveHistoryToSupabase(fullHistory, false)
+        // Update sisa chat setelah reply
+        if (plan !== 'premium') getRemainingChat().then(n => setChatRemaining(n))
         // Throttle extract-profile: hanya setiap 5 pesan user, bukan tiap pesan
         const userMsgCount = fullHistory.filter(m => m.role === 'user').length
         if (userMsgCount % 5 === 0) {
@@ -354,6 +364,37 @@ export default function Chat({ user, chatMessages = [], setChatMessages, subscri
           <div style={{ color: 'rgba(255,255,255,0.65)', fontSize: '0.73rem' }}>Career Companion • aktif memantau</div>
         </div>
       </div>
+
+      {/* ── CTA Banner: muncul saat sisa chat ≤ 10 dan user free ── */}
+      {plan !== 'premium' && chatRemaining !== null && chatRemaining <= 10 && (
+        <div
+          onClick={() => window.dispatchEvent(new CustomEvent('show-upgrade', { detail: {} }))}
+          style={{
+            background: chatRemaining <= 3
+              ? 'linear-gradient(90deg,rgba(220,53,69,0.15),rgba(220,53,69,0.08))'
+              : 'linear-gradient(90deg,rgba(37,211,102,0.1),rgba(37,211,102,0.05))',
+            borderBottom: chatRemaining <= 3
+              ? '1px solid rgba(220,53,69,0.25)'
+              : '1px solid rgba(37,211,102,0.15)',
+            padding: '7px 16px',
+            display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+            cursor: 'pointer', flexShrink: 0,
+          }}
+        >
+          <span style={{ fontSize: '0.75rem', color: chatRemaining <= 3 ? '#ff6b6b' : 'rgba(255,255,255,0.7)' }}>
+            {chatRemaining <= 3
+              ? `⚠️ Sisa ${chatRemaining} chat hari ini`
+              : `💬 Sisa ${chatRemaining} chat hari ini`}
+          </span>
+          <span style={{
+            fontSize: '0.7rem', fontWeight: 700, padding: '3px 10px',
+            borderRadius: 99, background: chatRemaining <= 3 ? '#ff6b6b' : '#25D366',
+            color: '#fff', flexShrink: 0,
+          }}>
+            Upgrade →
+          </span>
+        </div>
+      )}
 
       <div style={{ flex: 1, overflowY: 'auto', padding: '10px 10px 4px', display: 'flex', flexDirection: 'column', gap: '2px' }}>
 
