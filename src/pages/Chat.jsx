@@ -322,6 +322,8 @@ export default function Chat({ user, chatMessages = [], setChatMessages, subscri
         pushBot(data.reply)
         const fullHistory = [...newHistory, { id: replyId, role: 'assistant', content: data.reply, text: data.reply }]
         setCoachHistory(fullHistory)
+        // Simpan langsung ke Supabase setelah Diah Anna reply — jangan tunggu debounce
+        saveHistoryToSupabase(fullHistory, false)
         apiFetch('/api/extract-profile', { userId: user?.id, messages: newHistory }).catch(() => {})
       })
       .catch(() => pushBot('Terjadi kepadatan jalur komunikasi. Sampaikan ulang poin terakhirmu.'))
