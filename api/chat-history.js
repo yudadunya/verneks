@@ -9,6 +9,10 @@ const supabase = createClient(
 )
 
 export default async function handler(req, res) {
+  console.log('[chat-history] method:', req.method)
+  console.log('[chat-history] query:', JSON.stringify(req.query))
+  console.log('[chat-history] body keys:', req.body ? Object.keys(req.body) : 'no body')
+
   const { userId, date, messages, daysBack = 7 } = req.method === 'GET'
     ? req.query
     : req.body
@@ -50,17 +54,19 @@ export default async function handler(req, res) {
 
     const sessionDate = date || new Date().toISOString().slice(0, 10)
 
-    // UPSERT: kalau baris hari ini sudah ada → update, kalau belum → insert
     const { error } = await supabase
       .from('user_chat_history')
       .upsert({
         user_id:      userId,
         session_date: sessionDate,
-        messages:     messages.slice(-100), // max 100 pesan per hari
+        messages:     messages.slice(-100),
         updated_at:   new Date().toISOString(),
       }, { onConflict: 'user_id,session_date' })
 
-    if (error) return res.status(500).json({ error: error.message })
+    if (error) {
+      console.error('[chat-history] upsert error:', JSON.stringify(error))
+      return res.status(500).json({ error: error.message, code: error.code, details: error.details })
+    }
     return res.status(200).json({ success: true })
   }
 
