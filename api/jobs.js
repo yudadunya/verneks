@@ -1,0 +1,192 @@
+/**
+ * api/cron/jobs.js — Router untuk semua cron jobs
+ * Routing via query param: ?job=weekly-review | compress-memory | cleanup
+ *
+ * Menggabungkan: weekly-review.js + compress-memory.js + cleanup-chat-history.js
+ * vercel.json cron paths diupdate ke /api/cron/jobs?job=...
+ */
+import { generateText } from '../lib/ai.js'
+import { createClient } from '@supabase/supabase-js'
+
+const supabase = createClient(
+  process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL,
+  process.env.SUPABASE_SERVICE_ROLE_KEY
+)
+
+export default async function handler(req, res) {
+  const authHeader  = req.headers['authorization']
+  const isVercelCron = req.headers['x-vercel-cron'] === '1'
+  if (!isVercelCron && authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
+    return res.status(401).json({ error: 'Unauthorized' })
+  }
+
+  const job = req.query.job
+  if (!job) return res.status(400).json({ error: 'Missing job param' })
+
+  // ── CLEANUP CHAT HISTORY ─────────────────────────────────────────────────
+  if (job === 'cleanup') {
+    const cutoff = new Date(Date.now() - 3 * 86400000).toISOString().slice(0, 10)
+    const { error, count } = await supabase
+      .from('user_chat_history').delete({ count: 'exact' }).lt('session_date', cutoff)
+    if (error) return res.status(500).json({ error: error.message })
+    return res.status(200).json({ success: true, deleted: count, cutoff })
+  }
+
+  // ── COMPRESS MEMORY ──────────────────────────────────────────────────────
+  if (job === 'compress-memory') {
+    const now     = new Date()
+    const d30ago  = new Date(now - 30  * 86400000).toISOString().slice(0, 10)
+    const d90ago  = new Date(now - 90  * 86400000).toISOString().slice(0, 10)
+    const d365ago = new Date(now - 365 * 86400000).toISOString().slice(0, 10)
+    let total = 0
+
+    total += await compressTier({ olderThan: d30ago,  from: 'daily',   to: 'weekly',  days: 7,   words: 50 })
+    total += await compressTier({ olderThan: d90ago,  from: 'weekly',  to: 'monthly', days: 30,  words: 25 })
+    total += await compressTier({ olderThan: d365ago, from: 'monthly', to: 'yearly',  days: 365, words: 10 })
+
+    return res.status(200).json({ success: true, totalCompressed: total })
+  }
+
+  // ── WEEKLY REVIEW ────────────────────────────────────────────────────────
+  if (job === 'weekly-review') {
+    function getWeekStart() {
+      const d = new Date(); const day = d.getDay()
+      const diff = day === 0 ? -6 : 1 - day
+      d.setDate(d.getDate() + diff); d.setHours(0,0,0,0)
+      return d.toISOString().split('T')[0]
+    }
+
+    const weekStart   = getWeekStart()
+    const sevenDaysAgo = new Date(Date.now() - 7 * 86400000)
+
+    const { data: users, error } = await supabase
+      .from('user_career_profiles')
+      .select('user_id, nama, target_posisi, career_readiness, gps_steps, running_insight, running_insight_updated_at')
+      .not('career_readiness', 'is', null).limit(50)
+
+    if (error) return res.status(500).json({ error: error.message })
+    if (!users?.length) return res.status(200).json({ success: true, processed: 0 })
+
+    const results = []
+    for (const user of users) {
+      try {
+        const [eventsRes, capsulesRes] = await Promise.all([
+          supabase.from('career_events')
+            .select('event_type, event_payload').eq('user_id', user.user_id)
+            .gte('created_at', sevenDaysAgo.toISOString()),
+          supabase.from('memory_capsule_log')
+            .select('capsule_text').eq('user_id', user.user_id)
+            .gte('capsule_date', sevenDaysAgo.toISOString().slice(0,10))
+            .order('capsule_date', { ascending: false }),
+        ])
+
+        const events   = eventsRes.data || []
+        const capsules = capsulesRes.data || []
+        if (events.length === 0 && capsules.length === 0) continue
+
+        const milestonesDone = events.filter(e => e.event_type === 'milestone_completed')
+        const doneCount  = (user.gps_steps || []).filter(s => s.done).length
+        const totalCount = (user.gps_steps || []).length
+
+        const summary = await generateText({
+          system: 'Kamu adalah Diah Anna, AI career coach. Tulis catatan refleksi mingguan 2-4 kalimat, hangat dan personal. Bahasa Indonesia natural.',
+          prompt: `Nama: ${user.nama || 'User'}\nTarget: ${user.target_posisi || '-'}\nProgress: ${doneCount}/${totalCount} step\nMilestone: ${milestonesDone.map(m => m.event_payload?.title).join(', ') || 'tidak ada'}\nRingkasan sesi:\n${capsules.map(c => `- ${c.capsule_text}`).join('\n') || '(tidak ada)'}`,
+          maxTokens: 150, tier: 'fast',
+        })
+
+        await supabase.from('user_weekly_reviews').upsert({
+          user_id: user.user_id, week_start: weekStart, summary: summary.trim(),
+        }, { onConflict: 'user_id,week_start' })
+
+        // Update running_insight kalau belum diupdate minggu ini
+        const alreadyUpdated = user.running_insight_updated_at
+          && new Date(user.running_insight_updated_at) >= sevenDaysAgo
+        if (!alreadyUpdated) {
+          try {
+            const newInsight = await generateText({
+              system: 'Susun running insight 4 kalimat max tentang user ini untuk AI coach. Bahasa Indonesia, padat.',
+              prompt: `Insight lama:\n${user.running_insight || '(belum ada)'}\n\nObservasi baru:\n${capsules.map(c => `- ${c.capsule_text}`).join('\n') || '(tidak ada)'}`,
+              maxTokens: 200, tier: 'fast',
+            })
+            await supabase.from('user_career_profiles').update({
+              running_insight: newInsight.trim(),
+              running_insight_updated_at: new Date().toISOString(),
+            }).eq('user_id', user.user_id)
+          } catch {}
+        }
+
+        results.push({ userId: user.user_id, status: 'generated' })
+      } catch (e) {
+        results.push({ userId: user.user_id, status: 'failed', error: e.message })
+      }
+    }
+
+    return res.status(200).json({
+      success: true, weekStart,
+      processed: results.length,
+      generated: results.filter(r => r.status === 'generated').length,
+    })
+  }
+
+  return res.status(400).json({ error: `Unknown job: ${job}` })
+}
+
+// ── Compress helper ──────────────────────────────────────────────────────────
+async function compressTier({ olderThan, from, to, days, words }) {
+  const { data: capsules } = await supabase
+    .from('memory_capsule_log')
+    .select('id, user_id, capsule_date, capsule_text')
+    .lt('capsule_date', olderThan).eq('granularity', from)
+    .neq('capsule_text', '[no new insight]')
+    .order('user_id').order('capsule_date').limit(200)
+
+  if (!capsules?.length) return 0
+
+  const byUser = {}
+  for (const c of capsules) {
+    if (!byUser[c.user_id]) byUser[c.user_id] = []
+    byUser[c.user_id].push(c)
+  }
+
+  let compressed = 0
+  for (const [, userCapsules] of Object.entries(byUser)) {
+    const sorted = [...userCapsules].sort((a,b) => a.capsule_date.localeCompare(b.capsule_date))
+    const periods = []; let cur = { startDate: sorted[0].capsule_date, capsules: [] }
+    for (const c of sorted) {
+      const diff = (new Date(c.capsule_date) - new Date(cur.startDate)) / 86400000
+      if (diff < days) cur.capsules.push(c)
+      else { periods.push(cur); cur = { startDate: c.capsule_date, capsules: [c] } }
+    }
+    periods.push(cur)
+
+    for (const period of periods) {
+      if (!period.capsules.length) continue
+      const combined = period.capsules.map(c => c.capsule_text).join('\n---\n')
+      let summary = ''
+      try {
+        summary = await generateText({
+          system: `Buat ringkasan ${words} kata atau kurang. Hanya fakta terpenting. Bahasa Indonesia.`,
+          prompt: combined.slice(0, 2000),
+          maxTokens: Math.ceil(words * 2), tier: 'fast', plan: 'free',
+        })
+      } catch { continue }
+
+      const repDate = period.capsules[0].capsule_date
+      await supabase.from('memory_capsule_log').upsert({
+        user_id: period.capsules[0].user_id, capsule_date: repDate,
+        capsule_text: summary.trim(), granularity: to,
+      }, { onConflict: 'user_id,capsule_date' })
+
+      const toDelete = period.capsules.filter(c => c.capsule_date !== repDate).map(c => c.id)
+      if (toDelete.length > 0) {
+        await supabase.from('memory_capsule_log').delete().in('id', toDelete)
+      } else {
+        await supabase.from('memory_capsule_log')
+          .update({ granularity: to, capsule_text: summary.trim() })
+          .eq('id', period.capsules[0].id)
+      }
+      compressed++
+    }
+  }
+  return compressed
+}
