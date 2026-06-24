@@ -117,12 +117,11 @@ export default function Chat({ user, chatMessages = [], setChatMessages, subscri
   // ── Load history dari Supabase saat mount ────────────────────────────────
   useEffect(() => {
     if (!user?.id || historyLoaded) return
-    setHistoryLoaded(true)
 
     fetch(`/api/chat-history?userId=${user.id}&daysBack=1`)
       .then(r => r.json())
       .then(data => {
-        if (data.error) return
+        if (data.error) { setHistoryLoaded(true); return }
 
         if (Array.isArray(data.today) && data.today.length > 0) {
           // Ada history hari ini → restore + skip greeting
@@ -147,8 +146,12 @@ export default function Chat({ user, chatMessages = [], setChatMessages, subscri
           greetingFiredRef.current = true
         }
         // today kosong → biarkan greeting useEffect jalan normal
+        setHistoryLoaded(true)
       })
-      .catch(() => {})
+      .catch(() => {
+        // Fetch gagal → tetap set loaded supaya greeting bisa jalan
+        setHistoryLoaded(true)
+      })
   }, [user?.id])
 
   // ── End-session trigger: kirim ke /api/end-session ───────────────────────
