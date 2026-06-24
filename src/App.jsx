@@ -169,43 +169,6 @@ export default function App() {
 
   const subscription = useSubscription(user?.id)
 
-  // ── Auto-logout setelah inaktif 5 menit ──────────────────────────────────
-  // Depend ke user?.id (bukan objek user), supaya TOKEN_REFRESHED otomatis
-  // tiap ~1 jam tidak terus-menerus teardown/re-setup timer ini.
-  useEffect(() => {
-    if (!user?.id) return
-
-    const INACTIVE_LIMIT = 5 * 60 * 1000
-    let inactiveTimer
-
-    const resetTimer = () => {
-      clearTimeout(inactiveTimer)
-      inactiveTimer = setTimeout(async () => {
-        console.warn('[App] Auto-logout: inaktif 5 menit')
-        await Promise.race([
-          supabase.auth.signOut().catch(() => {}),
-          new Promise(resolve => setTimeout(resolve, 3000)),
-        ])
-        Object.keys(localStorage)
-          .filter(k => k.startsWith('sb-') || k.startsWith('lc_'))
-          .forEach(k => localStorage.removeItem(k))
-        window.location.replace('/')
-      }, INACTIVE_LIMIT)
-    }
-
-    const events = ['mousedown', 'mousemove', 'keydown', 'scroll', 'touchstart', 'click']
-    events.forEach(e => window.addEventListener(e, resetTimer, { passive: true }))
-    window.addEventListener('diah-anna-replied', resetTimer)
-
-    resetTimer()
-
-    return () => {
-      clearTimeout(inactiveTimer)
-      events.forEach(e => window.removeEventListener(e, resetTimer))
-      window.removeEventListener('diah-anna-replied', resetTimer)
-    }
-  }, [user?.id])
-
   // Global upgrade modal trigger
   useEffect(() => {
     const handler = (e) => {
