@@ -285,45 +285,6 @@ function FreeDashboard({ user, profile, genome, growth, onUpgrade, weeklyReview 
         </div>
       )}
 
-      {/* ═══ SECTION 6 — PREMIUM CTA ═════════════════════════════════════════ */}
-      {targetPosisi && (
-        <div style={{
-          ...fade(0.3, visible),
-          background: 'linear-gradient(135deg,rgba(37,211,102,0.08),rgba(52,183,241,0.06))',
-          border: '1px solid rgba(37,211,102,0.2)',
-          borderRadius: 18, padding: '22px 18px', marginBottom: 12,
-        }}>
-          <div style={{ textAlign: 'center', marginBottom: 18 }}>
-            <div style={{ fontSize: '1.5rem', marginBottom: 8 }}>🔓</div>
-            <div style={{ color: '#fff', fontWeight: 800, fontSize: '1rem', marginBottom: 6 }}>Career GPS Premium</div>
-            <div style={{ color: 'rgba(255,255,255,0.45)', fontSize: '0.8rem', lineHeight: 1.6 }}>
-              Roadmap lengkapmu sudah siap.
-            </div>
-          </div>
-
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginBottom: 18 }}>
-            {['✓ Career GPS Personal — roadmap step by step', '✓ Diah Anna Unlimited — tanya kapanpun', '✓ Progress Tracking harian', '✓ Weekly Coaching personal', '✓ Opportunity Matching sesuai DNA'].map((f, i) => (
-              <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: '0.8rem', color: 'rgba(255,255,255,0.65)' }}>
-                <span style={{ color: '#25D366', fontWeight: 700, flexShrink: 0 }}>✓</span>
-                <span>{f.replace('✓ ', '')}</span>
-              </div>
-            ))}
-          </div>
-
-          <div style={{ textAlign: 'center', marginBottom: 14 }}>
-            <div style={{ color: 'rgba(255,255,255,0.25)', fontSize: '0.73rem', textDecoration: 'line-through', marginBottom: 2 }}>Harga Normal Rp599.000</div>
-            <div style={{ color: '#25D366', fontWeight: 900, fontSize: '1.3rem' }}>Rp199.000 <span style={{ fontSize: '0.7rem', color: 'rgba(255,255,255,0.4)', fontWeight: 400 }}>/bulan</span></div>
-          </div>
-
-          <button
-            onClick={dispatchUpgrade}
-            style={{ width: '100%', padding: '14px', background: 'linear-gradient(135deg,#25D366,#128C7E)', color: '#fff', fontWeight: 800, fontSize: '0.95rem', borderRadius: 13, border: 'none', cursor: 'pointer', boxShadow: '0 5px 22px rgba(37,211,102,0.4)' }}
-          >
-            🚀 Buka Career GPS Saya
-          </button>
-        </div>
-      )}
-
     </div>
   )
 }
