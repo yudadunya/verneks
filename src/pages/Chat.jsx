@@ -304,31 +304,6 @@ export default function Chat({ user, chatMessages = [], setChatMessages, subscri
     memoryFiredRef.current = false
   }, [user?.id])
 
-  useEffect(() => {
-    // visibilitychange: tab ditutup, pindah tab, lock screen, dll
-    const onVisibilityChange = () => {
-      if (document.visibilityState === 'hidden') {
-        sendMemoryUpdate('visibility')
-      }
-    }
-    // beforeunload: close browser / refresh paksa — backup
-    const onBeforeUnload = () => {
-      sendMemoryUpdate('beforeunload')
-    }
-
-    // logout manual: Profile.jsx dispatch event ini sebelum signOut
-    const onLogout = () => sendMemoryUpdate('logout')
-
-    document.addEventListener('visibilitychange', onVisibilityChange)
-    window.addEventListener('beforeunload', onBeforeUnload)
-    window.addEventListener('diah-anna-logout-memory', onLogout)
-    return () => {
-      document.removeEventListener('visibilitychange', onVisibilityChange)
-      window.removeEventListener('beforeunload', onBeforeUnload)
-      window.removeEventListener('diah-anna-logout-memory', onLogout)
-    }
-  }, [sendMemoryUpdate])
-
   const handleSend = () => {
     const msg = input.trim()
     if (!msg || loading) return
