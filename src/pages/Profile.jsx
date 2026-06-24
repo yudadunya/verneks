@@ -88,6 +88,7 @@ export default function Profile({ user, loading = false, subscription = DEFAULT_
   const target      = profile?.target_posisi || null
   const posisi      = profile?.posisi_saat_ini || null
   const isPremium   = plan === 'premium'
+  const depthScore  = profile?.depth_score || 0
 
   // Tanggal discovery: ambil dari last_updated profil
   const discoveryDate = profile?.last_updated
@@ -153,6 +154,37 @@ export default function Profile({ user, loading = false, subscription = DEFAULT_
               {isPremium ? 'Premium' : 'Free'}
             </span>
           </div>
+
+          {/* Depth Score Badge — Diah Anna mengenalmu */}
+          {depthScore > 0 && (
+            <div style={{ marginTop: 12, padding: '12px 16px', borderRadius: 14, background: 'rgba(123,107,255,0.08)', border: '1px solid rgba(123,107,255,0.2)' }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
+                  <img src="/diah-anna.png" alt="Diah Anna" style={{ width: 24, height: 24, borderRadius: '50%', objectFit: 'cover' }} />
+                  <span style={{ color: 'rgba(255,255,255,0.7)', fontSize: '0.75rem', fontWeight: 600 }}>Diah Anna mengenalmu</span>
+                </div>
+                <span style={{ color: '#a594ff', fontSize: '0.85rem', fontWeight: 800 }}>{depthScore}%</span>
+              </div>
+              {/* Progress bar */}
+              <div style={{ height: 5, borderRadius: 99, background: 'rgba(255,255,255,0.07)', overflow: 'hidden' }}>
+                <div style={{
+                  height: '100%', borderRadius: 99,
+                  width: `${depthScore}%`,
+                  background: 'linear-gradient(90deg, #7B6BFF, #a594ff)',
+                  transition: 'width 0.8s ease',
+                }} />
+              </div>
+              <div style={{ color: 'rgba(255,255,255,0.3)', fontSize: '0.65rem', marginTop: 6 }}>
+                {depthScore < 30
+                  ? 'Diah Anna baru mengenalmu — terus ngobrol!'
+                  : depthScore < 60
+                  ? 'Diah Anna mulai memahami pola karirmu'
+                  : depthScore < 85
+                  ? 'Diah Anna sudah sangat mengenalmu 🧠'
+                  : 'Diah Anna mengenalmu lebih dalam dari siapapun ✨'}
+              </div>
+            </div>
+          )}
         </div>
 
         {/* ── Info Akun ── */}

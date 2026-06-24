@@ -324,7 +324,11 @@ export default function Chat({ user, chatMessages = [], setChatMessages, subscri
         setCoachHistory(fullHistory)
         // Simpan langsung ke Supabase setelah Diah Anna reply — jangan tunggu debounce
         saveHistoryToSupabase(fullHistory, false)
-        apiFetch('/api/extract-profile', { userId: user?.id, messages: newHistory }).catch(() => {})
+        // Throttle extract-profile: hanya setiap 5 pesan user, bukan tiap pesan
+        const userMsgCount = fullHistory.filter(m => m.role === 'user').length
+        if (userMsgCount % 5 === 0) {
+          apiFetch('/api/extract-profile', { userId: user?.id, messages: fullHistory }).catch(() => {})
+        }
       })
       .catch(() => pushBot('Terjadi kepadatan jalur komunikasi. Sampaikan ulang poin terakhirmu.'))
       .finally(() => setLoading(false))
