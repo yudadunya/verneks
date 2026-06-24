@@ -63,7 +63,7 @@ export default function Opportunities({ user, loading = false }) {
     setDataLoading(true)
     setError(null)
     try {
-      const res  = await fetch('/api/job-match', {
+      const res  = await fetch('/api/utils?action=job-match', {
         method:  'POST',
         headers: { 'Content-Type': 'application/json' },
         body:    JSON.stringify({ userId: user.id }),

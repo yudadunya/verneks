@@ -612,7 +612,7 @@ export default function Dashboard({ user, loading = false, subscription = DEFAUL
 
       // Backfill user lama: kalau summary kosong tapi ada career data → refresh otomatis
       if (p?.target_posisi && !p?.summary) {
-        fetch('/api/refresh-profile', {
+        fetch('/api/utils?action=refresh-profile', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ userId: user.id })

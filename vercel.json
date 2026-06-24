@@ -78,15 +78,15 @@
   ],
   "crons": [
     {
-      "path": "/api/cron/weekly-review",
+      "path": "/api/cron/jobs?job=weekly-review",
       "schedule": "0 1 * * 1"
     },
     {
-      "path": "/api/cron/compress-memory",
+      "path": "/api/cron/jobs?job=compress-memory",
       "schedule": "0 2 * * 1"
     },
     {
-      "path": "/api/cron/cleanup-chat-history",
+      "path": "/api/cron/jobs?job=cleanup",
       "schedule": "0 3 * * *"
     }
   ]

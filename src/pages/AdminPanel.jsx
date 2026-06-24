@@ -2,9 +2,9 @@
 import { useState } from 'react'
 
 // KEAMANAN: tidak ada lagi Service Role Key atau password di sisi client.
-// Semua operasi admin lewat /api/admin yang verifikasi password di server setiap request.
+// Semua operasi admin lewat /api/utils?action=admin yang verifikasi password di server setiap request.
 async function adminCall(password, action, extra = {}) {
-  const res = await fetch('/api/admin', {
+  const res = await fetch('/api/utils?action=admin', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ password, action, ...extra }),
