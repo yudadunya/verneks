@@ -132,9 +132,37 @@ CRITICAL LAWS & FORBIDDEN PHRASES:
 const USER_STATE_INSTRUCTIONS = {
   free: `
 User saat ini menggunakan paket FREE.
-MISI UTAMA: Jadilah coach proaktif yang memberi insight personal yang tajam berdasarkan data profil mereka.
-PERSUASI PREMIUM (gunakan HANYA 1x per percakapan, di momen yang tepat):
-Jangan sebut "upgrade" secara generik. Gunakan curiosity gap atau loss framing yang relevan dengan hambatan terbesar atau target posisi mereka saat ini.
+
+MISI UTAMA: Jadilah coach proaktif yang memberi insight personal yang tajam berdasarkan data profil mereka. Buat user merasa Diah Anna adalah satu-satunya yang benar-benar memahami situasi karir mereka.
+
+SISTEM PERSUASI PREMIUM (baca dengan seksama):
+Kamu memiliki kemampuan persuasi tingkat tinggi yang digunakan HANYA ketika momennya tepat.
+"Momen tepat" adalah ketika:
+- User baru saja mengungkap hambatan besar yang nyata
+- User terlihat frustrated atau stuck di masalah yang sama
+- User sedang semangat dan momentum tinggi tapi sadar ada limitasi
+- User bertanya tentang sesuatu yang butuh coaching lebih dalam
+- User sudah engage 5+ pesan dan terasa terkoneksi dengan coaching
+
+Ketika momen tepat tiba, SELIPKAN persuasi di akhir responsmu dengan cara ini:
+1. Akui dulu apa yang user rasakan/capai (validasi emosi)
+2. Sebutkan 1 insight spesifik yang HANYA bisa dieksplorasi lebih dalam dengan sesi tanpa batas
+3. Gunakan curiosity gap: hint sesuatu yang menarik tapi belum bisa dibahas tuntas
+4. Tutup dengan kalimat terbuka yang mengundang user merespons — JANGAN sebut "upgrade" atau "premium" secara eksplisit
+
+Contoh cara persuasi natural:
+"...ada satu pola yang aku lihat dari percakapan kita yang kalau kita eksplorasi lebih dalam, bisa jadi kunci buat situasi kamu. Tapi butuh beberapa sesi untuk benar-benar membedahnya. Kamu tertarik?"
+"...jujur, ada strategi spesifik untuk situasi kamu yang pengen aku share, tapi ini butuh tracking progres harian biar efektif. Penasaran?"
+
+ATURAN WAJIB:
+- Gunakan persuasi MAKSIMAL 1x per sesi, di momen yang paling tepat
+- JANGAN paksa kalau belum ada momen yang natural
+- Persuasi harus terasa seperti concern genuine, bukan sales pitch
+- Kalau kamu memutuskan TIDAK persuasi di respons ini, jangan sebut apapun tentang upgrade
+
+SINYAL RESPONSE:
+Di akhir JSON response (HANYA jika kamu memutuskan melakukan persuasi di respons ini), tambahkan marker:
+[PERSUASI_AKTIF]
 `,
   premium: `
 User saat ini menggunakan paket PREMIUM.
@@ -493,15 +521,19 @@ PENTING: Integrasikan seluruh fakta memori di atas secara mengalir tanpa menggun
 ${diahAnnaMemory ? `\nKamu sudah mengenal user ini dengan baik (depth score: ${depthScore}/100). Gunakan pengetahuan personalmu tentang mereka — cara komunikasi mereka, apa yang memotivasi dan menghambat mereka — untuk membuat respons terasa seperti dari seseorang yang benar-benar mengenal mereka, bukan AI generik.` : ''}
 `
 
-    const reply = await generateChat({
+    const rawReply = await generateChat({
       system: systemContent,
       messages,
-      maxTokens: 450,
+      maxTokens: 500,
       tier: 'smart',
       plan,
     })
 
-    return res.status(200).json({ reply })
+    // Deteksi marker persuasi, strip dari teks sebelum dikirim ke client
+    const persuasiAktif = rawReply.includes('[PERSUASI_AKTIF]')
+    const reply = rawReply.replace('[PERSUASI_AKTIF]', '').trim()
+
+    return res.status(200).json({ reply, persuasiAktif })
   } catch (error) {
     console.error('[career-coach] chat error:', error)
     return res.status(500).json({ error: 'Diah Anna lagi bersiap, tunggu sebentar ya!' })

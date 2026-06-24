@@ -241,42 +241,6 @@ export default function Profile({ user, loading = false, subscription = DEFAULT_
           />
         </div>
 
-        {/* ── Upgrade CTA (free only) ── */}
-        {!isPremium && !loading && (
-          <div style={{
-            background: 'linear-gradient(135deg,rgba(123,107,255,0.1),rgba(37,211,102,0.06))',
-            border: '1px solid rgba(123,107,255,0.2)',
-            borderRadius: 16, padding: '16px', marginBottom: 14,
-            ...fade(0.22),
-          }}>
-            <div style={{ display: 'flex', gap: 10, alignItems: 'flex-start', marginBottom: 10 }}>
-              <img src="/diah-anna.png" alt="" style={{ width: 32, height: 32, borderRadius: '50%', objectFit: 'cover', flexShrink: 0 }} />
-              <div>
-                <div style={{ color: '#fff', fontWeight: 700, fontSize: '0.82rem', marginBottom: 2 }}>Diah Anna</div>
-                <div style={{ color: 'rgba(255,255,255,0.6)', fontSize: '0.78rem', lineHeight: 1.6 }}>
-                  {depthScore > 0
-                    ? `Aku sudah mengenalmu ${depthScore}% — dengan Premium, kita bisa terus ngobrol tanpa batas dan aku bisa mengenalmu jauh lebih dalam lagi.`
-                    : 'Upgrade ke Premium untuk roadmap 6 bulan, chat unlimited, dan coaching yang makin personal setiap sesi.'}
-                </div>
-              </div>
-            </div>
-            <a
-              href="http://lynk.id/yudadunya/r3o5ldq5qkex/checkout"
-              target="_blank"
-              rel="noopener noreferrer"
-              style={{
-                display: 'block', width: '100%', padding: '12px',
-                background: 'linear-gradient(135deg,#7B6BFF,#25D366)',
-                color: '#fff', fontWeight: 700, fontSize: '0.88rem',
-                borderRadius: 12, textDecoration: 'none', textAlign: 'center',
-                boxShadow: '0 3px 18px rgba(123,107,255,0.35)',
-              }}
-            >
-              🚀 Upgrade Premium — Rp 199rb / bulan
-            </a>
-          </div>
-        )}
-
         {/* ── Logout ── */}
         <button
           onClick={handleLogout}
