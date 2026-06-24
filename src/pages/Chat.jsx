@@ -294,6 +294,11 @@ export default function Chat({ user, chatMessages = [], setChatMessages, subscri
         containerRef.current.style.height = (vv.height - 65) + 'px'
         containerRef.current.style.top    = vv.offsetTop + 'px'
       }
+      // Scroll ke bawah setiap kali keyboard muncul/ukuran viewport berubah
+      // Pakai setTimeout supaya layout sudah selesai di-recalculate dulu
+      setTimeout(() => {
+        bottomRef.current?.scrollIntoView({ behavior: 'smooth' })
+      }, 50)
     }
     vv.addEventListener('resize', update)
     vv.addEventListener('scroll', update)
