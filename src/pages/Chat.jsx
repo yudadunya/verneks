@@ -23,7 +23,11 @@ async function apiFetch(url, body) {
   const text = await resp.text()
   let data
   try { data = JSON.parse(text) } catch { throw new Error(text.slice(0, 120)) }
-  if (!resp.ok || data.error) throw new Error(data.error || `HTTP ${resp.status}`)
+  if (!resp.ok || data.error) {
+    const err = new Error(data.error || `HTTP ${resp.status}`)
+    err.limitReached = data.limitReached || false
+    throw err
+  }
   return data
 }
 
@@ -167,24 +171,34 @@ export default function Chat({ user, chatMessages = [], setChatMessages, subscri
   // ── End-session trigger: kirim ke /api/end-session ───────────────────────
   const memoryFiredRef = useRef(false)
 
+  // Reset flag tiap hari (bukan tiap user berubah)
+  useEffect(() => { memoryFiredRef.current = false }, [user?.id])
+
   const sendEndSession = useCallback((triggerType = 'visibility') => {
     if (!user?.id) return
     if (memoryFiredRef.current) return
-    if (coachHistory.filter(m => m.role === 'user').length < 3) return
+    const msgs = coachHistoryRef.current
+    if (msgs.filter(m => m.role === 'user').length < 3) return
     memoryFiredRef.current = true
 
     const payload = JSON.stringify({
       userId:   user.id,
-      messages: coachHistory.slice(-50),
+      messages: msgs.slice(-50),
       trigger:  triggerType,
     })
 
+    // sendBeacon pakai Blob text/plain — lebih reliable cross-browser
     if (triggerType !== 'logout' && navigator.sendBeacon) {
-      navigator.sendBeacon('/api/end-session', new Blob([payload], { type: 'application/json' }))
+      navigator.sendBeacon('/api/end-session', new Blob([payload], { type: 'text/plain' }))
     } else {
-      fetch('/api/end-session', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: payload, keepalive: true }).catch(() => {})
+      fetch('/api/end-session', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: payload,
+        keepalive: true,
+      }).catch(() => {})
     }
-  }, [user?.id, coachHistory])
+  }, [user?.id])
 
   // Reset flag tiap user baru
   useEffect(() => { memoryFiredRef.current = false }, [user?.id])
@@ -367,7 +381,14 @@ export default function Chat({ user, chatMessages = [], setChatMessages, subscri
           apiFetch('/api/extract-profile', { userId: user?.id, messages: fullHistory }).catch(() => {})
         }
       })
-      .catch(() => pushBot('Terjadi kepadatan jalur komunikasi. Sampaikan ulang poin terakhirmu.'))
+      .catch((err) => {
+        if (err.limitReached) {
+          pushBot('Chat hari ini sudah habis 🙏 Upgrade ke Premium untuk lanjut ngobrol tanpa batas.')
+          setTimeout(() => window.dispatchEvent(new CustomEvent('show-upgrade', { detail: {} })), 1200)
+        } else {
+          pushBot('Terjadi kepadatan jalur komunikasi. Sampaikan ulang poin terakhirmu.')
+        }
+      })
       .finally(() => setLoading(false))
   }
 
