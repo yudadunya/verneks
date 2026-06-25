@@ -89,13 +89,17 @@ export default function Chat({ user, chatMessages = [], setChatMessages, subscri
   // ── Save helper ───────────────────────────────────────────────────────────
   const saveHistoryToSupabase = useCallback((msgs, useBeacon = false) => {
     if (!user?.id || !msgs?.length) return
+    // Update localStorage langsung supaya sinkron
+    if (coachKey) {
+      try { localStorage.setItem(coachKey, JSON.stringify(msgs.slice(-50))) } catch {}
+    }
     const payload = JSON.stringify({ userId: user.id, messages: msgs.slice(-50) })
     if (useBeacon && navigator.sendBeacon) {
       navigator.sendBeacon('/api/chat-history', new Blob([payload], { type: 'application/json' }))
     } else {
       fetch('/api/chat-history', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: payload, keepalive: true }).catch(() => {})
     }
-  }, [user?.id])
+  }, [user?.id, coachKey])
 
   const setCoachHistory = useCallback((updater) => {
     setCoachHistoryRaw(prev => {
@@ -104,7 +108,7 @@ export default function Chat({ user, chatMessages = [], setChatMessages, subscri
         try { localStorage.setItem(coachKey, JSON.stringify(next.slice(-50))) } catch {}
       }
       if (saveTimerRef.current) clearTimeout(saveTimerRef.current)
-      saveTimerRef.current = setTimeout(() => saveHistoryToSupabase(next), 2000)
+      saveTimerRef.current = setTimeout(() => saveHistoryToSupabase(next), 300)
       return next
     })
   }, [coachKey, saveHistoryToSupabase])
@@ -127,7 +131,7 @@ export default function Chat({ user, chatMessages = [], setChatMessages, subscri
         if (data.error) { setHistoryLoaded(true); return }
 
         if (Array.isArray(data.today) && data.today.length > 0) {
-          // Ada history hari ini → restore + skip greeting
+          // Selalu pakai data Supabase — lebih reliable dari localStorage
           setCoachHistoryRaw(data.today)
           if (coachKey) {
             try { localStorage.setItem(coachKey, JSON.stringify(data.today.slice(-50))) } catch {}
@@ -145,7 +149,6 @@ export default function Chat({ user, chatMessages = [], setChatMessages, subscri
               try { localStorage.setItem(storageKey, JSON.stringify(displayMsgs)) } catch {}
             }
           }
-          // ✓ Ada history → jangan greeting
           greetingFiredRef.current = true
         }
         // today kosong → biarkan greeting useEffect jalan normal
@@ -334,6 +337,8 @@ export default function Chat({ user, chatMessages = [], setChatMessages, subscri
     const msgId = Date.now()
     const newHistory = [...coachHistory, { id: msgId, role: 'user', content: msg, text: msg }]
     setCoachHistory(newHistory)
+    // Simpan langsung setelah user kirim — jangan tunggu reply Diah Anna
+    saveHistoryToSupabase(newHistory, false)
     setLoading(true)
 
     // Cek apakah user merespons positif setelah Diah Anna persuasi
