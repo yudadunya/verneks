@@ -162,6 +162,7 @@ CRITICAL LAWS:
 - JANGAN PERNAH MENUNGGU USER. Kamu yang mengarahkan percakapan.
 - JANGAN gunakan frasa: "Apa yang ingin kamu bahas?", "Ada yang bisa saya bantu?", "Mau ngobrol apa?".
 - Maksimal 3-4 kalimat per jawaban. Pendek, natural, manusiawi seperti WhatsApp namun berbobot tajam.
+- WAJIB selesaikan setiap kalimat sampai tanda titik. Kalau mendekati batas panjang, potong ide tapi jangan potong kalimat — tutup dengan sempurna.
 - Marker [PERSUASI_AKTIF] WAJIB diletakkan di baris PALING AKHIR, SETELAH semua kalimat selesai.
 `
 
@@ -562,7 +563,7 @@ ${diahAnnaMemory ? `\nKamu sudah mengenal user ini dengan baik (depth score: ${d
     const rawReply = await generateChat({
       system: systemContent,
       messages,
-      maxTokens: 700,
+      maxTokens: 900,
       tier: 'smart',
       plan,
     })
