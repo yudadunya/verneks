@@ -69,7 +69,7 @@ export default function UpgradeModal({ user, onClose, initialData = null }) {
   const gaps      = (profile?.skill_gaps || profile?.gap_skills || []).slice(0, 4)
   const gpsSteps  = buildGpsSteps(profile?.gps_steps, gaps, target)
   const mentorMsg = profile?.mentor_message
-    || `Berdasarkan hasil analisisku, target ${target} sangat realistis untuk kamu capai. Yang paling penting sekarang bukan belajar lebih banyak, tetapi belajar hal yang tepat dalam urutan yang tepat. Career GPS Premium akan menunjukkan langkah tersebut secara spesifik untuk profilmu.`
+    || `Berdasarkan percakapan kita, aku sudah melihat pola yang jelas di situasi karir kamu — dan ada jalur spesifik yang bisa mempercepat perjalananmu ke ${target}. Aku pengen bantu kamu eksekusi step by step, bukan cuma kasih insight sekali lalu hilang. Ini yang bisa kita lakukan bareng kalau kamu mau lanjut lebih serius.`
 
   return (
     <>
@@ -109,10 +109,10 @@ export default function UpgradeModal({ user, onClose, initialData = null }) {
           <div style={{ textAlign: 'center', marginBottom: 20 }}>
             <div style={{ fontSize: '1.5rem', marginBottom: 6 }}>🚀</div>
             <div style={{ color: '#fff', fontWeight: 800, fontSize: '1.1rem', letterSpacing: '-0.3px', marginBottom: 4 }}>
-              Buka Career GPS Premium
+              Lanjutkan Perjalanan Ini Bersama Diah Anna
             </div>
             <div style={{ color: 'rgba(255,255,255,0.4)', fontSize: '0.8rem', lineHeight: 1.5 }}>
-              Kamu sudah mengetahui DNA Karier dan posisi kamu saat ini.<br/>
+              Kamu sudah tahu DNA Karier dan posisimu sekarang.<br/>
               Sekarang saatnya mendapatkan panduan yang jelas.
             </div>
           </div>
@@ -233,14 +233,14 @@ export default function UpgradeModal({ user, onClose, initialData = null }) {
           {/* ── Pricing ── */}
           <div style={{ textAlign: 'center', marginBottom: 14 }}>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10, marginBottom: 3 }}>
-              <span style={{ color: 'rgba(255,255,255,0.28)', fontSize: '0.82rem', textDecoration: 'line-through' }}>Rp599.000/bln</span>
+              <span style={{ color: 'rgba(255,255,255,0.28)', fontSize: '0.82rem', textDecoration: 'line-through' }}>Rp599.000</span>
               <span style={{ background: '#EF5350', color: '#fff', fontSize: '0.6rem', fontWeight: 800, padding: '2px 7px', borderRadius: 99 }}>HEMAT 67%</span>
             </div>
-            <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'center', gap: 4 }}>
+            <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'center', gap: 6 }}>
               <span style={{ color: '#FFB74D', fontWeight: 900, fontSize: '1.6rem' }}>Rp199.000</span>
-              <span style={{ color: 'rgba(255,255,255,0.35)', fontSize: '0.82rem' }}> periode akses 1 bulan</span>
+              <span style={{ background: 'rgba(255,183,77,0.15)', color: '#FFB74D', fontSize: '0.68rem', fontWeight: 800, padding: '3px 10px', borderRadius: 99, border: '1px solid rgba(255,183,77,0.3)' }}>SEKALI BAYAR</span>
             </div>
-            <div style={{ color: 'rgba(255,255,255,0.25)', fontSize: '0.7rem', marginTop: 2 }}>Semua fitur premium · Unlimited · Sekali Bayar</div>
+            <div style={{ color: 'rgba(255,255,255,0.25)', fontSize: '0.7rem', marginTop: 4 }}>Akses penuh 30 hari · Tidak ada biaya tersembunyi · Bukan langganan</div>
           </div>
 
           {/* ── CTAs ── */}
@@ -255,7 +255,7 @@ export default function UpgradeModal({ user, onClose, initialData = null }) {
               borderRadius: 14, textDecoration: 'none', textAlign: 'center',
               boxShadow: '0 4px 20px rgba(37,211,102,0.42)',
             }}>
-            🚀 Buka Career GPS Saya
+            🚀 Ya, Lanjutkan Bersama Diah Anna
           </a>
 
           <button
