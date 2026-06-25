@@ -30,12 +30,14 @@ export default async function handler(req, res) {
 
     // ── Step 0: Simpan chat history (selalu) ────────────────────────────────
     if (Array.isArray(sessionMsgs) && sessionMsgs.length > 0) {
-      await supabase.from('user_chat_history').upsert({
-        user_id:      userId,
-        session_date: today,
-        messages:     sessionMsgs.slice(-50),
-        updated_at:   new Date().toISOString(),
-      }, { onConflict: 'user_id,session_date' }).catch(e => console.error('[end-session] history save error:', e.message))
+      try {
+        await supabase.from('user_chat_history').upsert({
+          user_id:      userId,
+          session_date: today,
+          messages:     sessionMsgs.slice(-50),
+          updated_at:   new Date().toISOString(),
+        }, { onConflict: 'user_id,session_date' })
+      } catch(e) { console.error('[end-session] history save error:', e.message) }
     }
 
     // Guard: minimal 3 pesan user
@@ -72,10 +74,12 @@ export default async function handler(req, res) {
     const hasNewInsight = evalResult.trim().toUpperCase().startsWith('Y')
 
     if (!hasNewInsight) {
-      await supabase.from('memory_capsule_log').upsert({
-        user_id: userId, capsule_date: today,
-        capsule_text: '[no new insight]', granularity: 'daily',
-      }, { onConflict: 'user_id,capsule_date' }).catch(() => {})
+      try {
+        await supabase.from('memory_capsule_log').upsert({
+          user_id: userId, capsule_date: today,
+          capsule_text: '[no new insight]', granularity: 'daily',
+        }, { onConflict: 'user_id,capsule_date' })
+      } catch(e) { console.error('[end-session] capsule upsert error:', e.message) }
       return res.status(200).json({ skipped: true, reason: 'no_new_insight' })
     }
 
