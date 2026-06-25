@@ -53,10 +53,6 @@ export default function Chat({ user, chatMessages = [], setChatMessages, subscri
   const { plan, loading: subLoading, checkUsage, isExpired } = subscription
 
   // Ref untuk selalu punya history terbaru tanpa closure stale
-  const coachHistoryRef = useRef(coachHistory)
-  useEffect(() => { coachHistoryRef.current = coachHistory }, [coachHistory])
-
-  // ── Tracking state persuasi Diah Anna ────────────────────────────────────
   const [waitingForPositive, setWaitingForPositive] = useState(false)
 
   const storageKey     = user?.id ? `lc_chat_${user.id}` : null
@@ -89,6 +85,10 @@ export default function Chat({ user, chatMessages = [], setChatMessages, subscri
   })
 
   const [historyLoaded, setHistoryLoaded] = useState(false)
+
+  // Ref untuk selalu punya history terbaru tanpa stale closure
+  const coachHistoryRef = useRef([])
+  useEffect(() => { coachHistoryRef.current = coachHistory }, [coachHistory])
 
   // ── Save helper ───────────────────────────────────────────────────────────
   const saveHistoryToSupabase = useCallback((msgs, useBeacon = false) => {
