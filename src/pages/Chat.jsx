@@ -204,9 +204,9 @@ export default function Chat({ user, chatMessages = [], setChatMessages, subscri
   useEffect(() => { memoryFiredRef.current = false }, [user?.id])
 
   useEffect(() => {
-    const onHide      = () => { saveHistoryToSupabase(coachHistory, true); sendEndSession('visibility') }
-    const onUnload    = () => { saveHistoryToSupabase(coachHistory, true); sendEndSession('beforeunload') }
-    const onLogout    = () => { saveHistoryToSupabase(coachHistory, false); sendEndSession('logout') }
+    const onHide   = () => { saveHistoryToSupabase(coachHistoryRef.current, true);  sendEndSession('visibility') }
+    const onUnload = () => { saveHistoryToSupabase(coachHistoryRef.current, true);  sendEndSession('beforeunload') }
+    const onLogout = () => { saveHistoryToSupabase(coachHistoryRef.current, false); sendEndSession('logout') }
     document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'hidden') onHide() })
     window.addEventListener('beforeunload', onUnload)
     window.addEventListener('diah-anna-logout-memory', onLogout)
@@ -214,7 +214,7 @@ export default function Chat({ user, chatMessages = [], setChatMessages, subscri
       window.removeEventListener('beforeunload', onUnload)
       window.removeEventListener('diah-anna-logout-memory', onLogout)
     }
-  }, [coachHistory, sendEndSession, saveHistoryToSupabase])
+  }, [sendEndSession, saveHistoryToSupabase])
 
   const pushBot = useCallback((text, quickReplies = null) => {
     setMessages(prev => [...prev, { id: Date.now() + Math.random(), role: 'bot', text, quickReplies }])
