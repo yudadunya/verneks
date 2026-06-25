@@ -1,8 +1,62 @@
 import { useEffect, useState } from 'react'
+import * as React from 'react'
 import { useNavigate } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 // Subscription/plan sekarang datang dari prop (di-lift ke App.jsx) — lihat komentar di App.jsx.
 import BottomNav from '../components/BottomNav'
+
+// ── MemoryCard: tampilkan apa yang Diah Anna ingat tentang user ──────────────
+function MemoryCard({ memory, updatedAt }) {
+  const [open, setOpen] = React.useState(false)
+  const dateStr = updatedAt
+    ? new Date(updatedAt).toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' })
+    : null
+
+  return (
+    <div style={{ marginTop: 10 }}>
+      <button
+        onClick={() => setOpen(v => !v)}
+        style={{
+          width: '100%', background: 'rgba(165,148,255,0.08)',
+          border: '1px solid rgba(165,148,255,0.2)',
+          borderRadius: 10, padding: '8px 12px',
+          display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+          cursor: 'pointer', color: 'rgba(255,255,255,0.55)', fontSize: '0.72rem',
+        }}
+      >
+        <span>🧠 Apa yang Diah Anna ingat tentang kamu</span>
+        <span style={{ fontSize: '0.65rem', transition: 'transform 0.2s', transform: open ? 'rotate(180deg)' : 'none' }}>▼</span>
+      </button>
+
+      {open && (
+        <div style={{
+          marginTop: 8, padding: '14px', borderRadius: 12,
+          background: 'rgba(13,10,30,0.6)',
+          border: '1px solid rgba(165,148,255,0.15)',
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10 }}>
+            <img src="/diah-anna.png" alt="" style={{ width: 28, height: 28, borderRadius: '50%', objectFit: 'cover' }} />
+            <div>
+              <div style={{ color: '#a594ff', fontSize: '0.72rem', fontWeight: 700 }}>Catatan Diah Anna</div>
+              {dateStr && <div style={{ color: 'rgba(255,255,255,0.25)', fontSize: '0.62rem' }}>Diperbarui {dateStr}</div>}
+            </div>
+          </div>
+          <div style={{
+            color: 'rgba(255,255,255,0.65)', fontSize: '0.78rem',
+            lineHeight: 1.75, fontStyle: 'italic',
+            borderLeft: '2px solid rgba(165,148,255,0.3)',
+            paddingLeft: 10,
+          }}>
+            "{memory}"
+          </div>
+          <div style={{ marginTop: 10, color: 'rgba(255,255,255,0.2)', fontSize: '0.62rem', textAlign: 'center' }}>
+            Memori ini diperbarui otomatis setiap sesi ngobrol yang bermakna
+          </div>
+        </div>
+      )}
+    </div>
+  )
+}
 
 // Default aman kalau prop subscription literal undefined (mismatch deploy,
 // race Suspense, atau sebab lain) — JANGAN biarkan ini crash hard.
@@ -183,6 +237,11 @@ export default function Profile({ user, loading = false, subscription = DEFAULT_
                   ? 'Diah Anna sudah sangat mengenalmu 🧠'
                   : 'Diah Anna mengenalmu lebih dalam dari siapapun ✨'}
               </div>
+
+              {/* Tombol lihat memori — hanya kalau ada memory */}
+              {profile?.diah_anna_memory && (
+                <MemoryCard memory={profile.diah_anna_memory} updatedAt={profile.memory_updated_at} />
+              )}
             </div>
           )}
         </div>
