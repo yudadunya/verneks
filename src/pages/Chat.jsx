@@ -52,6 +52,10 @@ export default function Chat({ user, chatMessages = [], setChatMessages, subscri
   const location = useLocation()
   const { plan, loading: subLoading, checkUsage, isExpired } = subscription
 
+  // Ref untuk selalu punya history terbaru tanpa closure stale
+  const coachHistoryRef = useRef(coachHistory)
+  useEffect(() => { coachHistoryRef.current = coachHistory }, [coachHistory])
+
   // ── Tracking state persuasi Diah Anna ────────────────────────────────────
   const [waitingForPositive, setWaitingForPositive] = useState(false)
 
@@ -335,16 +339,13 @@ export default function Chat({ user, chatMessages = [], setChatMessages, subscri
     if (!msg || loading) return
     setInput(''); pushUser(msg)
     const msgId = Date.now()
-    const newHistory = [...coachHistory, { id: msgId, role: 'user', content: msg, text: msg }]
+    const newHistory = [...coachHistoryRef.current, { id: msgId, role: 'user', content: msg, text: msg }]
     setCoachHistory(newHistory)
-    // Simpan langsung setelah user kirim — jangan tunggu reply Diah Anna
     saveHistoryToSupabase(newHistory, false)
     setLoading(true)
 
-    // Cek apakah user merespons positif setelah Diah Anna persuasi
     if (plan !== 'premium' && waitingForPositive && isPositiveResponse(msg)) {
       setWaitingForPositive(false)
-      // Tampilkan show-upgrade setelah 800ms (beri waktu pesan tampil dulu)
       setTimeout(() => {
         window.dispatchEvent(new CustomEvent('show-upgrade', { detail: {} }))
       }, 800)
@@ -356,8 +357,8 @@ export default function Chat({ user, chatMessages = [], setChatMessages, subscri
         pushBot(data.reply)
         const fullHistory = [...newHistory, { id: replyId, role: 'assistant', content: data.reply, text: data.reply }]
         setCoachHistory(fullHistory)
+        // Save langsung dengan fullHistory yang sudah pasti lengkap
         saveHistoryToSupabase(fullHistory, false)
-        // Kalau Diah Anna baru saja persuasi, set flag tunggu respons positif
         if (plan !== 'premium' && data.persuasiAktif) {
           setWaitingForPositive(true)
         }
