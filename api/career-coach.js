@@ -6,6 +6,110 @@ const supabase = createClient(
   process.env.SUPABASE_SERVICE_ROLE_KEY
 )
 
+// ── [RSI] ENGINE: ANALISIS & PEMBELAJARAN POLA MANDIRI ───────────────────────
+async function analyzeAndLearnPatterns(userId, messages, aiResponse, careerProfile, existingPatterns, rsiVersion, supabase) {
+  try {
+    // Ambil hanya pesan user untuk analisis
+    const userMessages = messages.filter(m => m.role === 'user').map(m => m.content || m.text || '').join('\n')
+    
+    if (!userMessages || userMessages.length < 20) return // Terlalu pendek untuk dianalisis
+    
+    // Minta AI menganalisis pola dari percakapan ini
+    const patternAnalysis = await generateText({
+      system: `Kamu adalah sistem analisis pola perilaku untuk Diah Anna. Tugasmu: mengidentifikasi pola berulang, preferensi komunikasi, atau wawasan baru tentang user dari percakapan coaching karir.
+      
+Output HARUS dalam format JSON valid dengan struktur:
+{
+  "new_patterns": [
+    {
+      "type": "communication_style|emotional_trigger|work_habit|decision_pattern|motivation_driver|blocker",
+      "description": "Deskripsi singkat dan jelas tentang pola ini",
+      "confidence": 0-100,
+      "examples": ["contoh 1 dari percakapan", "contoh 2"]
+    }
+  ],
+  "strategy_adjustment": "Saran bagaimana Diah Anna harus menyesuaikan gaya coaching-nya berdasarkan pola ini",
+  "should_update_memory": true/false
+}`,
+      prompt: `Profil User: ${careerProfile?.nama || 'Unknown'}, Target: ${careerProfile?.target_posisi || 'Unknown'}\n\nRiwayat Percakapan:\n${userMessages.slice(0, 3000)}\n\nRespons AI:\n${aiResponse.slice(0, 1000)}\n\nAnalisis apakah ada pola baru yang bisa dipelajari atau pola lama yang perlu disesuaikan confidence-nya.`,
+      maxTokens: 800,
+      tier: 'smart',
+      plan: 'premium'
+    })
+    
+    // Parse hasil analisis
+    let analysis
+    try {
+      // Bersihkan markdown code blocks jika ada
+      const cleanJson = patternAnalysis.replace(/```json\s*|\s*```/g, '').trim()
+      analysis = JSON.parse(cleanJson)
+    } catch (e) {
+      console.error('[RSI] Failed to parse pattern analysis:', e.message)
+      return
+    }
+    
+    if (!analysis.new_patterns || analysis.new_patterns.length === 0) return // Tidak ada pola baru
+    
+    // Proses setiap pola yang ditemukan
+    for (const pattern of analysis.new_patterns) {
+      if (!pattern.type || !pattern.description) continue
+      
+      // Cek apakah pola serupa sudah ada
+      const similarPattern = existingPatterns.find(p => 
+        p.pattern_type === pattern.type && 
+        p.pattern_description.toLowerCase().includes(pattern.description.toLowerCase().slice(0, 30))
+      )
+      
+      if (similarPattern) {
+        // Update confidence pola yang sudah ada
+        const newConfidence = Math.min(100, similarPattern.confidence_score + 10)
+        await supabase.from('ai_learned_patterns')
+          .update({ 
+            confidence_score: newConfidence,
+            updated_at: new Date().toISOString()
+          })
+          .eq('id', similarPattern.id)
+      } else {
+        // Insert pola baru
+        await supabase.from('ai_learned_patterns')
+          .insert({
+            user_id: userId,
+            pattern_type: pattern.type,
+            pattern_description: pattern.description,
+            confidence_score: pattern.confidence || 50,
+            examples: pattern.examples || [],
+            discovered_at: new Date().toISOString()
+          })
+      }
+    }
+    
+    // Log proses self-improvement
+    await supabase.from('ai_self_improvement_log')
+      .insert({
+        user_id: userId,
+        session_id: `chat_${Date.now()}`,
+        improvement_type: 'pattern_recognition',
+        before_state: { patterns_count: existingPatterns.length, rsi_version: rsiVersion },
+        after_state: { patterns_count: existingPatterns.length + (analysis.new_patterns?.length || 0), rsi_version: rsiVersion + 1 },
+        confidence_delta: analysis.new_patterns?.reduce((sum, p) => sum + (p.confidence || 0), 0) / (analysis.new_patterns?.length || 1),
+        notes: analysis.strategy_adjustment || ''
+      })
+    
+    // Update RSI version di profil user
+    await supabase.from('user_career_profiles')
+      .update({ 
+        rsi_version: rsiVersion + 1,
+        last_updated: new Date().toISOString()
+      })
+      .eq('user_id', userId)
+    
+    console.log(`[RSI] Learned ${analysis.new_patterns.length} new patterns for user ${userId}. New version: v${rsiVersion + 1}`)
+    
+  } catch (error) {
+    console.error('[RSI] Analysis error:', error.message)
+  }
+}
+
 // ── KEAMANAN: plan & usage TIDAK PERNAH dipercaya dari client ────────────────
 const LIMITS = {
   free:    { chat: 15, 'cv-review': 1, ats: 1, coach: 999, interview: 1, 'cv-maker': 1 },
@@ -441,12 +545,14 @@ export default async function handler(req, res) {
   let sessionNotes  = []
   let recentMilestones = []
   let activeDashboardMission = null
+  let learnedPatterns = []      // [RSI] Pola yang sudah dipelajari AI
+  let rsiVersion = 1            // [RSI] Versi model mental AI tentang user
 
   if (userId) {
     try {
       const yesterday = new Date(Date.now() - 86400000).toISOString().slice(0, 10)
 
-      const [profileRes, growthRes, genomeRes, capsuleRes, eventsRes, dashboardRes] = await Promise.all([
+      const [profileRes, growthRes, genomeRes, capsuleRes, eventsRes, dashboardRes, patternsRes] = await Promise.all([
         supabase.from('user_career_profiles').select('*').eq('user_id', userId).maybeSingle(),
         supabase.from('user_growth_state').select('*').eq('user_id', userId).maybeSingle(),
         supabase.from('user_genome_scores').select('*').eq('user_id', userId).maybeSingle(),
@@ -454,6 +560,8 @@ export default async function handler(req, res) {
         supabase.from('memory_capsule_log').select('capsule_text, capsule_date').eq('user_id', userId).eq('capsule_date', yesterday).maybeSingle(),
         supabase.from('career_events').select('event_type, event_payload, created_at').eq('user_id', userId).eq('event_type', 'milestone_completed').order('created_at', { ascending: false }).limit(3),
         supabase.from('dashboard_missions').select('*').eq('user_id', userId).eq('status', 'active').order('created_at', { ascending: false }).limit(1).maybeSingle(),
+        // [RSI] Ambil pola yang sudah dipelajari
+        supabase.from('ai_learned_patterns').select('pattern_type, pattern_description, confidence_score, examples').eq('user_id', userId).order('confidence_score', { ascending: false }).limit(10),
       ])
 
       careerProfile          = profileRes.data
@@ -462,6 +570,8 @@ export default async function handler(req, res) {
       sessionNotes           = capsuleRes.data ? [{ summary: capsuleRes.data.capsule_text }] : []
       recentMilestones       = eventsRes.data || []
       activeDashboardMission = dashboardRes.data
+      learnedPatterns        = patternsRes.data || []
+      rsiVersion             = careerProfile?.rsi_version || 1
     } catch (e) {
       console.error('[career-coach] load error:', e.message)
     }
@@ -497,6 +607,12 @@ export default async function handler(req, res) {
     // BUKAN ke user_growth_state. Sumber lama (growthState) selalu null.
     running_insight: careerProfile?.running_insight || null
   }
+
+  // [RSI] Format pola yang dipelajari menjadi konteks untuk AI
+  const rsiPatternsBlock = learnedPatterns.length > 0 ? `
+# POLA YANG SUDAH AKU PELAJARI TENTANG KAMU (RSI v${rsiVersion})
+${learnedPatterns.map((p, i) => `${i + 1}. ${p.pattern_type}: ${p.pattern_description} (Keyakinan: ${p.confidence_score}%). Contoh: ${(p.examples || []).slice(0, 2).join('; ')}`).join('\n')}
+` : ''
 
   // ════════════════════════════════════════════
   // ACTION: INIT CHAT (GENERASI PROACTIVE GREETING V2)
@@ -576,7 +692,7 @@ Next Milestone: ${structuralMemory.next_milestone || 'Belum ditentukan'}
 Top Genome Dimensions: ${topGenomeDimensions}
 ${sessionNotes.length > 0 ? `\nCatatan Sesi Sebelumnya:\n${sessionNotes.map(n => `- ${n.summary}`).join('\n')}` : ''}
 ${recentMilestones.length > 0 ? `\nMilestone Baru Diselesaikan:\n${recentMilestones.map(m => `- ${m.event_payload?.title}`).join('\n')}` : ''}
-${deepMemoryBlock}${depthProfileBlock}`
+${deepMemoryBlock}${depthProfileBlock}${rsiPatternsBlock}`
 
   try {
     const systemContent = `
@@ -593,6 +709,7 @@ ${RESPONSE_FRAMEWORK}
 
 PENTING: Integrasikan seluruh fakta memori di atas secara mengalir tanpa menggunakan kalimat template kaku. JANGAN beralih menjadi pasif atau melemparkan kendali obrolan kembali kepada user tanpa memberikan value tindakan/opini yang solid.
 ${diahAnnaMemory ? `\nKamu sudah mengenal user ini dengan baik (depth score: ${depthScore}/100). Gunakan pengetahuan personalmu tentang mereka — cara komunikasi mereka, apa yang memotivasi dan menghambat mereka — untuk membuat respons terasa seperti dari seseorang yang benar-benar mengenal mereka, bukan AI generik.` : ''}
+${learnedPatterns.length > 0 ? `\n\n[RSI ACTIVE] Kamu sudah belajar dari ${learnedPatterns.length} pola perilaku user ini. Gunakan wawasan ini untuk menyesuaikan gaya komunikasimu. Versi model mentalmu tentang user ini adalah v${rsiVersion}.` : ''}
 `
 
     const rawReply = await generateChat({
@@ -606,6 +723,14 @@ ${diahAnnaMemory ? `\nKamu sudah mengenal user ini dengan baik (depth score: ${d
     // Strip semua varian marker persuasi
     const persuasiAktif = /\[UPGRADE\]|\[PERSUASI_AKTI[FV]\]/i.test(rawReply)
     const reply = rawReply.replace(/\[UPGRADE\]|\[PERSUASI_AKTI[FV]\]/gi, '').trim()
+
+    // [RSI] Trigger background process untuk analisis pola & self-improvement
+    // Tidak di-await agar tidak memperlambat respons chat
+    if (userId && messages.length > 2) {
+      analyzeAndLearnPatterns(userId, messages, rawReply, careerProfile, learnedPatterns, rsiVersion, supabase).catch(e => 
+        console.error('[RSI] Background analysis error:', e.message)
+      )
+    }
 
     return res.status(200).json({ reply, persuasiAktif })
   } catch (error) {
