@@ -6,6 +6,32 @@ const supabase = createClient(
   process.env.SUPABASE_SERVICE_ROLE_KEY
 )
 
+// ── [RSI] ROBUST JSON PARSER ─────────────────────────────────────────────────
+function extractJsonFromResponse(text) {
+  if (!text) return null
+
+  // 1. Coba cari blok JSON di dalam ```json ... ```
+  const jsonBlockMatch = text.match(/```json\s*([\s\S]*?)\s*```/)
+  if (jsonBlockMatch) {
+    try { return JSON.parse(jsonBlockMatch[1]) } catch (e) {}
+  }
+
+  // 2. Coba parse langsung
+  try { return JSON.parse(text) } catch (e) {}
+
+  // 3. Strategi terakhir: ambil substring antara '{' pertama dan '}' terakhir
+  // Berguna kalau AI tambahkan teks penjelasan di luar JSON atau respons terpotong
+  const startIdx = text.indexOf('{')
+  const endIdx   = text.lastIndexOf('}')
+  if (startIdx !== -1 && endIdx !== -1 && endIdx > startIdx) {
+    try { return JSON.parse(text.substring(startIdx, endIdx + 1)) } catch (e2) {
+      console.error('[RSI] Gagal parse JSON potensial:', e2.message)
+    }
+  }
+
+  return null
+}
+
 // ── [RSI] ENGINE: ANALISIS & PEMBELAJARAN POLA MANDIRI ───────────────────────
 async function analyzeAndLearnPatterns(userId, messages, aiResponse, careerProfile, existingPatterns, rsiVersion, supabase) {
   try {
@@ -37,27 +63,11 @@ Output HARUS dalam format JSON valid dengan struktur:
       plan: 'premium'
     })
     
-    // Parse hasil analisis
-    let analysis
-    try {
-      // Bersihkan markdown code blocks jika ada
-      let cleanJson = patternAnalysis.replace(/```json\s*|\s*```/g, '').trim()
-      
-      // Fallback: coba ekstrak JSON dari tengah teks jika masih gagal
-      const jsonMatch = cleanJson.match(/\{[\s\S]*\}/)
-      if (jsonMatch) {
-        cleanJson = jsonMatch[0]
-      }
-      
-      analysis = JSON.parse(cleanJson)
-      
-      // Validasi struktur
-      if (!analysis || !Array.isArray(analysis.new_patterns)) {
-        throw new Error('Invalid structure: missing new_patterns array')
-      }
-    } catch (e) {
-      console.error('[RSI] Failed to parse pattern analysis:', e.message)
-      console.error('[RSI] Raw response:', patternAnalysis.slice(0, 500))
+    // Parse hasil analisis — pakai robust parser
+    const analysis = extractJsonFromResponse(patternAnalysis)
+
+    if (!analysis || !Array.isArray(analysis.new_patterns)) {
+      console.error('[RSI] Invalid structure atau parse gagal. Raw:', patternAnalysis.slice(0, 300))
       return
     }
     
