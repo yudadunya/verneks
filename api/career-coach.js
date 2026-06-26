@@ -41,10 +41,23 @@ Output HARUS dalam format JSON valid dengan struktur:
     let analysis
     try {
       // Bersihkan markdown code blocks jika ada
-      const cleanJson = patternAnalysis.replace(/```json\s*|\s*```/g, '').trim()
+      let cleanJson = patternAnalysis.replace(/```json\s*|\s*```/g, '').trim()
+      
+      // Fallback: coba ekstrak JSON dari tengah teks jika masih gagal
+      const jsonMatch = cleanJson.match(/\{[\s\S]*\}/)
+      if (jsonMatch) {
+        cleanJson = jsonMatch[0]
+      }
+      
       analysis = JSON.parse(cleanJson)
+      
+      // Validasi struktur
+      if (!analysis || !Array.isArray(analysis.new_patterns)) {
+        throw new Error('Invalid structure: missing new_patterns array')
+      }
     } catch (e) {
       console.error('[RSI] Failed to parse pattern analysis:', e.message)
+      console.error('[RSI] Raw response:', patternAnalysis.slice(0, 500))
       return
     }
     
