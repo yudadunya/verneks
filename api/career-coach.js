@@ -79,29 +79,29 @@ Output HARUS dalam format JSON valid dengan struktur:
       
       // Cek apakah pola serupa sudah ada
       const similarPattern = existingPatterns.find(p => 
-        p.pattern_type === pattern.type && 
+        p.pattern_category === pattern.type && 
         p.pattern_description.toLowerCase().includes(pattern.description.toLowerCase().slice(0, 30))
       )
       
       if (similarPattern) {
-        // Update confidence pola yang sudah ada
-        const newConfidence = Math.min(100, similarPattern.confidence_score + 10)
+        // Update confidence + occurrence count
         await supabase.from('ai_learned_patterns')
           .update({ 
-            confidence_score: newConfidence,
-            updated_at: new Date().toISOString()
+            confidence_score:  Math.min(100, (similarPattern.confidence_score || 50) + 10),
+            occurrence_count:  (similarPattern.occurrence_count || 1) + 1,
+            last_observed_at:  new Date().toISOString(),
           })
           .eq('id', similarPattern.id)
       } else {
         // Insert pola baru
         await supabase.from('ai_learned_patterns')
           .insert({
-            user_id: userId,
-            pattern_type: pattern.type,
+            user_id:             userId,
+            pattern_category:    pattern.type,
             pattern_description: pattern.description,
-            confidence_score: pattern.confidence || 50,
-            examples: pattern.examples || [],
-            discovered_at: new Date().toISOString()
+            confidence_score:    pattern.confidence || 50,
+            occurrence_count:    1,
+            last_observed_at:    new Date().toISOString(),
           })
       }
     }
@@ -584,7 +584,7 @@ export default async function handler(req, res) {
         supabase.from('career_events').select('event_type, event_payload, created_at').eq('user_id', userId).eq('event_type', 'milestone_completed').order('created_at', { ascending: false }).limit(3),
         supabase.from('dashboard_missions').select('*').eq('user_id', userId).eq('status', 'active').order('created_at', { ascending: false }).limit(1).maybeSingle(),
         // [RSI] Ambil pola yang sudah dipelajari
-        supabase.from('ai_learned_patterns').select('pattern_type, pattern_description, confidence_score, examples').eq('user_id', userId).order('confidence_score', { ascending: false }).limit(10),
+        supabase.from('ai_learned_patterns').select('id, pattern_category, pattern_description, confidence_score, occurrence_count, last_observed_at').eq('user_id', userId).order('confidence_score', { ascending: false }).limit(10),
       ])
 
       careerProfile          = profileRes.data
@@ -634,7 +634,7 @@ export default async function handler(req, res) {
   // [RSI] Format pola yang dipelajari menjadi konteks untuk AI
   const rsiPatternsBlock = learnedPatterns.length > 0 ? `
 # POLA YANG SUDAH AKU PELAJARI TENTANG KAMU (RSI v${rsiVersion})
-${learnedPatterns.map((p, i) => `${i + 1}. ${p.pattern_type}: ${p.pattern_description} (Keyakinan: ${p.confidence_score}%). Contoh: ${(p.examples || []).slice(0, 2).join('; ')}`).join('\n')}
+${learnedPatterns.map((p, i) => `${i + 1}. ${p.pattern_category}: ${p.pattern_description} (Keyakinan: ${p.confidence_score}%, muncul ${p.occurrence_count}x)`).join('\n')}
 ` : ''
 
   // ════════════════════════════════════════════
