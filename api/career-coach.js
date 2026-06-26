@@ -6,6 +6,32 @@ const supabase = createClient(
   process.env.SUPABASE_SERVICE_ROLE_KEY
 )
 
+// ── [RSI] ROBUST JSON PARSER ─────────────────────────────────────────────────
+function extractJsonFromResponse(text) {
+  if (!text) return null
+
+  // 1. Coba cari blok JSON di dalam ```json ... ```
+  const jsonBlockMatch = text.match(/```json\s*([\s\S]*?)\s*```/)
+  if (jsonBlockMatch) {
+    try { return JSON.parse(jsonBlockMatch[1]) } catch (e) {}
+  }
+
+  // 2. Coba parse langsung
+  try { return JSON.parse(text) } catch (e) {}
+
+  // 3. Strategi terakhir: ambil substring antara '{' pertama dan '}' terakhir
+  // Berguna kalau AI tambahkan teks penjelasan di luar JSON atau respons terpotong
+  const startIdx = text.indexOf('{')
+  const endIdx   = text.lastIndexOf('}')
+  if (startIdx !== -1 && endIdx !== -1 && endIdx > startIdx) {
+    try { return JSON.parse(text.substring(startIdx, endIdx + 1)) } catch (e2) {
+      console.error('[RSI] Gagal parse JSON potensial:', e2.message)
+    }
+  }
+
+  return null
+}
+
 // ── [RSI] ENGINE: ANALISIS & PEMBELAJARAN POLA MANDIRI ───────────────────────
 async function analyzeAndLearnPatterns(userId, messages, aiResponse, careerProfile, existingPatterns, rsiVersion, supabase) {
   try {
@@ -37,27 +63,11 @@ Output HARUS dalam format JSON valid dengan struktur:
       plan: 'premium'
     })
     
-    // Parse hasil analisis
-    let analysis
-    try {
-      // Bersihkan markdown code blocks jika ada
-      let cleanJson = patternAnalysis.replace(/```json\s*|\s*```/g, '').trim()
-      
-      // Fallback: coba ekstrak JSON dari tengah teks jika masih gagal
-      const jsonMatch = cleanJson.match(/\{[\s\S]*\}/)
-      if (jsonMatch) {
-        cleanJson = jsonMatch[0]
-      }
-      
-      analysis = JSON.parse(cleanJson)
-      
-      // Validasi struktur
-      if (!analysis || !Array.isArray(analysis.new_patterns)) {
-        throw new Error('Invalid structure: missing new_patterns array')
-      }
-    } catch (e) {
-      console.error('[RSI] Failed to parse pattern analysis:', e.message)
-      console.error('[RSI] Raw response:', patternAnalysis.slice(0, 500))
+    // Parse hasil analisis — pakai robust parser
+    const analysis = extractJsonFromResponse(patternAnalysis)
+
+    if (!analysis || !Array.isArray(analysis.new_patterns)) {
+      console.error('[RSI] Invalid structure atau parse gagal. Raw:', patternAnalysis.slice(0, 300))
       return
     }
     
@@ -69,29 +79,29 @@ Output HARUS dalam format JSON valid dengan struktur:
       
       // Cek apakah pola serupa sudah ada
       const similarPattern = existingPatterns.find(p => 
-        p.pattern_type === pattern.type && 
+        p.pattern_category === pattern.type && 
         p.pattern_description.toLowerCase().includes(pattern.description.toLowerCase().slice(0, 30))
       )
       
       if (similarPattern) {
-        // Update confidence pola yang sudah ada
-        const newConfidence = Math.min(100, similarPattern.confidence_score + 10)
+        // Update confidence + occurrence count
         await supabase.from('ai_learned_patterns')
           .update({ 
-            confidence_score: newConfidence,
-            updated_at: new Date().toISOString()
+            confidence_score:  Math.min(100, (similarPattern.confidence_score || 50) + 10),
+            occurrence_count:  (similarPattern.occurrence_count || 1) + 1,
+            last_observed_at:  new Date().toISOString(),
           })
           .eq('id', similarPattern.id)
       } else {
         // Insert pola baru
         await supabase.from('ai_learned_patterns')
           .insert({
-            user_id: userId,
-            pattern_type: pattern.type,
+            user_id:             userId,
+            pattern_category:    pattern.type,
             pattern_description: pattern.description,
-            confidence_score: pattern.confidence || 50,
-            examples: pattern.examples || [],
-            discovered_at: new Date().toISOString()
+            confidence_score:    pattern.confidence || 50,
+            occurrence_count:    1,
+            last_observed_at:    new Date().toISOString(),
           })
       }
     }
@@ -574,7 +584,7 @@ export default async function handler(req, res) {
         supabase.from('career_events').select('event_type, event_payload, created_at').eq('user_id', userId).eq('event_type', 'milestone_completed').order('created_at', { ascending: false }).limit(3),
         supabase.from('dashboard_missions').select('*').eq('user_id', userId).eq('status', 'active').order('created_at', { ascending: false }).limit(1).maybeSingle(),
         // [RSI] Ambil pola yang sudah dipelajari
-        supabase.from('ai_learned_patterns').select('pattern_type, pattern_description, confidence_score, examples').eq('user_id', userId).order('confidence_score', { ascending: false }).limit(10),
+        supabase.from('ai_learned_patterns').select('id, pattern_category, pattern_description, confidence_score, occurrence_count, last_observed_at').eq('user_id', userId).order('confidence_score', { ascending: false }).limit(10),
       ])
 
       careerProfile          = profileRes.data
@@ -624,7 +634,7 @@ export default async function handler(req, res) {
   // [RSI] Format pola yang dipelajari menjadi konteks untuk AI
   const rsiPatternsBlock = learnedPatterns.length > 0 ? `
 # POLA YANG SUDAH AKU PELAJARI TENTANG KAMU (RSI v${rsiVersion})
-${learnedPatterns.map((p, i) => `${i + 1}. ${p.pattern_type}: ${p.pattern_description} (Keyakinan: ${p.confidence_score}%). Contoh: ${(p.examples || []).slice(0, 2).join('; ')}`).join('\n')}
+${learnedPatterns.map((p, i) => `${i + 1}. ${p.pattern_category}: ${p.pattern_description} (Keyakinan: ${p.confidence_score}%, muncul ${p.occurrence_count}x)`).join('\n')}
 ` : ''
 
   // ════════════════════════════════════════════
