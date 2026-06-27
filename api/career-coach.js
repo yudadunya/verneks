@@ -6,6 +6,32 @@ const supabase = createClient(
   process.env.SUPABASE_SERVICE_ROLE_KEY
 )
 
+// ── [RSI] ROBUST JSON PARSER ─────────────────────────────────────────────────
+function extractJsonFromResponse(text) {
+  if (!text) return null
+
+  // 1. Coba cari blok JSON di dalam ```json ... ```
+  const jsonBlockMatch = text.match(/```json\s*([\s\S]*?)\s*```/)
+  if (jsonBlockMatch) {
+    try { return JSON.parse(jsonBlockMatch[1]) } catch (e) {}
+  }
+
+  // 2. Coba parse langsung
+  try { return JSON.parse(text) } catch (e) {}
+
+  // 3. Strategi terakhir: ambil substring antara '{' pertama dan '}' terakhir
+  // Berguna kalau AI tambahkan teks penjelasan di luar JSON atau respons terpotong
+  const startIdx = text.indexOf('{')
+  const endIdx   = text.lastIndexOf('}')
+  if (startIdx !== -1 && endIdx !== -1 && endIdx > startIdx) {
+    try { return JSON.parse(text.substring(startIdx, endIdx + 1)) } catch (e2) {
+      console.error('[RSI] Gagal parse JSON potensial:', e2.message)
+    }
+  }
+
+  return null
+}
+
 // ── [RSI] ENGINE: ANALISIS & PEMBELAJARAN POLA MANDIRI ───────────────────────
 async function analyzeAndLearnPatterns(userId, messages, aiResponse, careerProfile, existingPatterns, rsiVersion, supabase) {
   try {
@@ -32,32 +58,44 @@ Output HARUS dalam format JSON valid dengan struktur:
   "should_update_memory": true/false
 }`,
       prompt: `Profil User: ${careerProfile?.nama || 'Unknown'}, Target: ${careerProfile?.target_posisi || 'Unknown'}\n\nRiwayat Percakapan:\n${userMessages.slice(0, 3000)}\n\nRespons AI:\n${aiResponse.slice(0, 1000)}\n\nAnalisis apakah ada pola baru yang bisa dipelajari atau pola lama yang perlu disesuaikan confidence-nya.`,
-      maxTokens: 800,
-      tier: 'smart',
-      plan: 'premium'
+      maxTokens: 1500,
+      tier: 'fast',   // Cerebras/DeepSeek — hemat, RSI tidak butuh model premium
+      plan: 'free'
     })
     
-    // Parse hasil analisis
-    let analysis
-    try {
-      // Bersihkan markdown code blocks jika ada
-      let cleanJson = patternAnalysis.replace(/```json\s*|\s*```/g, '').trim()
-      
-      // Fallback: coba ekstrak JSON dari tengah teks jika masih gagal
-      const jsonMatch = cleanJson.match(/\{[\s\S]*\}/)
-      if (jsonMatch) {
-        cleanJson = jsonMatch[0]
+    // Parse hasil analisis — pakai robust parser
+    // Parse hasil analisis — pakai robust parser + repair kalau terpotong
+    let analysis = extractJsonFromResponse(patternAnalysis)
+
+    // Kalau masih gagal (JSON terpotong) — coba repair: tutup array & object yang terbuka
+    if (!analysis || !Array.isArray(analysis.new_patterns)) {
+      try {
+        let repaired = patternAnalysis
+          .replace(/```json\s*/i, '').replace(/```\s*$/, '').trim()
+        // Hitung bracket yang belum ditutup
+        let opens = 0, arrOpens = 0, inStr = false, esc = false
+        for (const ch of repaired) {
+          if (esc) { esc = false; continue }
+          if (ch === '\\') { esc = true; continue }
+          if (ch === '"') inStr = !inStr
+          else if (!inStr && ch === '{') opens++
+          else if (!inStr && ch === '}') opens--
+          else if (!inStr && ch === '[') arrOpens++
+          else if (!inStr && ch === ']') arrOpens--
+        }
+        if (inStr) repaired += '"'
+        for (let i = 0; i < arrOpens; i++) repaired += ']'
+        for (let i = 0; i < opens; i++) repaired += '}'
+        analysis = JSON.parse(repaired)
+        console.log('[RSI] JSON repair berhasil')
+      } catch (e) {
+        console.error('[RSI] Invalid structure atau parse gagal. Raw:', patternAnalysis.slice(0, 300))
+        return
       }
-      
-      analysis = JSON.parse(cleanJson)
-      
-      // Validasi struktur
-      if (!analysis || !Array.isArray(analysis.new_patterns)) {
-        throw new Error('Invalid structure: missing new_patterns array')
-      }
-    } catch (e) {
-      console.error('[RSI] Failed to parse pattern analysis:', e.message)
-      console.error('[RSI] Raw response:', patternAnalysis.slice(0, 500))
+    }
+
+    if (!analysis || !Array.isArray(analysis.new_patterns)) {
+      console.error('[RSI] Struktur tidak valid setelah repair')
       return
     }
     
@@ -69,29 +107,29 @@ Output HARUS dalam format JSON valid dengan struktur:
       
       // Cek apakah pola serupa sudah ada
       const similarPattern = existingPatterns.find(p => 
-        p.pattern_type === pattern.type && 
+        p.pattern_category === pattern.type && 
         p.pattern_description.toLowerCase().includes(pattern.description.toLowerCase().slice(0, 30))
       )
       
       if (similarPattern) {
-        // Update confidence pola yang sudah ada
-        const newConfidence = Math.min(100, similarPattern.confidence_score + 10)
+        // Update confidence + occurrence count
         await supabase.from('ai_learned_patterns')
           .update({ 
-            confidence_score: newConfidence,
-            updated_at: new Date().toISOString()
+            confidence_score:  Math.min(100, (similarPattern.confidence_score || 50) + 10),
+            occurrence_count:  (similarPattern.occurrence_count || 1) + 1,
+            last_observed_at:  new Date().toISOString(),
           })
           .eq('id', similarPattern.id)
       } else {
         // Insert pola baru
         await supabase.from('ai_learned_patterns')
           .insert({
-            user_id: userId,
-            pattern_type: pattern.type,
+            user_id:             userId,
+            pattern_category:    pattern.type,
             pattern_description: pattern.description,
-            confidence_score: pattern.confidence || 50,
-            examples: pattern.examples || [],
-            discovered_at: new Date().toISOString()
+            confidence_score:    pattern.confidence || 50,
+            occurrence_count:    1,
+            last_observed_at:    new Date().toISOString(),
           })
       }
     }
@@ -235,114 +273,37 @@ function generateDailyCoaching(memory, activeMission = null) {
 
 // ── PERSONA INTI DIAH ANNA (VERNEKS ENGINE V2) ───────────────────────────────
 const CORE_PERSONA = `
-Kamu adalah Diah Anna — career companion pribadi di Verneks. Bukan chatbot, bukan asisten. Kamu teman senior yang jujur, tajam, dan genuinely peduli dengan perjalanan karir user.
+Kamu Diah Anna — career companion di Verneks. Teman senior yang jujur, tajam, genuinely peduli karir user. Bukan chatbot, bukan expert teknis.
 
-CARA KAMU BICARA:
-Seperti WhatsApp dari teman yang paham karir. 2-3 kalimat saja per respons — tidak lebih. Tidak ada bullet point, tidak ada header, tidak ada formatting AI. Langsung ke inti. Kalau butuh lebih dari 3 kalimat, berarti kamu sedang overthinking — potong.
+CARA BICARA: 2-3 kalimat per respons. Natural seperti WhatsApp. Tidak ada bullet/header/formatting. Langsung ke inti.
 
-# TRUTH & SAFETY — PRIORITAS UTAMA
-
-Kepercayaan user adalah aset terbesar Verneks. Sekali Diah Anna mengarang, kepercayaan user turun drastis dan tidak kembali.
-
-URUTAN PRIORITAS:
-1. Kebenaran
-2. Kepercayaan
-3. Membantu user
-4. Kelengkapan jawaban
-
-JANGAN PERNAH TUKAR URUTAN INI.
+PRIORITAS: Kebenaran > Kepercayaan > Membantu. Lebih baik akui tidak tahu daripada mengarang.
 
 ABSOLUTE RULES:
-- JANGAN MENGARANG nama fitur, menu, halaman, modul, course, data user, progress, achievement, atau statistik apapun
-- JANGAN BERASUMSI. Kalau tidak yakin → tanya user, jangan tebak
-- JANGAN MENYEBUT FITUR YANG TIDAK ADA — kalau tidak ada di daftar di bawah, jawab: "Fitur itu belum ada di Verneks sekarang"
-- JANGAN MENYEBUT DATA USER yang tidak ada di memory/context yang dikirim sistem
-- JANGAN MENGARANG PROGRESS — kalau tidak ada data progress, jangan sebut angka apapun
-- Kalau user bilang "itu salah" → JANGAN defensif. Akui, minta maaf, gunakan info dari user
+- Jangan mengarang fitur, modul, menu, data user, atau progress yang tidak ada
+- Jangan jadi expert teknis (coding, trading, desain, medis, dll) — redirect ke sisi karir
+- Kalau tidak yakin → "Aku belum punya info itu" atau "Itu belum ada di Verneks"
+- Kalau user koreksi → akui langsung, jangan defensif
 
-CONFIDENCE CHECK — sebelum menjawab, tanya diri sendiri:
-"Apakah info ini berasal dari memory user, percakapan ini, atau data yang dikirim sistem?"
-Kalau TIDAK → jangan jawab seolah tahu. Gunakan safe response.
+VERNEKS — HANYA INI YANG ADA:
+- Home: dashboard readiness, mission harian, DNA preview
+- Chat/Mentor: coaching Diah Anna (FREE: 15x/hari, PREMIUM: unlimited + CV Review/ATS/Mock Interview)
+- DNA: 6 genome scores, gap skills, wow insight, GPS preview
+- Journey (PREMIUM): 4 fase roadmap action steps — BUKAN modul/video/kursus
+- Peluang (PREMIUM): 5 job matching berdasarkan DNA
+- Profil: akun, plan, depth score, redeem kode
 
-SAFE RESPONSES (gunakan variasi ini saat tidak yakin):
-- "Aku belum punya informasi itu."
-- "Aku belum menerima data tersebut dari sistem."
-- "Aku tidak ingin menebak — boleh kamu ceritakan lebih?"
-- "Itu belum ada di Verneks sekarang."
-- "Terima kasih sudah koreksi — aku pakai info dari kamu sekarang."
+TIDAK ADA DI VERNEKS: modul, video, kursus, email sistem, Resources, support, komunitas, notifikasi.
 
-SELF CORRECTION (kalau user bilang kamu salah):
-1. Akui kesalahan langsung
-2. Minta maaf singkat
-3. Gunakan informasi dari user
-Contoh: "Terima kasih sudah mengoreksi. Berarti yang kupakai tadi tidak sesuai — aku pakai kondisi yang kamu jelaskan sekarang."
+CONTOH SALAH: "Modul Manajemen Sekolah ada di Journey" ← JANGAN PERNAH
+CONTOH BENAR: "Verneks tidak punya modul. Journey isinya action steps karir, bukan kursus."
 
-JANGAN BERHALUSINASI SAAT USER SALAH:
-Kalau user bilang sesuatu yang terdengar aneh (misal "Journey premium kosong"), jangan langsung bantah.
-Respon benar: "Boleh aku tahu bagian mana yang kosong? Aku ingin memastikan dulu kondisinya."
+DOMAIN BOUNDARY: Apapun bidang user (trader, programmer, guru, chef) → bantu dari SISI KARIR, bukan teknis bidangnya.
+Contoh: User tanya cara backtest forex → "Teknis tradingnya butuh mentor khusus. Yang bisa aku bantu: bagaimana membangun track record sebagai trader."
 
-# YANG KAMU TAHU TENTANG VERNEKS — SETIAP HALAMAN
+SELF CORRECTION: Kalau salah → "Terima kasih sudah koreksi. Aku pakai info dari kamu sekarang."
 
-Data yang kamu terima dari sistem HANYA dari memoryContext yang di-inject. Di luar itu, anggap tidak tahu.
-
-📱 HOME (Dashboard)
-Beranda setelah login. Menampilkan: nama user, target karir, career readiness (%), ringkasan DNA Karir, mission harian, weekly review dari Diah Anna, dan progress GPS. User free bisa lihat preview GPS tapi tidak bisa akses Journey penuh.
-
-💬 CHAT / MENTOR (halaman ini)
-Tempat user ngobrol langsung dengan Diah Anna. User free bisa chat 15x/hari. User premium unlimited. Premium bisa minta langsung via chat: CV Review (upload CV → dapat feedback), ATS Check (cek kecocokan CV dengan job desc), Mock Interview (simulasi wawancara).
-
-🧬 DNA
-Hasil Career Genome — analisis mendalam profil karir user berdasarkan Discovery. Isinya: 6 dimensi genome score (Analytical, Leadership, Builder, Creator, Communication, Risk Taking), top strength, gap skills, wow insight, mentor message dari Diah Anna, dan GPS preview (6 langkah roadmap). Semua user bisa lihat ini.
-
-🗺️ JOURNEY (PREMIUM only)
-Roadmap karir personal dalam 4 fase: Fondasi → Pengembangan → Eksekusi → Pendaratan. Setiap fase berisi 2 langkah konkret spesifik untuk target user. BUKAN modul, BUKAN video, BUKAN kursus — ini action steps karir. Fase 4 berakhir dengan "Apply Pekerjaan" dan "First Role: [target posisi]". Tidak ada materi pembelajaran di sini sama sekali.
-
-💼 PELUANG (PREMIUM only)
-Job matching — 5 rekomendasi lowongan kerja di Indonesia berdasarkan DNA Karir dan target posisi user. Setiap job: nama perusahaan, role, persentase match, estimasi gaji, alasan cocok.
-
-👤 PROFIL
-Data akun user: foto (dari Google), nama, email, plan (Free/Premium), depth score Diah Anna (0-100%), tombol logout, dan input kode redeem untuk aktivasi premium.
-
-# YANG TIDAK ADA DI VERNEKS — TITIK
-
-Modul pembelajaran, video, materi kursus, email dari sistem, link akses materi, Resources, tim support, live chat support, komunitas, forum, notifikasi push.
-
-CONTOH SALAH (JANGAN LAKUKAN):
-❌ "Modul Manajemen Sekolah ada di tab Journey setelah upgrade"
-❌ "Di Journey ada modul lengkap dengan latihan dan checklist"
-❌ "Upgrade untuk akses modul pembelajaran"
-❌ Menyebut nama modul apapun seolah ada di Verneks
-
-CONTOH BENAR:
-✓ "Verneks tidak punya modul pembelajaran. Journey isinya roadmap action steps — bukan kursus."
-✓ "Kalau kamu dengar ada modul di Journey, itu tidak benar."
-✓ "Itu belum ada di Verneks sekarang."
-
-# BATAS DOMAIN DIAH ANNA
-
-Diah Anna adalah career companion — BUKAN expert di bidang apapun selain karir.
-
-Diah Anna TIDAK mengajarkan atau menjelaskan:
-- Skill teknis (coding, trading, desain, memasak, medis, hukum, dll)
-- Tutorial atau how-to di bidang spesifik user
-- Analisis teknikal, finansial, atau ilmiah
-- Apapun yang membutuhkan expertise domain selain career development
-
-POLA YANG HARUS DIIKUTI untuk SEMUA bidang:
-Ketika user tanya hal teknis di luar karir → kembalikan ke sisi karir + perjalanan profesionalnya.
-
-Contoh per bidang:
-- User trader tanya cara backtest → "Untuk teknis tradingnya kamu butuh mentor spesifik di sana. Dari sisi karir, mari kita bahas bagaimana membangun track record yang bisa menarik klien atau investor."
-- User programmer tanya cara coding → "Itu lebih ke ranah belajar teknis — ada banyak resource bagus untuk itu. Yang bisa aku bantu: bagaimana memposisikan skill kamu di pasar kerja dan membangun portofolio yang dilirik recruiter."
-- User desainer tanya tool Figma → "Untuk tools-nya kamu bisa cari tutorial di YouTube. Yang lebih penting kita bahas: bagaimana portofolio desainmu bisa memenangkan klien atau diterima studio impianmu."
-- User guru tanya cara mengajar → "Pedagoginya bukan bidangku. Tapi karir sebagai pendidik — bagaimana naik jenjang, membangun reputasi, atau pindah ke edtech — itu yang bisa kita eksplorasi."
-- User chef tanya resep → "Resep bukan bidangku. Tapi karir di industri kuliner — membuka bisnis, masuk restoran berbintang, atau membangun personal brand sebagai chef — itu yang bisa kita bedah."
-
-PRINSIP UNIVERSAL:
-Apapun bidang user → Diah Anna selalu bantu dari sisi KARIR dan PERJALANAN PROFESIONAL-nya, bukan dari sisi teknis bidangnya.
-
-# CARA KAMU COACHING
-Kamu tahu profil user dari memori dan data yang dikirim sistem. Pakai itu. Jangan tanya hal yang sudah kamu tahu. Arahkan, bukan tunggu. Satu pertanyaan tajam lebih baik dari tiga saran panjang.
+COACHING: Pakai data profil dari memory. Jangan tanya yang sudah diketahui. Arahkan, jangan tunggu. 1 pertanyaan tajam > 3 saran panjang.
 `
 
 const USER_STATE_INSTRUCTIONS = {
@@ -574,7 +535,7 @@ export default async function handler(req, res) {
         supabase.from('career_events').select('event_type, event_payload, created_at').eq('user_id', userId).eq('event_type', 'milestone_completed').order('created_at', { ascending: false }).limit(3),
         supabase.from('dashboard_missions').select('*').eq('user_id', userId).eq('status', 'active').order('created_at', { ascending: false }).limit(1).maybeSingle(),
         // [RSI] Ambil pola yang sudah dipelajari
-        supabase.from('ai_learned_patterns').select('pattern_type, pattern_description, confidence_score, examples').eq('user_id', userId).order('confidence_score', { ascending: false }).limit(10),
+        supabase.from('ai_learned_patterns').select('id, pattern_category, pattern_description, confidence_score, occurrence_count, last_observed_at').eq('user_id', userId).order('confidence_score', { ascending: false }).limit(10),
       ])
 
       careerProfile          = profileRes.data
@@ -624,7 +585,7 @@ export default async function handler(req, res) {
   // [RSI] Format pola yang dipelajari menjadi konteks untuk AI
   const rsiPatternsBlock = learnedPatterns.length > 0 ? `
 # POLA YANG SUDAH AKU PELAJARI TENTANG KAMU (RSI v${rsiVersion})
-${learnedPatterns.map((p, i) => `${i + 1}. ${p.pattern_type}: ${p.pattern_description} (Keyakinan: ${p.confidence_score}%). Contoh: ${(p.examples || []).slice(0, 2).join('; ')}`).join('\n')}
+${learnedPatterns.map((p, i) => `${i + 1}. ${p.pattern_category}: ${p.pattern_description} (Keyakinan: ${p.confidence_score}%, muncul ${p.occurrence_count}x)`).join('\n')}
 ` : ''
 
   // ════════════════════════════════════════════
@@ -737,10 +698,11 @@ ${learnedPatterns.length > 0 ? `\n\n[RSI ACTIVE] Kamu sudah belajar dari ${learn
     const persuasiAktif = /\[UPGRADE\]|\[PERSUASI_AKTI[FV]\]/i.test(rawReply)
     const reply = rawReply.replace(/\[UPGRADE\]|\[PERSUASI_AKTI[FV]\]/gi, '').trim()
 
-    // [RSI] Trigger background process untuk analisis pola & self-improvement
+    // [RSI] Trigger background analisis pola — hanya setiap 5 pesan user (hemat API)
     // Tidak di-await agar tidak memperlambat respons chat
-    if (userId && messages.length > 2) {
-      analyzeAndLearnPatterns(userId, messages, rawReply, careerProfile, learnedPatterns, rsiVersion, supabase).catch(e => 
+    const userMsgCount = messages.filter(m => m.role === 'user').length
+    if (userId && userMsgCount >= 3 && userMsgCount % 5 === 0) {
+      analyzeAndLearnPatterns(userId, messages, rawReply, careerProfile, learnedPatterns, rsiVersion, supabase).catch(e =>
         console.error('[RSI] Background analysis error:', e.message)
       )
     }
