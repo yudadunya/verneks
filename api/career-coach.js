@@ -393,6 +393,48 @@ ${stuckWarning}
 ${gpsContext}`
 }
 
+const PREDICTION_BRAIN = (careerReadiness, depthScore, lastUpdated, gpsSteps, plan) => {
+  const daysSinceUpdate = lastUpdated
+    ? Math.floor((Date.now() - new Date(lastUpdated)) / 86400000)
+    : 30
+
+  const doneSteps    = (gpsSteps || []).filter(s => s.done).length
+  const totalSteps   = (gpsSteps || []).length
+  const progressPct  = totalSteps > 0 ? Math.round((doneSteps / totalSteps) * 100) : 0
+
+  // Estimasi waktu capai target
+  const readiness         = careerReadiness || 0
+  const weeklyProgressEst = daysSinceUpdate <= 7 ? 5 : daysSinceUpdate <= 14 ? 2 : 0
+  const remainingReadiness = 100 - readiness
+  const etaWeeks = weeklyProgressEst > 0
+    ? Math.ceil(remainingReadiness / weeklyProgressEst)
+    : null
+
+  // Risk signals
+  const risks = []
+  if (daysSinceUpdate > 14) risks.push(`Tidak ada aktivitas ${daysSinceUpdate} hari — risiko momentum hilang tinggi`)
+  if (readiness < 30 && depthScore < 20) risks.push('Profil belum cukup dalam — prediksi coaching kurang akurat')
+  if (plan === 'free' && depthScore > 30) risks.push('User engaged tapi masih free — peluang konversi premium tinggi')
+  if (doneSteps === 0 && totalSteps > 0) risks.push('Belum ada satu pun GPS step selesai — butuh quick win segera')
+
+  // Momentum signals
+  const momentum = []
+  if (daysSinceUpdate <= 3) momentum.push('User aktif — momentum sedang tinggi, manfaatkan')
+  if (doneSteps > 0) momentum.push(`${doneSteps}/${totalSteps} GPS step selesai (${progressPct}%) — ada traction`)
+  if (depthScore >= 30) momentum.push(`Depth score ${depthScore}% — Diah Anna sudah cukup mengenal user ini`)
+
+  const etaText = etaWeeks
+    ? `Estimasi capai target: ~${etaWeeks} minggu dengan konsistensi saat ini`
+    : 'Estimasi belum bisa dihitung — user perlu lebih aktif'
+
+  return `# BRAIN 5 — PREDICTION
+${etaText}
+${risks.length > 0 ? `\nRISIKO:\n${risks.map(r => `- ${r}`).join('\n')}` : ''}
+${momentum.length > 0 ? `\nMOMENTUM:\n${momentum.map(m => `- ${m}`).join('\n')}` : ''}
+
+Gunakan prediksi ini untuk proaktif — jangan tunggu user tanya, gunakan sinyal ini untuk mengarahkan percakapan.`
+}
+
 const USER_STATE_INSTRUCTIONS = {
   free: `
 User ini pakai paket FREE. Tab yang dia punya: Home, Chat, DNA, Profil. Journey dan Peluang belum terbuka.
@@ -767,6 +809,14 @@ ${STRATEGY_BRAIN(
   structuralMemory.current_focus,
   structuralMemory.next_milestone,
   careerProfile?.last_updated
+)}
+
+${PREDICTION_BRAIN(
+  careerProfile?.career_readiness || growthState?.progress_percent || 0,
+  depthScore,
+  careerProfile?.last_updated,
+  structuralMemory.gps_steps,
+  plan
 )}
 
 # PLAN USER SAAT INI: ${plan === 'premium' ? 'PREMIUM — punya akses Journey, Peluang, semua fitur' : 'FREE — hanya punya tab Home, Chat, DNA, Profil. Belum punya akses Journey dan Peluang.'}
