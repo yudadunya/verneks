@@ -82,10 +82,6 @@ function FreeDashboard({ user, profile, genome, growth, onUpgrade, weeklyReview 
   const gpsSteps     = profile?.gps_steps || growth?.gps_steps || []
   const mentorMsg    = profile?.mentor_message || growth?.mentor_message || null
   const currentFocus = growth?.current_focus || gaps[0] || null
-  const wowInsight   = profile?.career_dna?.wow_insight || null
-  const motivasi     = profile?.motivasi || null
-  const diahMemory   = profile?.diah_anna_memory || null
-  const depthScore   = profile?.depth_score || 0
   const opportunities = getOpportunities(targetPosisi, readiness)
 
   const dispatchUpgrade = () =>
@@ -129,55 +125,38 @@ function FreeDashboard({ user, profile, genome, growth, onUpgrade, weeklyReview 
         </button>
       </div>
 
-      {/* ═══ MOTIVASI ════════════════════════════════════════════════════════ */}
-      {motivasi && (
-        <div style={{ ...S.card({ background: 'rgba(255,183,77,0.05)', border: '1px solid rgba(255,183,77,0.15)' }), ...fade(0.08, visible) }}>
-          <div style={{ color: '#FFB74D', fontSize: '0.65rem', fontWeight: 700, letterSpacing: '1px', marginBottom: 6 }}>💡 KENAPA KAMU KEJAR INI</div>
-          <div style={{ color: 'rgba(255,255,255,0.8)', fontSize: '0.83rem', lineHeight: 1.65, fontStyle: 'italic' }}>"{motivasi}"</div>
-        </div>
-      )}
+      {/* ═══ SINYAL DIAH ANNA — prediksi actionable ══════════════════════════ */}
+      {(() => {
+        const daysSince = profile?.last_updated
+          ? Math.floor((Date.now() - new Date(profile.last_updated)) / 86400000)
+          : 99
+        const doneSteps = gpsSteps.filter(s => s.done).length
+        const totalSteps = gpsSteps.length
+        const weeklyRate = daysSince <= 7 ? 5 : daysSince <= 14 ? 2 : 0
+        const etaWeeks   = weeklyRate > 0 ? Math.ceil((100 - readiness) / weeklyRate) : null
 
-      {/* ═══ WOW INSIGHT — preview blur untuk free ═══════════════════════════ */}
-      {wowInsight && (
-        <div style={{ ...S.card({ background: 'rgba(123,107,255,0.06)', border: '1px solid rgba(123,107,255,0.18)' }), ...fade(0.1, visible) }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
-            <img src="/diah-anna.png" alt="" style={{ width: 24, height: 24, borderRadius: '50%', objectFit: 'cover' }} />
-            <div style={{ color: '#a594ff', fontSize: '0.65rem', fontWeight: 700, letterSpacing: '1px' }}>🔍 INSIGHT DARI DIAH ANNA</div>
-          </div>
-          <div style={{ color: 'rgba(255,255,255,0.8)', fontSize: '0.83rem', lineHeight: 1.65 }}>
-            {wowInsight.split('.')[0]}.
-          </div>
-          <div style={{ color: 'rgba(255,255,255,0.4)', fontSize: '0.83rem', lineHeight: 1.65, filter: 'blur(4px)', userSelect: 'none', marginTop: 4 }}>
-            {wowInsight.split('.').slice(1).join('.') || 'Ada pola unik dalam dirimu yang jarang disadari oleh orang lain...'}
-          </div>
-          <div onClick={() => window.dispatchEvent(new CustomEvent('show-upgrade', { detail: {} }))}
-            style={{ marginTop: 10, background: 'rgba(123,107,255,0.15)', border: '1px solid rgba(123,107,255,0.25)', borderRadius: 8, padding: '6px 12px', fontSize: '0.72rem', color: '#a594ff', cursor: 'pointer', textAlign: 'center' }}>
-            🔓 Buka insight lengkap dengan Premium
-          </div>
-        </div>
-      )}
+        const signals = []
+        if (daysSince > 14) signals.push({ icon: '⚠️', text: `${daysSince} hari belum ada aktivitas — momentum bisa hilang`, color: '#ff6b6b' })
+        if (doneSteps === 0 && totalSteps > 0) signals.push({ icon: '🎯', text: 'Mulai satu langkah kecil hari ini untuk membangun momentum', color: '#FFB74D' })
+        if (daysSince <= 3 && readiness > 0) signals.push({ icon: '🔥', text: 'Momentum sedang tinggi — manfaatkan sekarang!', color: '#25D366' })
+        if (etaWeeks) signals.push({ icon: '📅', text: `Estimasi capai target: ~${etaWeeks} minggu dengan konsistensi ini`, color: '#34B7F1' })
 
-      {/* ═══ DEPTH SCORE — preview memory Diah Anna ══════════════════════════ */}
-      {diahMemory && depthScore > 0 && (
-        <div style={{ ...S.card({ background: 'rgba(123,107,255,0.04)', border: '1px solid rgba(123,107,255,0.12)' }), ...fade(0.12, visible) }}>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
+        if (signals.length === 0) return null
+        return (
+          <div style={{ ...S.card({ background: 'rgba(52,183,241,0.04)', border: '1px solid rgba(52,183,241,0.15)' }), ...fade(0.08, visible) }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 7, marginBottom: 10 }}>
               <img src="/diah-anna.png" alt="" style={{ width: 22, height: 22, borderRadius: '50%', objectFit: 'cover' }} />
-              <span style={{ color: 'rgba(255,255,255,0.5)', fontSize: '0.68rem' }}>Diah Anna mengenalmu</span>
+              <span style={{ color: '#34B7F1', fontSize: '0.65rem', fontWeight: 700, letterSpacing: '1px' }}>SINYAL DARI DIAH ANNA</span>
             </div>
-            <span style={{ color: '#a594ff', fontSize: '0.75rem', fontWeight: 800 }}>{depthScore}%</span>
+            {signals.slice(0, 2).map((s, i) => (
+              <div key={i} style={{ display: 'flex', gap: 8, alignItems: 'flex-start', marginBottom: i < signals.length - 1 ? 8 : 0 }}>
+                <span style={{ fontSize: '0.8rem', flexShrink: 0 }}>{s.icon}</span>
+                <span style={{ color: s.color, fontSize: '0.78rem', lineHeight: 1.5 }}>{s.text}</span>
+              </div>
+            ))}
           </div>
-          <div style={{ height: 3, borderRadius: 99, background: 'rgba(255,255,255,0.06)', marginBottom: 8 }}>
-            <div style={{ height: '100%', width: `${depthScore}%`, borderRadius: 99, background: 'linear-gradient(90deg,#7B6BFF,#a594ff)', transition: 'width 1s ease' }} />
-          </div>
-          <div style={{ color: 'rgba(255,255,255,0.3)', fontSize: '0.68rem', filter: 'blur(3px)', userSelect: 'none' }}>
-            {diahMemory.slice(0, 80)}...
-          </div>
-          <div style={{ marginTop: 6, color: 'rgba(255,255,255,0.25)', fontSize: '0.65rem', textAlign: 'center' }}>
-            Upgrade untuk lihat apa yang Diah Anna ingat tentang kamu
-          </div>
-        </div>
-      )}
+        )
+      })()}
 
       {/* ═══ CATATAN DIAH ANNA MINGGU INI ═══════════════════════════════════ */}
       {weeklyReview?.summary && (
@@ -357,10 +336,6 @@ function PremiumDashboard({ user, profile, genome, growth, actions, events, week
   const gpsSteps     = profile?.gps_steps || growth?.gps_steps || []
   const mentorMsg    = profile?.mentor_message || null
   const currentFocus = growth?.current_focus || gaps[0] || null
-  const wowInsight   = profile?.career_dna?.wow_insight || null
-  const motivasi     = profile?.motivasi || null
-  const diahMemory   = profile?.diah_anna_memory || null
-  const depthScore   = profile?.depth_score || 0
   const opportunities = getOpportunities(targetPosisi, readiness)
 
   // Hitung +progress minggu ini dari career_events (jika ada)
@@ -432,46 +407,39 @@ function PremiumDashboard({ user, profile, genome, growth, actions, events, week
         </div>
       )}
 
-      {/* ═══ MOTIVASI — full untuk premium ══════════════════════════════════ */}
-      {motivasi && (
-        <div style={{ ...S.card({ background: 'rgba(255,183,77,0.06)', border: '1px solid rgba(255,183,77,0.2)' }), ...fade(0.07, visible) }}>
-          <div style={{ color: '#FFB74D', fontSize: '0.65rem', fontWeight: 700, letterSpacing: '1px', marginBottom: 6 }}>💡 KENAPA KAMU KEJAR INI</div>
-          <div style={{ color: 'rgba(255,255,255,0.85)', fontSize: '0.85rem', lineHeight: 1.7, fontStyle: 'italic' }}>"{motivasi}"</div>
-        </div>
-      )}
+      {/* ═══ SINYAL DIAH ANNA — prediksi actionable (premium) ═══════════════ */}
+      {(() => {
+        const daysSince = profile?.last_updated
+          ? Math.floor((Date.now() - new Date(profile.last_updated)) / 86400000)
+          : 99
+        const doneSteps  = gpsSteps.filter(s => s.done).length
+        const totalSteps = gpsSteps.length
+        const weeklyRate = daysSince <= 7 ? 5 : daysSince <= 14 ? 2 : 0
+        const etaWeeks   = weeklyRate > 0 ? Math.ceil((100 - readiness) / weeklyRate) : null
 
-      {/* ═══ WOW INSIGHT — full detail untuk premium ════════════════════════ */}
-      {wowInsight && (
-        <div style={{ ...S.card({ background: 'rgba(123,107,255,0.07)', border: '1px solid rgba(123,107,255,0.22)' }), ...fade(0.09, visible) }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10 }}>
-            <img src="/diah-anna.png" alt="" style={{ width: 28, height: 28, borderRadius: '50%', objectFit: 'cover', border: '1.5px solid rgba(123,107,255,0.4)' }} />
-            <div style={{ color: '#a594ff', fontSize: '0.65rem', fontWeight: 700, letterSpacing: '1px' }}>🔍 INSIGHT DARI DIAH ANNA</div>
-          </div>
-          <div style={{ color: 'rgba(255,255,255,0.85)', fontSize: '0.85rem', lineHeight: 1.7 }}>{wowInsight}</div>
-        </div>
-      )}
+        const signals = []
+        if (daysSince > 14) signals.push({ icon: '⚠️', text: `${daysSince} hari belum ada aktivitas — momentum bisa hilang`, color: '#ff6b6b' })
+        if (doneSteps === 0 && totalSteps > 0) signals.push({ icon: '🎯', text: 'Mulai satu langkah kecil hari ini untuk membangun momentum', color: '#FFB74D' })
+        if (daysSince <= 3) signals.push({ icon: '🔥', text: 'Momentum sedang tinggi — ini waktu terbaik untuk push lebih jauh', color: '#25D366' })
+        if (etaWeeks) signals.push({ icon: '📅', text: `Estimasi capai target: ~${etaWeeks} minggu dengan konsistensi ini`, color: '#34B7F1' })
+        if (doneSteps > 0 && totalSteps > 0) signals.push({ icon: '✅', text: `${doneSteps}/${totalSteps} langkah GPS selesai — kamu sedang dalam jalur`, color: '#25D366' })
 
-      {/* ═══ DIAH ANNA MEMORY — full untuk premium ══════════════════════════ */}
-      {diahMemory && depthScore > 0 && (
-        <div style={{ ...S.card({ background: 'rgba(123,107,255,0.05)', border: '1px solid rgba(123,107,255,0.15)' }), ...fade(0.11, visible) }}>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
-              <img src="/diah-anna.png" alt="" style={{ width: 24, height: 24, borderRadius: '50%', objectFit: 'cover' }} />
-              <span style={{ color: '#a594ff', fontSize: '0.7rem', fontWeight: 600 }}>Diah Anna mengenalmu</span>
+        if (signals.length === 0) return null
+        return (
+          <div style={{ ...S.card({ background: 'rgba(52,183,241,0.05)', border: '1px solid rgba(52,183,241,0.18)' }), ...fade(0.07, visible) }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 7, marginBottom: 10 }}>
+              <img src="/diah-anna.png" alt="" style={{ width: 22, height: 22, borderRadius: '50%', objectFit: 'cover' }} />
+              <span style={{ color: '#34B7F1', fontSize: '0.65rem', fontWeight: 700, letterSpacing: '1px' }}>SINYAL DARI DIAH ANNA</span>
             </div>
-            <span style={{ color: '#a594ff', fontSize: '0.78rem', fontWeight: 800 }}>{depthScore}%</span>
+            {signals.slice(0, 3).map((s, i) => (
+              <div key={i} style={{ display: 'flex', gap: 8, alignItems: 'flex-start', marginBottom: i < signals.length - 1 ? 8 : 0 }}>
+                <span style={{ fontSize: '0.8rem', flexShrink: 0 }}>{s.icon}</span>
+                <span style={{ color: s.color, fontSize: '0.78rem', lineHeight: 1.5 }}>{s.text}</span>
+              </div>
+            ))}
           </div>
-          <div style={{ height: 3, borderRadius: 99, background: 'rgba(255,255,255,0.07)', marginBottom: 10 }}>
-            <div style={{ height: '100%', width: `${depthScore}%`, borderRadius: 99, background: 'linear-gradient(90deg,#7B6BFF,#a594ff)', transition: 'width 1s ease' }} />
-          </div>
-          <div style={{ color: 'rgba(255,255,255,0.65)', fontSize: '0.8rem', lineHeight: 1.7, fontStyle: 'italic', borderLeft: '2px solid rgba(165,148,255,0.3)', paddingLeft: 10 }}>
-            "{diahMemory}"
-          </div>
-          <div style={{ marginTop: 8, color: 'rgba(255,255,255,0.2)', fontSize: '0.62rem', textAlign: 'center' }}>
-            Diperbarui otomatis setiap sesi yang bermakna
-          </div>
-        </div>
-      )}
+        )
+      })()}
 
       {/* ═══ SECTION 2 — TODAY'S MISSION ═════════════════════════════════════ */}
       {todayMission && (
