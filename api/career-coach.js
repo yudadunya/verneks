@@ -335,6 +335,64 @@ ATURAN:
 - Mode CHALLENGER hanya kalau sudah ada rapport (minimal 5 pesan)
 `
 
+const STRATEGY_BRAIN = (stage, gpsSteps, currentFocus, nextMilestone, lastUpdated) => {
+  // Deteksi apakah user stuck (tidak ada progress > 14 hari)
+  const daysSinceUpdate = lastUpdated
+    ? Math.floor((Date.now() - new Date(lastUpdated)) / 86400000)
+    : 0
+  const isStuck = daysSinceUpdate > 14
+
+  // Strategi per career stage
+  const stageStrategies = {
+    'Career Explorer': `
+STRATEGI: User masih eksplorasi — belum punya arah yang jelas.
+Fokus Diah Anna: Bantu user mempersempit target dari opsi-opsi yang ada.
+Pertanyaan kunci: "Dari semua yang kamu pertimbangkan, mana yang paling bikin kamu excited saat bangun pagi?"
+Hindari: Langsung kasih roadmap panjang — user belum siap.`,
+
+    'Career Builder': `
+STRATEGI: User sudah punya target, sedang membangun fondasi.
+Fokus Diah Anna: Skill building + networking yang tepat sasaran.
+Pertanyaan kunci: "Skill mana yang paling sering muncul di job desc target kamu?"
+Hindari: Terlalu banyak teori — user butuh aksi konkret minggu ini.`,
+
+    'Career Professional': `
+STRATEGI: User sudah bekerja di bidangnya, ingin naik level.
+Fokus Diah Anna: Visibility + positioning + leverage pengalaman yang ada.
+Pertanyaan kunci: "Apa pencapaian terbesar kamu 6 bulan terakhir yang belum banyak orang tahu?"
+Hindari: Saran dari nol — user sudah punya modal, tinggal dioptimalkan.`,
+
+    'Career Expert': `
+STRATEGI: User sudah expert, ingin scale impact atau pindah ke peran strategis.
+Fokus Diah Anna: Personal brand + thought leadership + peluang non-linear.
+Pertanyaan kunci: "Kalau kamu bisa pilih satu legacy yang ingin diingat orang dari karir kamu, apa itu?"
+Hindari: Saran teknis level bawah — tidak relevan untuk posisi mereka.`,
+
+    'Career Leader': `
+STRATEGI: User di level leadership — fokus pada sistem dan orang, bukan tugas.
+Fokus Diah Anna: Leverage tim + decision making + long-term positioning.
+Pertanyaan kunci: "Siapa di tim kamu yang bisa replace kamu dalam 6 bulan ke depan?"
+Hindari: Micromanagement mindset — user perlu berpikir di level yang lebih tinggi.`,
+  }
+
+  const strategy = stageStrategies[stage] || stageStrategies['Career Builder']
+
+  const stuckWarning = isStuck ? `
+⚠️ USER TAMPAK STUCK: Tidak ada update progress selama ${daysSinceUpdate} hari.
+Prioritaskan ACCOUNTABILITY atau CHALLENGER mode.
+Tanya langsung: "Apa yang membuat langkah ini belum bergerak?"` : ''
+
+  const gpsContext = gpsSteps?.length > 0 ? `
+GPS ROADMAP AKTIF:
+${gpsSteps.slice(0, 3).map((s, i) => `${i+1}. [${s.done ? '✓' : '○'}] ${s.title}`).join('\n')}
+${gpsSteps.filter(s => !s.done).length > 0 ? `Next action: ${gpsSteps.find(s => !s.done)?.title}` : 'Semua step selesai — saatnya naik level!'}` : ''
+
+  return `# BRAIN 4 — STRATEGY
+${strategy}
+${stuckWarning}
+${gpsContext}`
+}
+
 const USER_STATE_INSTRUCTIONS = {
   free: `
 User ini pakai paket FREE. Tab yang dia punya: Home, Chat, DNA, Profil. Journey dan Peluang belum terbuka.
@@ -702,6 +760,14 @@ ${deepMemoryBlock}${depthProfileBlock}${rsiPatternsBlock}`
 ${CORE_PERSONA}
 
 ${COACHING_BRAIN}
+
+${STRATEGY_BRAIN(
+  growthState?.career_stage || careerProfile?.career_stage || 'Career Builder',
+  structuralMemory.gps_steps,
+  structuralMemory.current_focus,
+  structuralMemory.next_milestone,
+  careerProfile?.last_updated
+)}
 
 # PLAN USER SAAT INI: ${plan === 'premium' ? 'PREMIUM — punya akses Journey, Peluang, semua fitur' : 'FREE — hanya punya tab Home, Chat, DNA, Profil. Belum punya akses Journey dan Peluang.'}
 
