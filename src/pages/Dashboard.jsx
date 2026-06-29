@@ -118,18 +118,26 @@ function FreeDashboard({ user, profile, genome, growth, onUpgrade, weeklyReview 
     <div style={{ padding: '16px 16px 0', maxWidth: 480, margin: '0 auto' }}>
 
       {/* ═══ 1. PERSONAL GREETING ════════════════════════════════════════════ */}
-      <div style={{ ...fade(0.02, visible), marginBottom: 16 }}>
+      <div style={{ ...fade(0.02, visible), padding: '14px 16px 0' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <div>
-            <div style={{ color: '#fff', fontWeight: 800, fontSize: '1.15rem' }}>{timeGreet}, {firstName} 👋</div>
-            {daysTogether > 0 && (
-              <div style={{ color: 'rgba(255,255,255,0.3)', fontSize: '0.68rem', marginTop: 3 }}>
-                Hari ke-{daysTogether} perjalanan kita bersama
-              </div>
-            )}
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+            <div style={{ width: 38, height: 38, borderRadius: '50%', overflow: 'hidden', border: '2px solid rgba(37,211,102,0.3)', flexShrink: 0 }}>
+              {user?.user_metadata?.avatar_url
+                ? <img src={user.user_metadata.avatar_url} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                : <div style={{ width: '100%', height: '100%', background: '#1a3a20', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1rem' }}>👤</div>}
+            </div>
+            <div>
+              <div style={{ color: '#fff', fontWeight: 800, fontSize: '1rem' }}>{timeGreet}, {firstName} 👋</div>
+              {daysTogether > 0 && (
+                <div style={{ color: 'rgba(255,255,255,0.3)', fontSize: '0.65rem', marginTop: 2 }}>
+                  Hari ke-{daysTogether} perjalanan kita bersama
+                </div>
+              )}
+            </div>
           </div>
-          <div style={{ background: 'rgba(255,183,77,0.12)', border: '1px solid rgba(255,183,77,0.25)', borderRadius: 99, padding: '4px 12px', fontSize: '0.68rem', color: '#FFB74D', fontWeight: 700 }}>
-            FREE
+          <div style={{ background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 99, padding: '4px 12px', fontSize: '0.65rem', color: 'rgba(255,255,255,0.4)', fontWeight: 600, cursor: 'pointer' }}
+            onClick={() => window.dispatchEvent(new CustomEvent('show-upgrade', { detail: {} }))}>
+            FREE → Upgrade
           </div>
         </div>
       </div>
@@ -407,20 +415,27 @@ function PremiumDashboard({ user, profile, genome, growth, actions, events, week
   const premiumDiahMsg = getPremiumDiahMsg()
 
   return (
-    <div style={{ padding: '16px 16px 0', maxWidth: 480, margin: '0 auto' }}>
+    <div style={{ padding: '0', maxWidth: 480, margin: '0 auto' }}>
 
       {/* ═══ 1. PERSONAL GREETING — PREMIUM ══════════════════════════════════ */}
-      <div style={{ ...fade(0.02, visible), marginBottom: 16 }}>
+      <div style={{ ...fade(0.02, visible), padding: '14px 16px 0', marginBottom: 0 }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <div>
-            <div style={{ color: '#fff', fontWeight: 800, fontSize: '1.15rem' }}>{timeGreet2}, {firstName} 👋</div>
-            {daysTogether2 > 0 && (
-              <div style={{ color: 'rgba(255,255,255,0.3)', fontSize: '0.68rem', marginTop: 3 }}>
-                Hari ke-{daysTogether2} perjalanan kita bersama
-              </div>
-            )}
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+            <div style={{ width: 38, height: 38, borderRadius: '50%', overflow: 'hidden', border: '2px solid rgba(255,183,77,0.5)', flexShrink: 0 }}>
+              {user?.user_metadata?.avatar_url
+                ? <img src={user.user_metadata.avatar_url} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                : <div style={{ width: '100%', height: '100%', background: '#2a1a05', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1rem' }}>👤</div>}
+            </div>
+            <div>
+              <div style={{ color: '#fff', fontWeight: 800, fontSize: '1rem' }}>{timeGreet2}, {firstName} 👋</div>
+              {daysTogether2 > 0 && (
+                <div style={{ color: 'rgba(255,255,255,0.3)', fontSize: '0.65rem', marginTop: 2 }}>
+                  Hari ke-{daysTogether2} perjalanan kita bersama
+                </div>
+              )}
+            </div>
           </div>
-          <div style={{ background: 'rgba(255,183,77,0.12)', border: '1px solid rgba(255,183,77,0.3)', borderRadius: 99, padding: '4px 12px', fontSize: '0.68rem', color: '#FFB74D', fontWeight: 700 }}>
+          <div style={{ background: 'rgba(255,183,77,0.1)', border: '1px solid rgba(255,183,77,0.3)', borderRadius: 99, padding: '4px 12px', fontSize: '0.68rem', color: '#FFB74D', fontWeight: 700 }}>
             ⭐ PREMIUM
           </div>
         </div>
@@ -708,29 +723,6 @@ export default function Dashboard({ user, loading = false, subscription = DEFAUL
 
   return (
     <div style={{ minHeight: '100vh', background: '#0a0f0d', paddingBottom: 90, fontFamily: "'Plus Jakarta Sans', sans-serif" }}>
-
-      {/* Header */}
-      <div style={{ background: 'rgba(255,255,255,0.025)', borderBottom: '1px solid rgba(255,255,255,0.05)', padding: '13px 18px', display: 'flex', alignItems: 'center', gap: 10 }}>
-        <div style={{ width: 38, height: 38, borderRadius: '50%', overflow: 'hidden', border: `2px solid ${isPremium ? 'rgba(255,183,77,0.5)' : 'rgba(37,211,102,0.3)'}`, flexShrink: 0 }}>
-          {user?.user_metadata?.avatar_url
-            ? <img src={user.user_metadata.avatar_url} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-            : <div style={{ width: '100%', height: '100%', background: '#1a3a20', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1rem' }}>👤</div>}
-        </div>
-        <div style={{ flex: 1 }}>
-          <div style={{ color: '#fff', fontWeight: 700, fontSize: '0.95rem' }}>Halo, {firstName} 👋</div>
-          <div style={{ fontSize: '0.68rem' }}>
-            {isPremium
-              ? <span style={{ color: '#FFB74D' }}>⭐ Premium Member</span>
-              : <span style={{ color: 'rgba(255,255,255,0.3)' }}>Free Plan · <span style={{ color: '#25D366', cursor: 'pointer' }} onClick={() => window.dispatchEvent(new CustomEvent('show-upgrade', { detail: { profile, genome, growth } }))}>Upgrade Premium</span></span>
-            }
-          </div>
-        </div>
-        {isPremium && (
-          <div style={{ background: 'rgba(255,183,77,0.1)', border: '1px solid rgba(255,183,77,0.2)', borderRadius: 8, padding: '4px 10px', fontSize: '0.65rem', color: '#FFB74D', fontWeight: 600 }}>
-            PREMIUM ⭐
-          </div>
-        )}
-      </div>
 
       {/* Content berdasarkan status plan */}
       {isPremium ? (
