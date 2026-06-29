@@ -84,79 +84,108 @@ function FreeDashboard({ user, profile, genome, growth, onUpgrade, weeklyReview 
   const currentFocus = growth?.current_focus || gaps[0] || null
   const opportunities = getOpportunities(targetPosisi, readiness)
 
+  // ── Greeting yang kontekstual ──────────────────────────────────────────────
+  const hour = new Date().getHours()
+  const timeGreet = hour < 11 ? 'Selamat pagi' : hour < 15 ? 'Selamat siang' : hour < 18 ? 'Selamat sore' : 'Selamat malam'
+
+  // ── Diah Anna daily message berdasarkan sinyal ────────────────────────────
+  const daysSince = profile?.last_updated
+    ? Math.floor((Date.now() - new Date(profile.last_updated)) / 86400000) : 99
+  const doneSteps  = gpsSteps.filter(s => s.done).length
+  const totalSteps = gpsSteps.length
+  const weeklyRate = daysSince <= 7 ? 5 : daysSince <= 14 ? 2 : 0
+  const etaWeeks   = weeklyRate > 0 ? Math.ceil((100 - readiness) / weeklyRate) : null
+
+  const getDiahMessage = () => {
+    if (daysSince > 21) return { msg: `Aku sudah lama menunggu, ${firstName}. Momentum bisa hilang kalau terlalu lama berhenti — hari ini, satu langkah kecil saja.`, tone: '#ff6b6b' }
+    if (daysSince > 7)  return { msg: `${firstName}, sudah beberapa hari kita tidak ngobrol. Jangan biarkan ritmemu hilang — aku di sini kalau kamu mau lanjut.`, tone: '#FFB74D' }
+    if (readiness >= 80) return { msg: `${firstName}, tinggal sedikit lagi. Kamu hampir sampai — jangan berhenti sekarang.`, tone: '#25D366' }
+    if (doneSteps > 0)  return { msg: `${firstName}, aku melihat progresmu. Terus pertahankan ritme ini — satu langkah hari ini lebih berarti dari sepuluh rencana.`, tone: '#25D366' }
+    if (doneSteps === 0 && totalSteps > 0) return { msg: `${firstName}, roadmapmu sudah siap. Yang kubutuhkan darimu hari ini cukup satu langkah pertama saja.`, tone: '#FFB74D' }
+    return { msg: `${timeGreet}, ${firstName}. Aku sudah menyiapkan fokus terbaikmu hari ini — mari kita mulai.`, tone: '#34B7F1' }
+  }
+  const diahMsg = getDiahMessage()
+
+  // Hitung hari bergabung
+  const joinedAt  = profile?.created_at || user?.created_at
+  const daysTogether = joinedAt
+    ? Math.floor((Date.now() - new Date(joinedAt)) / 86400000) : 0
+
   const dispatchUpgrade = () =>
     window.dispatchEvent(new CustomEvent('show-upgrade', { detail: { profile, genome, growth } }))
 
   return (
     <div style={{ padding: '16px 16px 0', maxWidth: 480, margin: '0 auto' }}>
 
-      {/* ═══ SECTION 1 — HERO CARD ═══════════════════════════════════════════ */}
-      <div style={{
-        ...S.card({ background: 'linear-gradient(135deg,#0d2b1a,#0f3324)', border: '1px solid rgba(37,211,102,0.25)' }),
-        ...fade(0.05, visible),
-      }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 14 }}>
+      {/* ═══ 1. PERSONAL GREETING ════════════════════════════════════════════ */}
+      <div style={{ ...fade(0.02, visible), marginBottom: 16 }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <div>
-            <div style={S.label}>👋 HALO, {firstName.toUpperCase()}</div>
-            <div style={{ color: 'rgba(255,255,255,0.35)', fontSize: '0.65rem', letterSpacing: '1px', marginBottom: 8 }}>🎯 TARGET KARIER</div>
-            <div style={{ color: '#fff', fontWeight: 800, fontSize: '1.1rem' }}>{targetPosisi || '—'}</div>
+            <div style={{ color: '#fff', fontWeight: 800, fontSize: '1.15rem' }}>{timeGreet}, {firstName} 👋</div>
+            {daysTogether > 0 && (
+              <div style={{ color: 'rgba(255,255,255,0.3)', fontSize: '0.68rem', marginTop: 3 }}>
+                Hari ke-{daysTogether} perjalanan kita bersama
+              </div>
+            )}
           </div>
-          <div style={{ textAlign: 'right' }}>
-            <div style={{ color: '#25D366', fontWeight: 900, fontSize: '1.65rem', lineHeight: 1 }}>{readiness}%</div>
-            <div style={{ color: 'rgba(255,255,255,0.3)', fontSize: '0.62rem' }}>Career Readiness</div>
+          <div style={{ background: 'rgba(255,183,77,0.12)', border: '1px solid rgba(255,183,77,0.25)', borderRadius: 99, padding: '4px 12px', fontSize: '0.68rem', color: '#FFB74D', fontWeight: 700 }}>
+            FREE
           </div>
         </div>
+      </div>
 
-        {currentFocus && (
-          <div style={{ background: 'rgba(37,211,102,0.1)', border: '1px solid rgba(37,211,102,0.2)', borderRadius: 10, padding: '8px 12px', marginBottom: 14, display: 'flex', alignItems: 'center', gap: 8 }}>
-            <span style={{ fontSize: '0.75rem' }}>🎯</span>
-            <div>
-              <div style={{ color: 'rgba(255,255,255,0.4)', fontSize: '0.6rem', letterSpacing: '0.5px' }}>FOKUS SAAT INI</div>
-              <div style={{ color: '#fff', fontSize: '0.82rem', fontWeight: 600 }}>{currentFocus}</div>
-            </div>
+      {/* ═══ 2. DIAH ANNA DAILY MESSAGE ══════════════════════════════════════ */}
+      <div style={{
+        ...S.card({ background: 'linear-gradient(135deg,rgba(13,10,30,0.9),rgba(20,15,45,0.9))', border: `1px solid ${diahMsg.tone}30` }),
+        ...fade(0.04, visible),
+      }}>
+        <div style={{ display: 'flex', alignItems: 'flex-start', gap: 12 }}>
+          <img src="/diah-anna.png" alt="Diah Anna" style={{ width: 38, height: 38, borderRadius: '50%', objectFit: 'cover', border: `2px solid ${diahMsg.tone}60`, flexShrink: 0 }} />
+          <div>
+            <div style={{ color: diahMsg.tone, fontSize: '0.65rem', fontWeight: 700, letterSpacing: '1px', marginBottom: 6 }}>💬 DIAH ANNA</div>
+            <div style={{ color: 'rgba(255,255,255,0.85)', fontSize: '0.85rem', lineHeight: 1.7 }}>{diahMsg.msg}</div>
           </div>
-        )}
-
-        <button
-          onClick={() => navigate('/chat')}
-          style={{ width: '100%', padding: '11px', background: 'linear-gradient(135deg,#25D366,#128C7E)', color: '#fff', fontWeight: 700, fontSize: '0.85rem', borderRadius: 11, border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 7, boxShadow: '0 3px 14px rgba(37,211,102,0.3)' }}
-        >
-          💬 Chat Diah Anna
+        </div>
+        <button onClick={() => navigate('/chat')}
+          style={{ width: '100%', marginTop: 14, padding: '10px', background: 'linear-gradient(135deg,#25D366,#128C7E)', color: '#fff', fontWeight: 700, fontSize: '0.83rem', borderRadius: 10, border: 'none', cursor: 'pointer' }}>
+          💬 Balas Diah Anna
         </button>
       </div>
 
-      {/* ═══ SINYAL DIAH ANNA — prediksi actionable ══════════════════════════ */}
-      {(() => {
-        const daysSince = profile?.last_updated
-          ? Math.floor((Date.now() - new Date(profile.last_updated)) / 86400000)
-          : 99
-        const doneSteps = gpsSteps.filter(s => s.done).length
-        const totalSteps = gpsSteps.length
-        const weeklyRate = daysSince <= 7 ? 5 : daysSince <= 14 ? 2 : 0
-        const etaWeeks   = weeklyRate > 0 ? Math.ceil((100 - readiness) / weeklyRate) : null
-
-        const signals = []
-        if (daysSince > 14) signals.push({ icon: '⚠️', text: `${daysSince} hari belum ada aktivitas — momentum bisa hilang`, color: '#ff6b6b' })
-        if (doneSteps === 0 && totalSteps > 0) signals.push({ icon: '🎯', text: 'Mulai satu langkah kecil hari ini untuk membangun momentum', color: '#FFB74D' })
-        if (daysSince <= 3 && readiness > 0) signals.push({ icon: '🔥', text: 'Momentum sedang tinggi — manfaatkan sekarang!', color: '#25D366' })
-        if (etaWeeks) signals.push({ icon: '📅', text: `Estimasi capai target: ~${etaWeeks} minggu dengan konsistensi ini`, color: '#34B7F1' })
-
-        if (signals.length === 0) return null
-        return (
-          <div style={{ ...S.card({ background: 'rgba(52,183,241,0.04)', border: '1px solid rgba(52,183,241,0.15)' }), ...fade(0.08, visible) }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 7, marginBottom: 10 }}>
-              <img src="/diah-anna.png" alt="" style={{ width: 22, height: 22, borderRadius: '50%', objectFit: 'cover' }} />
-              <span style={{ color: '#34B7F1', fontSize: '0.65rem', fontWeight: 700, letterSpacing: '1px' }}>SINYAL DARI DIAH ANNA</span>
+      {/* ═══ 3. TARGET + FOKUS HARI INI ══════════════════════════════════════ */}
+      {targetPosisi && (
+        <div style={{
+          ...S.card({ background: 'linear-gradient(135deg,#0d2b1a,#0f3324)', border: '1px solid rgba(37,211,102,0.25)' }),
+          ...fade(0.06, visible),
+        }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 12 }}>
+            <div>
+              <div style={{ color: 'rgba(255,255,255,0.35)', fontSize: '0.6rem', letterSpacing: '1px', marginBottom: 4 }}>🎯 TARGET KARIER</div>
+              <div style={{ color: '#fff', fontWeight: 800, fontSize: '1rem' }}>{targetPosisi}</div>
             </div>
-            {signals.slice(0, 2).map((s, i) => (
-              <div key={i} style={{ display: 'flex', gap: 8, alignItems: 'flex-start', marginBottom: i < signals.length - 1 ? 8 : 0 }}>
-                <span style={{ fontSize: '0.8rem', flexShrink: 0 }}>{s.icon}</span>
-                <span style={{ color: s.color, fontSize: '0.78rem', lineHeight: 1.5 }}>{s.text}</span>
-              </div>
-            ))}
+            <div style={{ textAlign: 'right' }}>
+              <div style={{ color: '#25D366', fontWeight: 900, fontSize: '1.5rem', lineHeight: 1 }}>{readiness}%</div>
+              <div style={{ color: 'rgba(255,255,255,0.3)', fontSize: '0.6rem' }}>Readiness</div>
+            </div>
           </div>
-        )
-      })()}
+
+          {currentFocus && (
+            <div style={{ background: 'rgba(37,211,102,0.1)', border: '1px solid rgba(37,211,102,0.2)', borderRadius: 10, padding: '10px 12px' }}>
+              <div style={{ color: 'rgba(255,255,255,0.4)', fontSize: '0.6rem', letterSpacing: '0.5px', marginBottom: 4 }}>🎯 FOKUS HARI INI</div>
+              <div style={{ color: '#fff', fontSize: '0.83rem', fontWeight: 600, lineHeight: 1.5 }}>{currentFocus}</div>
+              <div style={{ color: 'rgba(37,211,102,0.7)', fontSize: '0.72rem', marginTop: 5 }}>
+                Satu langkah kecil hari ini lebih baik dari sepuluh rencana.
+              </div>
+            </div>
+          )}
+
+          {etaWeeks && (
+            <div style={{ marginTop: 10, color: 'rgba(255,255,255,0.35)', fontSize: '0.72rem', textAlign: 'center' }}>
+              📅 Dengan ritme ini, target bisa tercapai dalam ~{etaWeeks} minggu
+            </div>
+          )}
+        </div>
+      )}
 
       {/* ═══ CATATAN DIAH ANNA MINGGU INI ═══════════════════════════════════ */}
       {weeklyReview?.summary && (
@@ -356,90 +385,99 @@ function PremiumDashboard({ user, profile, genome, growth, actions, events, week
   // Activity history
   const recentEvents = events?.slice(0, 5) || []
 
+  // ── Greeting & Diah Anna message (sama seperti free, tapi lebih kaya) ──────
+  const hour2 = new Date().getHours()
+  const timeGreet2 = hour2 < 11 ? 'Selamat pagi' : hour2 < 15 ? 'Selamat siang' : hour2 < 18 ? 'Selamat sore' : 'Selamat malam'
+  const daysSince2 = profile?.last_updated
+    ? Math.floor((Date.now() - new Date(profile.last_updated)) / 86400000) : 0
+  const doneSteps2  = gpsSteps.filter(s => s.done).length
+  const totalSteps2 = gpsSteps.length
+  const weeklyRate2 = daysSince2 <= 7 ? 5 : daysSince2 <= 14 ? 2 : 0
+  const etaWeeks2   = weeklyRate2 > 0 ? Math.ceil((100 - readiness) / weeklyRate2) : null
+  const joinedAt2   = profile?.created_at || user?.created_at
+  const daysTogether2 = joinedAt2 ? Math.floor((Date.now() - new Date(joinedAt2)) / 86400000) : 0
+
+  const getPremiumDiahMsg = () => {
+    if (weeklyReview?.summary) return { msg: weeklyReview.summary, tone: '#A5A0FF' }
+    if (daysSince2 > 14) return { msg: `${firstName}, sudah ${daysSince2} hari. Aku tahu kamu sibuk — tapi jangan biarkan momentum yang sudah kamu bangun hilang begitu saja.`, tone: '#ff6b6b' }
+    if (readiness >= 80) return { msg: `${firstName}, kamu hampir sampai. ${100 - readiness}% lagi — ini bukan saat untuk mengendurkan tempo.`, tone: '#25D366' }
+    if (doneSteps2 > 0) return { msg: `${firstName}, ${doneSteps2} dari ${totalSteps2} langkah sudah selesai. Aku melihat traction yang nyata — pertahankan.`, tone: '#25D366' }
+    return { msg: `${timeGreet2}, ${firstName}. Aku sudah menyiapkan fokus terbaik untukmu hari ini. Mari kita lanjutkan perjalanan ini.`, tone: '#34B7F1' }
+  }
+  const premiumDiahMsg = getPremiumDiahMsg()
+
   return (
     <div style={{ padding: '16px 16px 0', maxWidth: 480, margin: '0 auto' }}>
 
-      {/* ═══ SECTION 1 — PREMIUM HERO ════════════════════════════════════════ */}
+      {/* ═══ 1. PERSONAL GREETING — PREMIUM ══════════════════════════════════ */}
+      <div style={{ ...fade(0.02, visible), marginBottom: 16 }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <div>
+            <div style={{ color: '#fff', fontWeight: 800, fontSize: '1.15rem' }}>{timeGreet2}, {firstName} 👋</div>
+            {daysTogether2 > 0 && (
+              <div style={{ color: 'rgba(255,255,255,0.3)', fontSize: '0.68rem', marginTop: 3 }}>
+                Hari ke-{daysTogether2} perjalanan kita bersama
+              </div>
+            )}
+          </div>
+          <div style={{ background: 'rgba(255,183,77,0.12)', border: '1px solid rgba(255,183,77,0.3)', borderRadius: 99, padding: '4px 12px', fontSize: '0.68rem', color: '#FFB74D', fontWeight: 700 }}>
+            ⭐ PREMIUM
+          </div>
+        </div>
+      </div>
+
+      {/* ═══ 2. DIAH ANNA MESSAGE — PREMIUM ══════════════════════════════════ */}
+      <div style={{
+        ...S.card({ background: 'linear-gradient(135deg,rgba(13,10,30,0.95),rgba(20,15,50,0.95))', border: `1px solid ${premiumDiahMsg.tone}40` }),
+        ...fade(0.04, visible),
+      }}>
+        <div style={{ display: 'flex', alignItems: 'flex-start', gap: 12 }}>
+          <img src="/diah-anna.png" alt="Diah Anna" style={{ width: 42, height: 42, borderRadius: '50%', objectFit: 'cover', border: `2px solid ${premiumDiahMsg.tone}70`, flexShrink: 0 }} />
+          <div>
+            <div style={{ color: premiumDiahMsg.tone, fontSize: '0.65rem', fontWeight: 700, letterSpacing: '1px', marginBottom: 6 }}>💬 DIAH ANNA</div>
+            <div style={{ color: 'rgba(255,255,255,0.9)', fontSize: '0.88rem', lineHeight: 1.75 }}>{premiumDiahMsg.msg}</div>
+          </div>
+        </div>
+        <button onClick={() => navigate('/chat')}
+          style={{ width: '100%', marginTop: 14, padding: '11px', background: 'linear-gradient(135deg,#7B6BFF,#a594ff)', color: '#fff', fontWeight: 700, fontSize: '0.85rem', borderRadius: 11, border: 'none', cursor: 'pointer' }}>
+          💬 Lanjutkan Obrolan
+        </button>
+      </div>
+
+      {/* ═══ 3. HERO CARD — TARGET + MOMENTUM ════════════════════════════════ */}
       <div style={{
         background: 'linear-gradient(135deg,#0a2218,#0f3324,#0d1f2a)',
         border: '1px solid rgba(37,211,102,0.3)',
         borderRadius: 18, padding: '20px 18px', marginBottom: 12,
-        ...fade(0.05, visible),
+        ...fade(0.06, visible),
       }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 14 }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 12 }}>
           <div>
-            <div style={{ color: '#25D366', fontSize: '0.65rem', letterSpacing: '1px', marginBottom: 4 }}>⭐ PREMIUM</div>
-            <div style={{ color: 'rgba(255,255,255,0.35)', fontSize: '0.65rem', letterSpacing: '1px', marginBottom: 6 }}>🎯 TARGET KARIER</div>
+            <div style={{ color: 'rgba(255,255,255,0.35)', fontSize: '0.6rem', letterSpacing: '1px', marginBottom: 4 }}>🎯 TARGET KARIER</div>
             <div style={{ color: '#fff', fontWeight: 800, fontSize: '1.05rem' }}>{targetPosisi || '—'}</div>
           </div>
           <div style={{ textAlign: 'right' }}>
-            <div style={{ color: '#25D366', fontWeight: 900, fontSize: '1.65rem', lineHeight: 1 }}>{readiness}%</div>
-            <div style={{ color: 'rgba(255,255,255,0.3)', fontSize: '0.6rem', marginBottom: 4 }}>Career Readiness</div>
+            <div style={{ color: '#25D366', fontWeight: 900, fontSize: '1.5rem', lineHeight: 1 }}>{readiness}%</div>
             <div style={{ color: '#34B7F1', fontSize: '0.72rem', fontWeight: 600 }}>🔥 +{weekProgress}% minggu ini</div>
           </div>
         </div>
 
         {currentFocus && (
-          <div style={{ background: 'rgba(52,183,241,0.1)', border: '1px solid rgba(52,183,241,0.2)', borderRadius: 10, padding: '8px 12px' }}>
-            <div style={{ color: 'rgba(255,255,255,0.4)', fontSize: '0.6rem', letterSpacing: '0.5px', marginBottom: 2 }}>🎯 FOKUS HARI INI</div>
-            <div style={{ color: '#fff', fontSize: '0.82rem', fontWeight: 600 }}>{currentFocus}</div>
+          <div style={{ background: 'rgba(52,183,241,0.1)', border: '1px solid rgba(52,183,241,0.2)', borderRadius: 10, padding: '10px 12px' }}>
+            <div style={{ color: 'rgba(255,255,255,0.4)', fontSize: '0.6rem', letterSpacing: '0.5px', marginBottom: 4 }}>🎯 FOKUS HARI INI</div>
+            <div style={{ color: '#fff', fontSize: '0.83rem', fontWeight: 600, lineHeight: 1.5 }}>{currentFocus}</div>
+            <div style={{ color: 'rgba(52,183,241,0.7)', fontSize: '0.72rem', marginTop: 5 }}>
+              Satu langkah hari ini lebih berharga dari sepuluh rencana.
+            </div>
+          </div>
+        )}
+
+        {etaWeeks2 && (
+          <div style={{ marginTop: 10, color: 'rgba(255,255,255,0.35)', fontSize: '0.72rem', textAlign: 'center' }}>
+            📅 Dengan ritme ini, target tercapai dalam ~{etaWeeks2} minggu
           </div>
         )}
       </div>
-
-      {/* ═══ CATATAN DIAH ANNA MINGGU INI ═══════════════════════════════════ */}
-      {weeklyReview?.summary && (
-        <div style={{
-          ...S.card({ background: 'linear-gradient(135deg, rgba(79,70,229,0.08), rgba(6,182,212,0.05))', border: '1px solid rgba(79,70,229,0.2)' }),
-          ...fade(0.05, visible),
-        }}>
-          <div style={{ display: 'flex', alignItems: 'flex-start', gap: 10 }}>
-            <img src="/diah-anna.png" alt="" style={{ width: 32, height: 32, borderRadius: '50%', objectFit: 'cover', objectPosition: 'top', flexShrink: 0, border: '1.5px solid rgba(79,70,229,0.4)' }} />
-            <div>
-              <div style={{ color: '#A5A0FF', fontSize: '0.68rem', fontWeight: 700, letterSpacing: '0.3px', marginBottom: 4 }}>
-                📝 CATATAN DIAH ANNA MINGGU INI
-              </div>
-              <div style={{ color: 'rgba(255,255,255,0.75)', fontSize: '0.83rem', lineHeight: 1.6 }}>
-                {weeklyReview.summary}
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* ═══ SINYAL DIAH ANNA — prediksi actionable (premium) ═══════════════ */}
-      {(() => {
-        const daysSince = profile?.last_updated
-          ? Math.floor((Date.now() - new Date(profile.last_updated)) / 86400000)
-          : 99
-        const doneSteps  = gpsSteps.filter(s => s.done).length
-        const totalSteps = gpsSteps.length
-        const weeklyRate = daysSince <= 7 ? 5 : daysSince <= 14 ? 2 : 0
-        const etaWeeks   = weeklyRate > 0 ? Math.ceil((100 - readiness) / weeklyRate) : null
-
-        const signals = []
-        if (daysSince > 14) signals.push({ icon: '⚠️', text: `${daysSince} hari belum ada aktivitas — momentum bisa hilang`, color: '#ff6b6b' })
-        if (doneSteps === 0 && totalSteps > 0) signals.push({ icon: '🎯', text: 'Mulai satu langkah kecil hari ini untuk membangun momentum', color: '#FFB74D' })
-        if (daysSince <= 3) signals.push({ icon: '🔥', text: 'Momentum sedang tinggi — ini waktu terbaik untuk push lebih jauh', color: '#25D366' })
-        if (etaWeeks) signals.push({ icon: '📅', text: `Estimasi capai target: ~${etaWeeks} minggu dengan konsistensi ini`, color: '#34B7F1' })
-        if (doneSteps > 0 && totalSteps > 0) signals.push({ icon: '✅', text: `${doneSteps}/${totalSteps} langkah GPS selesai — kamu sedang dalam jalur`, color: '#25D366' })
-
-        if (signals.length === 0) return null
-        return (
-          <div style={{ ...S.card({ background: 'rgba(52,183,241,0.05)', border: '1px solid rgba(52,183,241,0.18)' }), ...fade(0.07, visible) }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 7, marginBottom: 10 }}>
-              <img src="/diah-anna.png" alt="" style={{ width: 22, height: 22, borderRadius: '50%', objectFit: 'cover' }} />
-              <span style={{ color: '#34B7F1', fontSize: '0.65rem', fontWeight: 700, letterSpacing: '1px' }}>SINYAL DARI DIAH ANNA</span>
-            </div>
-            {signals.slice(0, 3).map((s, i) => (
-              <div key={i} style={{ display: 'flex', gap: 8, alignItems: 'flex-start', marginBottom: i < signals.length - 1 ? 8 : 0 }}>
-                <span style={{ fontSize: '0.8rem', flexShrink: 0 }}>{s.icon}</span>
-                <span style={{ color: s.color, fontSize: '0.78rem', lineHeight: 1.5 }}>{s.text}</span>
-              </div>
-            ))}
-          </div>
-        )
-      })()}
 
       {/* ═══ SECTION 2 — TODAY'S MISSION ═════════════════════════════════════ */}
       {todayMission && (
@@ -478,7 +516,7 @@ function PremiumDashboard({ user, profile, genome, growth, actions, events, week
 
       {/* ═══ SECTION 3 — PROGRESS OVERVIEW ══════════════════════════════════ */}
       <div style={{ ...S.card(), ...fade(0.15, visible) }}>
-        <div style={S.sectionTitle}>📊 Progress Karier</div>
+        <div style={S.sectionTitle}>🔥 Career Momentum</div>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
           <span style={{ color: '#25D366', fontWeight: 900, fontSize: '2rem', lineHeight: 1 }}>{readiness}%</span>
           <div style={{ textAlign: 'right' }}>
