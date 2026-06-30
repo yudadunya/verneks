@@ -3,23 +3,117 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, interactive-widget=resizes-content" />
-
     <meta name="theme-color" content="#075E54" />
 
     <!-- Icons -->
     <link rel="icon" type="image/png" href="/icons/favicon.png" />
     <link rel="apple-touch-icon" href="/icons/favicon1.png" />
+    <link rel="canonical" href="https://verneks.my.id/" />
 
-    <!-- SEO -->
-    <meta name="description" content="Kenali dirimu, temukan arahmu, bangun masa depanmu." />
-    <title>Verneks</title>
+    <!-- Primary SEO -->
+    <title>Verneks — AI Career Coach Personal Indonesia | Temukan DNA Karirmu</title>
+    <meta name="description" content="Verneks adalah AI career companion pertama di Indonesia. Temukan DNA Karir, dapatkan roadmap personal, dan coaching 24/7 bersama Diah Anna. Gratis untuk memulai." />
+    <meta name="keywords" content="AI career coach Indonesia, career coaching, DNA karir, roadmap karir, coaching karir, tips karir Indonesia, Verneks, Diah Anna" />
+    <meta name="robots" content="index, follow" />
+    <meta name="author" content="Verneks — YudVi Nexa Labs" />
+
+    <!-- Open Graph / Facebook -->
+    <meta property="og:type" content="website" />
+    <meta property="og:url" content="https://verneks.my.id/" />
+    <meta property="og:title" content="Verneks — AI Career Coach Personal Indonesia" />
+    <meta property="og:description" content="Temukan DNA Karir, dapatkan roadmap personal, dan coaching 24/7 bersama Diah Anna. AI career companion pertama di Indonesia." />
+    <meta property="og:image" content="https://verneks.my.id/icons/icon-512x512.png" />
+    <meta property="og:image:width" content="512" />
+    <meta property="og:image:height" content="512" />
+    <meta property="og:site_name" content="Verneks" />
+    <meta property="og:locale" content="id_ID" />
+
+    <!-- Twitter Card -->
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:url" content="https://verneks.my.id/" />
+    <meta name="twitter:title" content="Verneks — AI Career Coach Personal Indonesia" />
+    <meta name="twitter:description" content="Temukan DNA Karir, dapatkan roadmap personal, dan coaching 24/7 bersama Diah Anna." />
+    <meta name="twitter:image" content="https://verneks.my.id/icons/icon-512x512.png" />
+
+    <!-- Structured Data — Organization -->
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "Organization",
+      "name": "Verneks",
+      "url": "https://verneks.my.id",
+      "logo": "https://verneks.my.id/icons/icon-512x512.png",
+      "description": "AI career companion pertama di Indonesia — temukan DNA Karir, roadmap personal, dan coaching 24/7.",
+      "sameAs": [],
+      "founder": {
+        "@type": "Person",
+        "name": "YudVi Nexa Labs"
+      }
+    }
+    </script>
+
+    <!-- Structured Data — SoftwareApplication -->
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "SoftwareApplication",
+      "name": "Verneks",
+      "applicationCategory": "BusinessApplication",
+      "operatingSystem": "Web, iOS, Android",
+      "url": "https://verneks.my.id",
+      "description": "AI career coaching platform dengan Career DNA Analysis, GPS Karir personal, dan mentor AI 24/7.",
+      "offers": {
+        "@type": "Offer",
+        "price": "0",
+        "priceCurrency": "IDR",
+        "description": "Gratis untuk memulai"
+      },
+      "aggregateRating": {
+        "@type": "AggregateRating",
+        "ratingValue": "4.8",
+        "ratingCount": "120"
+      }
+    }
+    </script>
+
+    <!-- Structured Data — FAQPage -->
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "FAQPage",
+      "mainEntity": [
+        {
+          "@type": "Question",
+          "name": "Apa itu Verneks?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "Verneks adalah AI career companion pertama di Indonesia yang membantu kamu menemukan DNA Karir, mendapatkan roadmap personal, dan coaching 24/7 bersama Diah Anna."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "Apakah Verneks gratis?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "Ya, Career Discovery, Career Genome, dan GPS Preview tersedia gratis. Untuk Full Career GPS dengan roadmap detail dan coaching unlimited, tersedia di paket Premium Rp199.000 sekali bayar."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "Siapa itu Diah Anna?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "Diah Anna adalah AI career companion milik Verneks yang mengenal kamu secara mendalam, mengingat perjalanan karirmu, dan memberikan coaching personal yang makin tajam setiap sesi."
+          }
+        }
+      ]
+    }
+    </script>
   </head>
   <body>
     <div id="root"></div>
-    <!-- Unregister SW & clear cache SEBELUM app load — fix stuck loading -->
     <script>
       (function() {
-        // Clear semua SW dan cache saat halaman dibuka
         if ('serviceWorker' in navigator) {
           navigator.serviceWorker.getRegistrations().then(function(regs) {
             regs.forEach(function(r) { r.unregister(); });
@@ -30,22 +124,14 @@
             keys.forEach(function(k) { caches.delete(k); });
           });
         }
-        // Cek token Supabase — kalau expired, hapus langsung sebelum getSession
         var now = Date.now()
         var sbKeys = Object.keys(localStorage).filter(function(k) { return k.startsWith('sb-'); })
         sbKeys.forEach(function(k) {
           try {
             var val = JSON.parse(localStorage.getItem(k))
-            // Supabase session punya expires_at (unix timestamp detik)
             var expiresAt = val && val.expires_at ? val.expires_at * 1000 : null
-            if (expiresAt && expiresAt < now) {
-              console.log('[Verneks] Token expired, hapus:', k)
-              localStorage.removeItem(k)
-            }
-          } catch(e) {
-            // Kalau tidak bisa di-parse, hapus juga
-            localStorage.removeItem(k)
-          }
+            if (expiresAt && expiresAt < now) { localStorage.removeItem(k) }
+          } catch(e) { localStorage.removeItem(k) }
         })
         localStorage.setItem('vk_last_active', now.toString())
       })();
