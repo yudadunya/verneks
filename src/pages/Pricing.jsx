@@ -62,6 +62,11 @@ export default function Pricing({ user }) {
   const [visible, setVisible] = useState(false)
 
   useEffect(() => { setTimeout(() => setVisible(true), 60) }, [])
+  useEffect(() => {
+    document.title = 'Harga & Paket — Verneks Premium | Rp199.000 Sekali Bayar'
+    const desc = document.querySelector('meta[name="description"]')
+    if (desc) desc.content = 'Verneks Premium Rp199.000 sekali bayar — akses penuh 30 hari: coaching unlimited, CV Review, ATS Check, Mock Interview, dan roadmap karir personal bersama Diah Anna.'
+  }, [])
 
   const handleCta = (plan) => {
     if (plan.id === 'free') return navigate('/chat')
