@@ -1,6 +1,7 @@
 import { useEffect, useState, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
+import { useSEO, generateBreadcrumb } from '../seo'
 
 // ─── BRAND TOKENS ─────────────────────────────────────────────────────────────
 const C = {
@@ -85,12 +86,6 @@ const FAQS = [
 
 // ─── HOOKS ────────────────────────────────────────────────────────────────────
 function useInView(threshold = 0.15) {
-  useEffect(() => {
-    document.title = 'Verneks — AI Career Coach Personal Indonesia | Temukan DNA Karirmu'
-    const desc = document.querySelector('meta[name="description"]')
-    if (desc) desc.content = 'Verneks adalah AI career companion pertama di Indonesia. Temukan DNA Karir, dapatkan roadmap personal, dan coaching 24/7 bersama Diah Anna. Gratis untuk memulai.'
-  }, [])
-
   const ref = useRef()
   const [visible, setVisible] = useState(false)
   useEffect(() => {
@@ -161,6 +156,15 @@ export default function Home({ user }) {
   const [chatIdx, setChatIdx]         = useState(0)
   const [openFaq, setOpenFaq]         = useState(null)
   const [barAnim, setBarAnim]         = useState(false)
+
+  useSEO({
+    title: 'Verneks — AI Career Coach Personal Indonesia',
+    description: 'Verneks adalah AI career companion pertama di Indonesia. Temukan DNA Karir, dapatkan roadmap personal, dan coaching 24/7 bersama Diah Anna. Gratis untuk memulai.',
+    path: '/',
+    breadcrumb: generateBreadcrumb([]),
+    faq: FAQS.map(item => ({ question: item.q, answer: item.a })),
+    includeOrganization: true,
+  })
 
   useEffect(() => {
     if (user) {
