@@ -164,6 +164,8 @@ export default function Home({ user }) {
     breadcrumb: generateBreadcrumb([]),
     faq: FAQS.map(item => ({ question: item.q, answer: item.a })),
     includeOrganization: true,
+    includeWebSite: true,
+    includeSoftwareApplication: true,
   })
 
   useEffect(() => {

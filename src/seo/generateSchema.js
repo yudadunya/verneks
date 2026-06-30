@@ -36,6 +36,23 @@ export function webSiteSchema() {
   }
 }
 
+/**
+ * @param {{name: string, description: string, url: string}} input
+ * Representasi satu halaman spesifik sebagai entity WebPage — melengkapi
+ * WebSite (representasi keseluruhan situs).
+ */
+export function webPageSchema(input) {
+  return {
+    '@context': 'https://schema.org',
+    '@type': 'WebPage',
+    name: input.name,
+    description: input.description,
+    url: input.url,
+    isPartOf: { '@type': 'WebSite', name: 'Verneks', url: SITE_URL },
+    inLanguage: 'id-ID',
+  }
+}
+
 export function softwareApplicationSchema() {
   return {
     '@context': 'https://schema.org',

@@ -8,6 +8,7 @@ export { generateMetadata, applyMetadata, SITE_URL, SITE_NAME } from './generate
 export {
   organizationSchema,
   webSiteSchema,
+  webPageSchema,
   softwareApplicationSchema,
   faqSchema,
   breadcrumbSchema,
