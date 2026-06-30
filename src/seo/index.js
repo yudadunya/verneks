@@ -16,7 +16,7 @@ export {
   injectSchemas,
 } from './generateSchema'
 export { generateBreadcrumb } from './generateBreadcrumb'
-export { FAQSection } from './generateFAQ'
+export { FAQSection } from './generateFAQ.jsx'
 export {
   careers, skills, tools, industries, roadmaps,
   salaries, certifications, interviews, companies,
