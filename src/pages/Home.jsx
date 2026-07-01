@@ -306,7 +306,7 @@ export default function Home({ user }) {
           {/* Trust note — jujur, tanpa klaim angka user yang belum bisa dibuktikan */}
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, margin: '14px 0 0' }}>
             <span style={{ color: 'rgba(255,255,255,0.4)', fontSize: '0.74rem' }}>
-              🇮🇩 Dibangun khusus untuk pencari kerja Indonesia
+              🇮🇩 Dibangun khusus untuk perjalanan kariermu di Indonesia
             </span>
           </div>
 
