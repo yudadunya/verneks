@@ -63,7 +63,6 @@ export function softwareApplicationSchema() {
     url: SITE_URL,
     description: 'AI career coaching platform dengan Career DNA Analysis, GPS Karir personal, dan mentor AI 24/7.',
     offers: { '@type': 'Offer', price: '0', priceCurrency: 'IDR', description: 'Gratis untuk memulai' },
-    aggregateRating: { '@type': 'AggregateRating', ratingValue: '4.8', ratingCount: '120' },
   }
 }
 

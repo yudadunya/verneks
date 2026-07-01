@@ -303,20 +303,10 @@ export default function Home({ user }) {
           {/* CTA Primary */}
           <CTAButton label="Mulai Gratis" />
 
-          {/* Social Proof */}
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10, margin: '14px 0 0' }}>
-            <div style={{ display: 'flex' }}>
-              {[0,1,2,3,4].map(i => (
-                <div key={i} style={{
-                  width: 24, height: 24, borderRadius: '50%',
-                  background: ['#22D3EE','#818CF8','#34D399','#FB923C','#F472B6'][i],
-                  border: '2px solid #0a0f0d',
-                  marginLeft: i > 0 ? -7 : 0,
-                }} />
-              ))}
-            </div>
+          {/* Trust note — jujur, tanpa klaim angka user yang belum bisa dibuktikan */}
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, margin: '14px 0 0' }}>
             <span style={{ color: 'rgba(255,255,255,0.4)', fontSize: '0.74rem' }}>
-              <strong style={{ color: 'rgba(255,255,255,0.7)' }}>1.000+</strong> orang sudah memulai
+              🇮🇩 Dibangun khusus untuk pencari kerja Indonesia
             </span>
           </div>
 
