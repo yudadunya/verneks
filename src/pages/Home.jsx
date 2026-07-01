@@ -277,42 +277,31 @@ export default function Home({ user }) {
 
           {/* Headline */}
           <h1 style={{ color: '#fff', fontSize: '1.75rem', fontWeight: 900, lineHeight: 1.25, margin: '0 0 20px', letterSpacing: '-0.5px' }}>
-            Jangan Habiskan Hidupmu<br />
             <span style={{ background: C.grad, WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>
-              Berjalan ke Arah yang Salah.
+              Temukan Karier yang Cocok untukmu.
             </span>
           </h1>
 
-          {/* Body copy */}
-          <div style={{ color: C.muted, fontSize: '0.93rem', lineHeight: 1.9, marginBottom: 28 }}>
-            <p style={{ margin: '0 0 20px', color: '#fff', fontWeight: 700, fontSize: '1rem', fontStyle: 'italic' }}>
-              Karena waktu yang hilang tidak bisa kembali.
-            </p>
-          </div>
-
           {/* Sub-headline */}
           <div style={{ marginBottom: 28 }}>
-            <p style={{ color: '#fff', fontWeight: 800, fontSize: '1.05rem', margin: '0 0 16px' }}>
-              Kenali Dirimu. Temukan Arahmu. Bangun Masa Depanmu.
-            </p>
-            <p style={{ color: C.muted, fontSize: '0.85rem', lineHeight: 1.7, margin: 0 }}>
-              Bersama <strong style={{ color: '#22D3EE' }}>Diah Anna</strong>, yang membantumu memahami diri, menemukan arah yang tepat, dan melangkah dengan lebih yakin.
+            <p style={{ color: C.muted, fontSize: '0.93rem', lineHeight: 1.9, margin: 0 }}>
+              Mulai dengan ngobrol bersama <strong style={{ color: '#22D3EE' }}>Diah Anna</strong>. Tanpa tes kepribadian, tanpa upload CV. Cukup percakapan yang membantumu memahami diri, menemukan arah, dan merencanakan langkah karier berikutnya.
             </p>
           </div>
 
           {/* CTA Primary */}
-          <CTAButton label="Mulai Gratis" />
+          <CTAButton label="Temukan Karierku" />
 
           {/* Trust note — jujur, tanpa klaim angka user yang belum bisa dibuktikan */}
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, margin: '14px 0 0' }}>
             <span style={{ color: 'rgba(255,255,255,0.4)', fontSize: '0.74rem' }}>
-              🇮🇩 Dibangun khusus untuk perjalanan kariermu di Indonesia
+              Dibangun khusus untuk perjalanan kariermu di Indonesia
             </span>
           </div>
 
           {/* Sub CTA note */}
           <p style={{ margin: '8px 0 0', fontSize: '0.72rem', color: 'rgba(255,255,255,0.25)' }}>
-            Mulai dalam 2 menit • Tanpa Upload CV • Tanpa tes panjang
+            Gratis untuk memulai • 2 menit • Tanpa tes panjang • Tanpa upload CV
           </p>
 
           {/* Login hint */}
