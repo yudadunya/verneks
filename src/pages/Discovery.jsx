@@ -4,7 +4,7 @@ import { supabase } from '../lib/supabase'
 
 const OPENING = {
   role: 'bot',
-  text: 'Halo! 👋\n\nSaya Diah Anna.\n\nSaya ingin mengenal kamu lebih dulu agar bisa memetakan karier yang paling cocok.\n\nApa target karier terbesar kamu saat ini?',
+  text: 'Halo! 👋\n\nSaya Diah Anna.\n\nSebelum kita mulai, aku pengen dengar dulu — apa yang bikin kamu akhirnya coba Verneks hari ini?',
   id: 'open'
 }
 
