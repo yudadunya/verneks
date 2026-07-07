@@ -9,15 +9,51 @@ const C = {
   secondary: '#06B6D4',
   purple:    '#7C3AED',
   grad:      'linear-gradient(135deg, #4F46E5 0%, #06B6D4 100%)',
-  gradRev:   'linear-gradient(135deg, #06B6D4 0%, #4F46E5 100%)',
   bg:        '#06060F',
   surface:   'rgba(79,70,229,0.07)',
   border:    'rgba(79,70,229,0.2)',
-  borderHi:  'rgba(6,182,212,0.3)',
   text:      '#fff',
-  muted:     'rgba(255,255,255,0.45)',
-  faint:     'rgba(255,255,255,0.08)',
+  muted:     'rgba(255,255,255,0.5)',
+  faint:     'rgba(255,255,255,0.06)',
+  // Light section tokens — manifesto & testimonials
+  lightBg:   '#F5F5F7',
+  lightText: '#0D0D1A',
+  lightMuted:'rgba(13,13,26,0.55)',
+  lightBdr:  'rgba(13,13,26,0.08)',
 }
+
+// ─── SEO DATA ─────────────────────────────────────────────────────────────────
+const FAQS = [
+  { q: 'Apakah Verneks gratis?',             a: 'Ya. Kamu bisa mulai berbicara dengan Diah Anna secara gratis.' },
+  { q: 'Apakah Diah Anna akan memilihkan karier saya?', a: 'Tidak. Keputusan tetap milikmu. Diah Anna membantu kamu memahami dirimu dan berbagai pilihan yang ada agar keputusanmu menjadi lebih sadar.' },
+  { q: 'Siapa yang cocok menggunakan Verneks?', a: 'Mahasiswa, fresh graduate, profesional, career switcher — siapa pun yang sedang mencari arah atau menghadapi keputusan penting dalam perjalanan kariernya.' },
+  { q: 'Apakah percakapan saya aman?',        a: 'Ya. Privasi dan kepercayaan adalah fondasi utama Verneks.' },
+]
+
+// ─── CHAT DEMO ────────────────────────────────────────────────────────────────
+// Sesederhana mungkin — emosi dulu, fitur belakangan.
+const CHAT_DEMO = [
+  { role: 'user', text: 'Aku udah 3 tahun kerja, tapi nggak tau harus ke mana...' },
+  { role: 'diah', text: 'Aku dengar. Boleh aku tanya satu hal?' },
+  { role: 'user', text: 'Boleh.' },
+  { role: 'diah', text: 'Kapan terakhir kamu melakukan sesuatu yang terasa benar-benar sesuai dengan dirimu?' },
+]
+
+// ─── TESTIMONIALS ─────────────────────────────────────────────────────────────
+const TESTIMONIALS = [
+  {
+    quote: 'Aku kira masalahku adalah salah pilih jurusan. Setelah ngobrol dengan Diah Anna, aku sadar — aku hanya belum pernah benar-benar mengenal diriku sendiri. Bukan jurusannya yang salah.',
+    name: 'Andi', city: 'Surabaya', context: 'Kini bekerja sebagai UX Designer',
+  },
+  {
+    quote: 'Yang berubah bukan pekerjaanku terlebih dahulu. Yang berubah adalah cara aku mengambil keputusan. Sekarang aku lebih tahu apa yang aku cari — dan kenapa.',
+    name: 'Rina', city: 'Jakarta', context: 'Profesional, 4 tahun pengalaman',
+  },
+  {
+    quote: 'Diah Anna tidak pernah menyuruhku memilih. Tapi sekarang aku jauh lebih yakin dengan pilihanku sendiri.',
+    name: 'Reza', city: 'Bandung', context: 'Fresh graduate',
+  },
+]
 
 // ─── HELPERS ──────────────────────────────────────────────────────────────────
 const GoogleIcon = () => (
@@ -28,138 +64,55 @@ const GoogleIcon = () => (
     <path fill="#fff" fillOpacity="0.9" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.18 1.48-4.97 2.31-8.16 2.31-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/>
   </svg>
 )
-
-const VerneksLogo = ({ size = 32 }) => (
-  <img
-    src="/verneks_icon_1.png"
-    alt="Verneks"
-    width={size}
-    height={size}
-    style={{ objectFit: 'contain', display: 'block' }}
-  />
+const VerneksLogo = ({ size = 30 }) => (
+  <img src="/verneks_icon_1.png" alt="Verneks" width={size} height={size} style={{ objectFit: 'contain', display: 'block' }} />
 )
 
-// ─── DATA ─────────────────────────────────────────────────────────────────────
-const DIAH_CHAT = [
-  { role: 'user', text: 'Diah, aku udah 3 tahun kerja tapi karier aku nggak kemana-mana...' },
-  { role: 'diah', text: 'Aku paham banget perasaan itu. Boleh aku tanya — kalau kamu bayangin karier impianmu 5 tahun dari sekarang, seperti apa?' },
-  { role: 'user', text: 'Aku nggak tau... itulah masalahnya 😔' },
-  { role: 'diah', text: 'Justru itu yang kita temukan bareng. Aku bantu kamu explore Career DNA kamu — strength tersembunyi, passion, dan arah yang paling cocok. Mulai yuk? 🧬' },
-]
-
-const PROBLEMS = [
-  { emoji: '🔍', text: '"Karier saya cocoknya ke mana?"' },
-  { emoji: '📚', text: '"Skill apa yang harus saya pelajari?"' },
-  { emoji: '🚪', text: '"Saya harus mulai dari mana?"' },
-  { emoji: '🎯', text: '"Bagaimana cara mencapai target saya?"' },
-]
-
-const GENOME_TRAITS = [
-  { label: 'Analytical',  pct: 87, color: '#06B6D4' },
-  { label: 'Leadership',  pct: 72, color: '#4F46E5' },
-  { label: 'Creative',    pct: 65, color: '#F59E0B' },
-  { label: 'Empathy',     pct: 91, color: '#EC4899' },
-  { label: 'Strategic',   pct: 78, color: '#7C3AED' },
-]
-
-const GAP_ITEMS = [
-  { skill: 'Data Analysis',     status: 'gap',     pct: 30, needed: 80 },
-  { skill: 'Leadership',        status: 'ok',      pct: 72, needed: 70 },
-  { skill: 'Product Strategy',  status: 'gap',     pct: 40, needed: 85 },
-  { skill: 'Stakeholder Mgmt',  status: 'partial', pct: 55, needed: 75 },
-]
-
-const GPS_STEPS = [
-  { month: 'Bulan 1–2', title: 'Fondasi',    desc: 'Google Data Analytics Certificate + 2 proyek portfolio', icon: '📐' },
-  { month: 'Bulan 3–4', title: 'Eksekusi',   desc: 'Kontribusi di startup, bangun network LinkedIn aktif',   icon: '⚡' },
-  { month: 'Bulan 5–6', title: 'Akselerasi', desc: 'Apply ke 10 posisi yang dikurasi Diah Anna untukmu',     icon: '🚀' },
-  { month: 'Bulan 7+',  title: 'Growth',     desc: 'Weekly coaching & progress tracking menuju promosi',     icon: '📈' },
-]
-
-const FAQS = [
-  { q: 'Apa itu Career DNA di Verneks?', a: 'Career DNA adalah peta unik yang menggambarkan kekuatan, kepribadian, dan passion karier kamu — diekstrak dari percakapan mendalam dengan Diah Anna AI. Hasilnya adalah Career Genome, visual representation tentang siapa kamu secara profesional.' },
-  { q: 'Apakah Verneks gratis?', a: 'Ya! Career Discovery, Career Genome, Career Gap Analysis, dan GPS Preview tersedia gratis. Untuk Full Career GPS dengan roadmap detail dan weekly coaching, tersedia di paket Premium.' },
-  { q: 'Bedanya Verneks dengan platform karier lain?', a: 'Platform lain menjual tools (ATS checker, CV builder). Verneks menjual arah dan roadmap. Kami tidak mulai dari CV — kami mulai dari siapa kamu, ke mana kamu mau pergi, dan apa yang perlu kamu lakukan untuk sampai ke sana.' },
-  { q: 'Berapa lama proses Career Discovery?', a: 'Sekitar 10–15 menit percakapan dengan Diah Anna. Tidak ada form panjang — cukup ngobrol natural tentang dirimu, pengalaman, dan aspirasi karier.' },
-  { q: 'Apakah cocok untuk fresh graduate?', a: 'Sangat cocok. Justru fresh graduate sangat diuntungkan karena bisa menentukan arah karier yang tepat sejak awal, bukan trial-error bertahun-tahun.' },
-]
-
-// ─── HOOKS ────────────────────────────────────────────────────────────────────
-function useInView(threshold = 0.15) {
+// FadeIn: scroll-triggered opacity + translateY
+function useInView(threshold = 0.08) {
   const ref = useRef()
   const [visible, setVisible] = useState(false)
   useEffect(() => {
-    const obs = new IntersectionObserver(([e]) => { if (e.isIntersecting) { setVisible(true); obs.disconnect() } }, { threshold })
+    const obs = new IntersectionObserver(
+      ([e]) => { if (e.isIntersecting) { setVisible(true); obs.disconnect() } },
+      { threshold }
+    )
     if (ref.current) obs.observe(ref.current)
     return () => obs.disconnect()
   }, [])
   return [ref, visible]
 }
-
-function Section({ children, style = {}, delay = 0 }) {
+function FadeIn({ children, delay = 0, style = {} }) {
   const [ref, visible] = useInView()
   return (
-    <div ref={ref} style={{ opacity: visible ? 1 : 0, transform: visible ? 'none' : 'translateY(28px)', transition: `opacity 0.65s ease ${delay}s, transform 0.65s ease ${delay}s`, ...style }}>
+    <div ref={ref} style={{
+      opacity: visible ? 1 : 0,
+      transform: visible ? 'none' : 'translateY(24px)',
+      transition: `opacity 0.85s ease ${delay}s, transform 0.85s ease ${delay}s`,
+      ...style,
+    }}>
       {children}
     </div>
   )
 }
 
-function Badge({ text, color = C.primary }) {
-  return (
-    <div style={{ display: 'inline-flex', alignItems: 'center', gap: 6, background: `${color}18`, border: `1px solid ${color}40`, borderRadius: 20, padding: '4px 12px', marginBottom: 14 }}>
-      <span style={{ width: 6, height: 6, borderRadius: '50%', background: color, display: 'inline-block', boxShadow: `0 0 6px ${color}` }} />
-      <span style={{ color, fontSize: '0.72rem', fontWeight: 700, letterSpacing: '0.5px', textTransform: 'uppercase' }}>{text}</span>
-    </div>
-  )
-}
-
-function SectionTitle({ badge, badgeColor, title, sub, center = true }) {
-  return (
-    <div style={{ textAlign: center ? 'center' : 'left', marginBottom: 28 }}>
-      {badge && <Badge text={badge} color={badgeColor || C.primary} />}
-      <h2 style={{ color: C.text, fontSize: '1.55rem', fontWeight: 800, lineHeight: 1.25, letterSpacing: '-0.4px', margin: '0 0 8px' }}>{title}</h2>
-      {sub && <p style={{ color: C.muted, fontSize: '0.88rem', lineHeight: 1.65, margin: 0 }}>{sub}</p>}
-    </div>
-  )
-}
+// Horizontal divider — subtle, 1px
+const Divider = ({ color = 'rgba(255,255,255,0.06)' }) => (
+  <div style={{ height: 1, background: color, margin: '0 24px' }} />
+)
 
 // ─── MAIN ─────────────────────────────────────────────────────────────────────
-function FAQItem({ q, a }) {
-  const [open, setOpen] = useState(false)
-  return (
-    <div
-      onClick={() => setOpen(o => !o)}
-      style={{
-        background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.07)',
-        borderRadius: 12, padding: '14px 16px', cursor: 'pointer',
-        transition: 'background 0.2s',
-      }}
-    >
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12 }}>
-        <span style={{ color: '#fff', fontWeight: 600, fontSize: '0.85rem', lineHeight: 1.4 }}>{q}</span>
-        <span style={{ color: 'rgba(255,255,255,0.3)', fontSize: '0.9rem', flexShrink: 0, transform: open ? 'rotate(45deg)' : 'none', transition: 'transform 0.2s' }}>+</span>
-      </div>
-      {open && (
-        <div style={{ color: 'rgba(255,255,255,0.55)', fontSize: '0.82rem', lineHeight: 1.7, marginTop: 10, paddingTop: 10, borderTop: '1px solid rgba(255,255,255,0.06)' }}>
-          {a}
-        </div>
-      )}
-    </div>
-  )
-}
-
 export default function Home({ user }) {
-  const navigate  = useNavigate()
+  const navigate = useNavigate()
   const [authLoading, setAuthLoading] = useState(false)
   const [visible, setVisible]         = useState(false)
   const [chatIdx, setChatIdx]         = useState(0)
   const [openFaq, setOpenFaq]         = useState(null)
-  const [barAnim, setBarAnim]         = useState(false)
+  const diahRef = useRef(null)
 
   useSEO({
-    title: 'Verneks — AI Career Coach Personal Indonesia',
-    description: 'Verneks adalah AI career companion pertama di Indonesia. Temukan DNA Karir, dapatkan roadmap personal, dan coaching 24/7 bersama Diah Anna. Gratis untuk memulai.',
+    title: 'Verneks — Karier Jangan Asal.',
+    description: 'Verneks membantu kamu mengenal dirimu, menentukan arahmu, dan membangun masa depanmu bersama Diah Anna — AI Career Companion pertama di Indonesia.',
     path: '/',
     breadcrumb: generateBreadcrumb([]),
     faq: FAQS.map(item => ({ question: item.q, answer: item.a })),
@@ -168,469 +121,561 @@ export default function Home({ user }) {
     includeSoftwareApplication: true,
   })
 
+  // ── Auth guard (tidak diubah) ─────────────────────────────────────────────
   useEffect(() => {
     if (user) {
-      // Cek apakah user sudah pernah Discovery — kalau sudah ke /chat, kalau belum ke /discovery
       supabase.from('user_career_profiles')
         .select('career_readiness')
         .eq('user_id', user.id)
         .maybeSingle()
         .then(({ data }) => {
-          if (data?.career_readiness != null) {
-            window.location.href = '/chat'
-          } else {
-            window.location.href = '/discovery'
-          }
+          window.location.href = data?.career_readiness != null ? '/chat' : '/discovery'
         })
       return
     }
-    setTimeout(() => setVisible(true), 100)
-    setTimeout(() => setBarAnim(true), 800)
+    setTimeout(() => setVisible(true), 80)
   }, [user])
 
+  // Chat animation
   useEffect(() => {
-    if (chatIdx >= DIAH_CHAT.length) return
-    const t = setTimeout(() => setChatIdx(i => i + 1), chatIdx === 0 ? 600 : 1300)
+    if (chatIdx >= CHAT_DEMO.length) return
+    const t = setTimeout(() => setChatIdx(i => i + 1), chatIdx === 0 ? 700 : 1400)
     return () => clearTimeout(t)
   }, [chatIdx])
 
   if (user) return null
 
-  // ── CTA (struktur login tidak diubah) ─────────────────────────────────────
-  // Tombol Masuk (returning user) → /chat
+  // ── Auth handlers (tidak diubah secara fungsional) ─────────────────────────
   const handleGoogle = async () => {
     setAuthLoading(true)
     await supabase.auth.signInWithOAuth({ provider: 'google', options: { redirectTo: `${window.location.origin}/chat` } })
     setAuthLoading(false)
   }
-
-  // CTA utama — cek session dulu
   const handleCTA = async () => {
     setAuthLoading(true)
-    // Cek apakah sudah pernah login sebelumnya
     const { data: { session } } = await supabase.auth.getSession()
     if (session?.user) {
-      // Sudah punya akun — cek apakah punya data Discovery
-      const { data: cp } = await supabase
-        .from('user_career_profiles')
-        .select('career_readiness')
-        .eq('user_id', session.user.id)
-        .maybeSingle()
+      const { data: cp } = await supabase.from('user_career_profiles').select('career_readiness').eq('user_id', session.user.id).maybeSingle()
       window.location.href = cp?.career_readiness != null ? '/chat' : '/discovery'
       return
     }
-    // Belum punya akun → OAuth ke /discovery
     await supabase.auth.signInWithOAuth({ provider: 'google', options: { redirectTo: `${window.location.origin}/discovery` } })
     setAuthLoading(false)
   }
-
-  const CTAButton = ({ label = 'Temukan Career DNA Kamu — Gratis', style = {} }) => (
+  const CTAButton = ({ label = 'Mulai Ngobrol dengan Diah Anna — Gratis', full = true, style: s = {} }) => (
     <button onClick={handleCTA} disabled={authLoading} style={{
-      display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10,
-      background: authLoading ? '#1a1a2e' : C.grad,
+      display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 10,
+      background: authLoading ? 'rgba(79,70,229,0.25)' : C.grad,
       color: '#fff', fontWeight: 800, fontSize: '0.95rem',
-      padding: '15px 22px', borderRadius: 14, border: 'none',
+      padding: '15px 24px', borderRadius: 14, border: 'none',
       cursor: authLoading ? 'not-allowed' : 'pointer',
-      boxShadow: authLoading ? 'none' : '0 4px 24px rgba(79,70,229,0.4)',
-      width: '100%', maxWidth: 420,
-      transition: 'all 0.2s', ...style
+      boxShadow: authLoading ? 'none' : '0 4px 28px rgba(79,70,229,0.4)',
+      width: full ? '100%' : 'auto', maxWidth: 420,
+      transition: 'all 0.2s', fontFamily: 'inherit', letterSpacing: '-0.2px', ...s,
     }}>
       {!authLoading && <GoogleIcon />}
       {authLoading ? 'Mengarahkan...' : label}
     </button>
   )
 
-  return (
-    <div style={{ background: C.bg, minHeight: '100vh', fontFamily: "'Plus Jakarta Sans', -apple-system, sans-serif", overflowX: 'hidden' }}>
+  // Hero reveal helper
+  const r = (delay) => ({
+    opacity: visible ? 1 : 0,
+    transform: visible ? 'none' : 'translateY(18px)',
+    transition: `opacity 0.85s ease ${delay}s, transform 0.85s ease ${delay}s`,
+  })
 
-      {/* ── NAVBAR ── */}
-      <nav style={{ position: 'relative', zIndex: 100, padding: '16px 20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-          <VerneksLogo size={32} />
-          <span style={{ color: '#fff', fontWeight: 800, fontSize: '1.15rem', letterSpacing: '-0.3px' }}>Verneks</span>
+  return (
+    <div style={{ background: C.bg, minHeight: '100vh', fontFamily: "'Plus Jakarta Sans', -apple-system, sans-serif", overflowX: 'hidden', color: C.text }}>
+
+      {/* ── NAVBAR ─────────────────────────────────────────────────────────── */}
+      <nav style={{ position: 'relative', zIndex: 100, padding: '16px 20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: `1px solid ${C.faint}` }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 9 }}>
+          <VerneksLogo size={28} />
+          <div>
+            <div style={{ color: '#fff', fontWeight: 800, fontSize: '0.93rem', lineHeight: 1.1 }}>Verneks</div>
+            <div style={{ background: C.grad, WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', fontSize: '0.58rem', fontWeight: 700, letterSpacing: '1px', textTransform: 'uppercase' }}>Karier Jangan Asal.</div>
+          </div>
         </div>
-        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 3 }}>
-          <button onClick={handleGoogle} disabled={authLoading} style={{ background: C.surface, border: `1px solid ${C.border}`, color: '#fff', borderRadius: 20, padding: '7px 18px', fontSize: '0.8rem', fontWeight: 700, cursor: 'pointer' }}>
-            Masuk
-          </button>
-          <span style={{ fontSize: '0.58rem', color: 'rgba(255,255,255,0.25)', whiteSpace: 'nowrap' }}>Sudah punya akun? Masuk di sini</span>
-        </div>
+        <button onClick={handleGoogle} style={{ background: 'transparent', border: `1px solid rgba(255,255,255,0.1)`, color: 'rgba(255,255,255,0.65)', borderRadius: 20, padding: '7px 18px', fontSize: '0.8rem', fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}>
+          Masuk
+        </button>
       </nav>
 
-      <div style={{ maxWidth: 480, margin: '0 auto', padding: '0 20px' }}>
+      {/* ════════════════════════════════════════════════════════════════════
+          HERO
+      ════════════════════════════════════════════════════════════════════ */}
+      <section style={{ padding: '60px 24px 64px', maxWidth: 480, margin: '0 auto', position: 'relative', zIndex: 5 }}>
 
-        {/* ══════════════════════════════════
-            SECTION 1 — HERO (PROBLEM AGITATION)
-        ══════════════════════════════════ */}
-        <div style={{
-          padding: '52px 0 40px',
-          opacity: visible ? 1 : 0,
-          transform: visible ? 'translateY(0)' : 'translateY(24px)',
-          transition: 'all 0.7s ease',
-          textAlign: 'center',
-        }}>
-          {/* Overline — Diah Anna badge */}
-          <div style={{ display: 'inline-flex', alignItems: 'center', gap: 8, background: 'rgba(6,182,212,0.1)', border: '1px solid rgba(6,182,212,0.3)', borderRadius: 99, padding: '6px 14px 6px 8px', marginBottom: 28 }}>
-            <img src="/diah-anna.png" alt="Diah Anna" style={{ width: 22, height: 22, borderRadius: '50%', objectFit: 'cover', border: '1.5px solid rgba(6,182,212,0.5)' }} />
-            <span style={{ fontSize: '0.7rem', color: '#22D3EE', fontWeight: 700, letterSpacing: '0.5px' }}>Diah Anna, teman perjalanan kariermu</span>
-          </div>
+        {/* Badge */}
+        <div style={r(0.05)}>
+          <span style={{
+            display: 'inline-block', background: C.surface, border: `1px solid ${C.border}`,
+            borderRadius: 20, padding: '5px 14px', fontSize: '0.75rem', fontWeight: 700,
+            color: C.secondary, letterSpacing: '0.3px', marginBottom: 28,
+          }}>
+            Karier Jangan Asal.
+          </span>
+        </div>
 
-          {/* Headline */}
-          <h1 style={{ color: '#fff', fontSize: '1.75rem', fontWeight: 900, lineHeight: 1.25, margin: '0 0 20px', letterSpacing: '-0.5px' }}>
-            <span style={{ background: C.grad, WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>
-              Temukan Karier yang Cocok untukmu.
-            </span>
+        {/* H1 — signature typography: satu baris per frasa, intentional line break */}
+        <div style={{ ...r(0.15), marginBottom: 28 }}>
+          <h1 style={{ fontSize: '2.6rem', fontWeight: 900, lineHeight: 1.1, letterSpacing: '-0.04em', margin: 0 }}>
+            <span style={{ display: 'block' }}>Kenali Dirimu.</span>
+            <span style={{ display: 'block', background: C.grad, WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>Tentukan Arahmu.</span>
+            <span style={{ display: 'block' }}>Bangun Masa Depanmu.</span>
           </h1>
+        </div>
 
-          {/* Sub-headline */}
-          <div style={{ marginBottom: 28 }}>
-            <p style={{ color: C.muted, fontSize: '0.93rem', lineHeight: 1.9, margin: 0 }}>
-              Mulai dengan ngobrol bersama <strong style={{ color: '#22D3EE' }}>Diah Anna</strong>. Tanpa tes kepribadian, tanpa upload CV. Cukup percakapan yang membantumu memahami diri, menemukan arah, dan merencanakan langkah karier berikutnya.
+        {/* Subheadline */}
+        <div style={{ ...r(0.3), marginBottom: 36 }}>
+          <p style={{ color: C.muted, fontSize: '0.92rem', lineHeight: 1.75, margin: 0 }}>
+            Karier bukan sekadar mencari pekerjaan.<br />
+            Karier adalah keputusan tentang hidup yang ingin kamu jalani.
+          </p>
+          <p style={{ color: 'rgba(255,255,255,0.75)', fontSize: '0.92rem', lineHeight: 1.75, margin: '12px 0 0' }}>
+            Bersama <strong>Diah Anna</strong>, kenali dirimu lebih dalam, temukan arah yang benar-benar sesuai, lalu bangun masa depan dengan keyakinan.
+          </p>
+        </div>
+
+        {/* Primary CTA */}
+        <div style={{ ...r(0.45), display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: 12, marginBottom: 16 }}>
+          <CTAButton />
+        </div>
+
+        {/* Secondary CTA */}
+        <div style={r(0.55)}>
+          <button
+            onClick={() => diahRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })}
+            style={{ background: 'none', border: 'none', cursor: 'pointer', color: C.muted, fontSize: '0.84rem', fontWeight: 600, padding: 0, fontFamily: 'inherit', textDecoration: 'underline', textDecorationColor: 'rgba(255,255,255,0.2)', textUnderlineOffset: 4 }}
+          >
+            Kenali Diah Anna ↓
+          </button>
+        </div>
+
+        {/* Trust signals */}
+        <div style={{ ...r(0.65), display: 'flex', flexWrap: 'wrap', gap: '8px 20px', marginTop: 28 }}>
+          {['Gratis memulai', 'Privasi terjaga', 'Dibuat untuk Indonesia 🇮🇩'].map((t, i) => (
+            <span key={i} style={{ color: 'rgba(255,255,255,0.35)', fontSize: '0.75rem', fontWeight: 500 }}>✓ {t}</span>
+          ))}
+        </div>
+      </section>
+
+      <Divider />
+
+      {/* ════════════════════════════════════════════════════════════════════
+          MANIFESTO — LIGHT BACKGROUND
+          Typography besar. Whitespace. Tidak ada kartu. Tidak ada gradient.
+      ════════════════════════════════════════════════════════════════════ */}
+      <section style={{ background: C.lightBg, padding: '72px 24px', position: 'relative' }}>
+        <div style={{ maxWidth: 480, margin: '0 auto' }}>
+
+          <FadeIn>
+            <p style={{ fontSize: '0.72rem', fontWeight: 700, letterSpacing: '2px', textTransform: 'uppercase', color: C.lightMuted, marginBottom: 40 }}>
+              Kenapa Verneks Ada?
             </p>
-          </div>
+          </FadeIn>
 
-          {/* CTA Primary */}
-          <CTAButton label="Temukan Karierku" />
+          <FadeIn delay={0.05}>
+            <p style={{ fontSize: '1.1rem', fontWeight: 500, lineHeight: 1.9, color: C.lightText, marginBottom: 32 }}>
+              Karena terlalu banyak orang<br />
+              memilih jurusan...<br />
+              memilih pekerjaan...<br />
+              bahkan memilih jalan hidup...<br />
+              <span style={{ color: C.lightMuted }}>tanpa benar-benar mengenal dirinya.</span>
+            </p>
+          </FadeIn>
 
-          {/* Trust note — jujur, tanpa klaim angka user yang belum bisa dibuktikan */}
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, margin: '14px 0 0' }}>
-            <span style={{ color: 'rgba(255,255,255,0.4)', fontSize: '0.74rem' }}>
-              Dibangun khusus untuk perjalanan kariermu di Indonesia
-            </span>
-          </div>
+          <FadeIn delay={0.1}>
+            <p style={{ fontSize: '1rem', lineHeight: 1.9, color: `rgba(13,13,26,0.6)`, marginBottom: 32 }}>
+              Mereka mengikuti teman.<br />
+              Mengikuti tren.<br />
+              Mengikuti tuntutan.<br />
+              Mengikuti rasa takut.
+            </p>
+          </FadeIn>
 
-          {/* Sub CTA note */}
-          <p style={{ margin: '8px 0 0', fontSize: '0.72rem', color: 'rgba(255,255,255,0.25)' }}>
-            Gratis untuk memulai • 2 menit • Tanpa tes panjang • Tanpa upload CV
-          </p>
+          <FadeIn delay={0.15}>
+            <p style={{ fontSize: '1rem', lineHeight: 1.8, color: C.lightMuted, marginBottom: 24 }}>
+              Lalu bertanya...
+            </p>
+            <div style={{ borderLeft: `3px solid ${C.primary}`, paddingLeft: 20, marginBottom: 36 }}>
+              <p style={{ fontSize: '1.1rem', fontWeight: 700, fontStyle: 'italic', lineHeight: 1.7, color: C.lightText, margin: 0 }}>
+                "Kenapa aku tidak benar-benar menikmati hidup yang kupilih?"
+              </p>
+            </div>
+          </FadeIn>
 
-          {/* Login hint */}
-          <p style={{ margin: '10px 0 0', fontSize: '0.72rem', color: 'rgba(255,255,255,0.3)' }}>
-            Sudah punya akun?{' '}
-            <span onClick={handleGoogle} style={{ color: C.primary, fontWeight: 700, cursor: 'pointer', textDecoration: 'underline' }}>
-              Masuk di sini
-            </span>
-          </p>
+          <FadeIn delay={0.2}>
+            <p style={{ fontSize: '1rem', lineHeight: 1.85, color: C.lightMuted, marginBottom: 28 }}>
+              Kami percaya...<br />
+              Banyak masalah karier bukan dimulai dari kurangnya kemampuan.
+            </p>
+            <p style={{ fontSize: '1rem', lineHeight: 1.85, color: C.lightText, fontWeight: 600 }}>
+              Tetapi dari keputusan yang dibuat tanpa benar-benar mengenal diri.
+            </p>
+          </FadeIn>
+
+          <FadeIn delay={0.25}>
+            <div style={{ borderTop: `1px solid ${C.lightBdr}`, marginTop: 48, paddingTop: 40 }}>
+              <p style={{ fontSize: '2rem', fontWeight: 900, letterSpacing: '-0.03em', color: C.lightText, lineHeight: 1.1, margin: 0 }}>
+                Karier<br />Jangan Asal.
+              </p>
+            </div>
+          </FadeIn>
+
         </div>
+      </section>
 
-        {/* ══════════════════════════════════
-            SECTION 3 — ALUR VERNEKS
-        ══════════════════════════════════ */}
-        <div style={{
-          padding: '40px 0',
-          opacity: visible ? 1 : 0,
-          transition: 'opacity 0.7s ease 0.25s',
-          borderTop: '1px solid rgba(255,255,255,0.05)',
-        }}>
-          <h2 style={{ color: '#fff', fontWeight: 800, fontSize: '1.2rem', textAlign: 'center', marginBottom: 6 }}>
-            Bagaimana Verneks Bekerja?
-          </h2>
-          <p style={{ color: C.muted, fontSize: '0.83rem', textAlign: 'center', marginBottom: 28, lineHeight: 1.6 }}>
-            Dari percakapan pertama hingga tujuanmu tercapai.
-          </p>
+      {/* ════════════════════════════════════════════════════════════════════
+          DIAH ANNA — Teman Berpikir, Bukan Pemberi Jawaban
+      ════════════════════════════════════════════════════════════════════ */}
+      <section ref={diahRef} style={{ background: C.bg, padding: '72px 24px', maxWidth: 480, margin: '0 auto' }}>
 
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 0 }}>
-            {[
-              {
-                step: '01',
-                icon: '💬',
-                title: 'Ngobrol dengan Diah Anna',
-                desc: 'Ceritakan situasimu sekarang dan ke mana kamu ingin pergi. Tidak perlu CV. Tidak perlu dokumen apapun.',
-                color: '#22D3EE',
-              },
-              {
-                step: '02',
-                icon: '🧬',
-                title: 'Temukan Career DNA-mu',
-                desc: 'Diah Anna menganalisis kekuatan, kepribadian, dan potensi tersembunyimu — hal yang tidak terlihat dari CV.',
-                color: '#818CF8',
-              },
-              {
-                step: '03',
-                icon: '🗺️',
-                title: 'Dapatkan Peta Jalan Personal',
-                desc: 'Roadmap karier yang dibuat khusus untukmu — langkah demi langkah, realistis, dan bisa langsung dijalankan.',
-                color: '#34D399',
-              },
-              {
-                step: '04',
-                icon: '🚀',
-                title: 'Bergerak dengan Jelas',
-                desc: 'Setiap hari kamu tahu harus melakukan apa. Tidak ada lagi kebingungan, tidak ada lagi jalan memutar.',
-                color: '#FB923C',
-              },
-              {
-                step: '05',
-                icon: '🎯',
-                title: 'Tujuanmu Tercapai',
-                desc: 'Diah Anna menemanimu sepanjang perjalanan — mengingatkan, memotivasi, dan merayakan setiap kemajuanmu.',
-                color: '#F472B6',
-              },
-            ].map((item, i, arr) => (
-              <div key={i} style={{ display: 'flex', gap: 0, alignItems: 'stretch' }}>
-                {/* Line connector */}
-                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', width: 44, flexShrink: 0 }}>
-                  <div style={{
-                    width: 36, height: 36, borderRadius: '50%', flexShrink: 0,
-                    background: `${item.color}18`, border: `2px solid ${item.color}40`,
-                    display: 'flex', alignItems: 'center', justifyContent: 'center',
-                    fontSize: '1rem', marginTop: 2,
-                  }}>
-                    {item.icon}
-                  </div>
-                  {i < arr.length - 1 && (
-                    <div style={{ width: 2, flex: 1, background: `linear-gradient(to bottom, ${item.color}30, ${arr[i+1].color}20)`, minHeight: 24 }} />
-                  )}
-                </div>
-
-                {/* Content */}
-                <div style={{ paddingLeft: 14, paddingBottom: i < arr.length - 1 ? 24 : 0, paddingTop: 4 }}>
-                  <div style={{ color: item.color, fontSize: '0.65rem', fontWeight: 700, letterSpacing: '1px', marginBottom: 3 }}>
-                    LANGKAH {item.step}
-                  </div>
-                  <div style={{ color: '#fff', fontWeight: 700, fontSize: '0.9rem', marginBottom: 5 }}>
-                    {item.title}
-                  </div>
-                  <div style={{ color: C.muted, fontSize: '0.82rem', lineHeight: 1.6 }}>
-                    {item.desc}
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-
-        {/* ── CTA Sekunder ── */}
-        <div style={{ padding: '0 0 32px', textAlign: 'center', opacity: visible ? 1 : 0, transition: 'opacity 0.7s ease 0.28s' }}>
-          <p style={{ color: C.muted, fontSize: '0.83rem', marginBottom: 14 }}>
-            Siap menemukan arahmu?
-          </p>
-          <CTAButton label="Mulai Sekarang — Gratis" />
-        </div>
-
-        {/* ══════════════════════════════════
-            SECTION 4 — TESTIMONI BETA
-        ══════════════════════════════════ */}
-        <div style={{
-          padding: '40px 0',
-          opacity: visible ? 1 : 0,
-          transition: 'opacity 0.7s ease 0.3s',
-          borderTop: '1px solid rgba(255,255,255,0.05)',
-        }}>
-          <h2 style={{ color: '#fff', fontWeight: 800, fontSize: '1.2rem', textAlign: 'center', marginBottom: 6 }}>
-            Kata Mereka yang Sudah Mencoba
-          </h2>
-          <p style={{ color: C.muted, fontSize: '0.83rem', textAlign: 'center', marginBottom: 28 }}>
-            Beta tester Verneks dari seluruh Indonesia
-          </p>
-
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-            {[
-              {
-                text: 'Aku pikir aku udah tau mau ke mana. Ternyata setelah ngobrol sama Diah Anna, aku sadar selama ini aku cuma ikut-ikutan. Sekarang aku punya arah yang beneran aku mau.',
-                name: 'Ayu R.',
-                city: 'Surabaya',
-                emoji: '🌟',
-              },
-              {
-                text: 'Yang bikin beda itu Diah Anna kayak beneran dengerin, bukan cuma ngasih daftar saran generik. Dia tau situasiku dan ngomongnya pas banget.',
-                name: 'Rizky F.',
-                city: 'Bandung',
-                emoji: '🔥',
-              },
-              {
-                text: 'Saya sudah 3 tahun stuck di posisi yang sama. Setelah pakai Verneks, saya akhirnya tahu langkah konkret apa yang harus saya ambil minggu ini.',
-                name: 'Sari W.',
-                city: 'Jakarta',
-                emoji: '✨',
-              },
-              {
-                text: 'Jujur awalnya skeptis sama AI. Tapi Diah Anna bisa ngerti konteks saya yang cukup kompleks. Roadmap-nya realistis dan langsung bisa diterapin.',
-                name: 'Bagas M.',
-                city: 'Yogyakarta',
-                emoji: '💡',
-              },
-            ].map((t, i) => (
-              <div key={i} style={{
-                background: 'rgba(255,255,255,0.03)',
-                border: '1px solid rgba(255,255,255,0.07)',
-                borderRadius: 16, padding: '16px',
-              }}>
-                <div style={{ color: C.muted, fontSize: '0.83rem', lineHeight: 1.7, marginBottom: 12, fontStyle: 'italic' }}>
-                  "{t.text}"
-                </div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                  <div style={{
-                    width: 32, height: 32, borderRadius: '50%',
-                    background: 'rgba(255,255,255,0.06)',
-                    display: 'flex', alignItems: 'center', justifyContent: 'center',
-                    fontSize: '0.9rem', flexShrink: 0,
-                  }}>
-                    {t.emoji}
-                  </div>
-                  <div>
-                    <div style={{ color: '#fff', fontWeight: 700, fontSize: '0.82rem' }}>{t.name}</div>
-                    <div style={{ color: C.muted, fontSize: '0.72rem' }}>{t.city}</div>
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-
-        {/* ══════════════════════════════════
-            SECTION 5 — SOLUTION (DIAH ANNA)
-        ══════════════════════════════════ */}
-        <div style={{
-          padding: '40px 0',
-          opacity: visible ? 1 : 0,
-          transition: 'opacity 0.7s ease 0.3s',
-          borderTop: '1px solid rgba(255,255,255,0.05)',
-        }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 14, marginBottom: 24 }}>
-            <img src="/diah-anna.png" alt="Diah Anna" style={{ width: 56, height: 56, borderRadius: '50%', objectFit: 'cover', border: `2px solid ${C.secondary}60`, flexShrink: 0 }} />
+        <FadeIn>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 14, marginBottom: 32 }}>
+            <img src="/diah-anna.png" alt="Diah Anna" style={{ width: 52, height: 52, borderRadius: '50%', objectFit: 'cover', objectPosition: 'top', flexShrink: 0, border: `2px solid rgba(79,70,229,0.45)`, boxShadow: '0 0 24px rgba(79,70,229,0.2)' }} />
             <div>
-              <div style={{ color: '#fff', fontWeight: 800, fontSize: '1rem' }}>Diah Anna</div>
-              <div style={{ color: C.muted, fontSize: '0.78rem' }}>AI Career Companion · Verneks</div>
+              <div style={{ color: '#fff', fontWeight: 800, fontSize: '0.95rem' }}>Diah Anna</div>
+              <div style={{ color: C.secondary, fontSize: '0.72rem', fontWeight: 600 }}>AI Career Companion · Verneks</div>
             </div>
           </div>
+        </FadeIn>
 
-          <h2 style={{ color: '#fff', fontWeight: 800, fontSize: '1.2rem', marginBottom: 20 }}>
-            Diah Anna Akan Membantumu:
+        <FadeIn delay={0.05}>
+          <h2 style={{ fontSize: '2rem', fontWeight: 900, lineHeight: 1.15, letterSpacing: '-0.04em', marginBottom: 32, color: '#fff' }}>
+            Teman Berpikir.<br />
+            <span style={{ color: C.muted, fontWeight: 500 }}>Bukan Pemberi Jawaban.</span>
           </h2>
+        </FadeIn>
 
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginBottom: 28 }}>
-            {[
-              { emoji: '🧬', text: 'Memahami siapa dirimu sebenarnya' },
-              { emoji: '🧭', text: 'Menemukan jalur karier yang paling sesuai' },
-              { emoji: '📍', text: 'Mengetahui posisi dan peluangmu saat ini' },
-              { emoji: '🚀', text: 'Menentukan langkah berikutnya dengan jelas' },
-              { emoji: '🎯', text: 'Tetap bergerak menuju tujuanmu' },
-            ].map((item, i) => (
-              <div key={i} style={{
-                display: 'flex', alignItems: 'center', gap: 12,
-                padding: '14px 16px', borderRadius: 14,
-                background: 'rgba(6,182,212,0.06)', border: '1px solid rgba(6,182,212,0.15)',
-              }}>
-                <span style={{ fontSize: '1.2rem', flexShrink: 0 }}>{item.emoji}</span>
-                <span style={{ color: 'rgba(255,255,255,0.85)', fontSize: '0.88rem', fontWeight: 500 }}>{item.text}</span>
-              </div>
-            ))}
-          </div>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
+          {[
+            'Diah Anna tidak hidup untuk menentukan masa depanmu.',
+            'Ia hadir untuk membantumu menemukan jalanmu sendiri.',
+            'Ia akan mendengarkan. Memahami. Menghubungkan cerita-ceritamu.',
+            'Melihat pola yang mungkin belum pernah kamu sadari.',
+          ].map((text, i) => (
+            <FadeIn key={i} delay={i * 0.07}>
+              <p style={{ color: i < 2 ? 'rgba(255,255,255,0.8)' : C.muted, fontSize: '0.95rem', lineHeight: 1.75, margin: 0 }}>{text}</p>
+            </FadeIn>
+          ))}
         </div>
 
-        {/* ══════════════════════════════════
-            SECTION 4 — BUKAN SEKADAR AI
-        ══════════════════════════════════ */}
-        <div style={{
-          padding: '40px 0',
-          opacity: visible ? 1 : 0,
-          transition: 'opacity 0.7s ease 0.4s',
-          borderTop: '1px solid rgba(255,255,255,0.05)',
-        }}>
-          <h2 style={{ color: '#fff', fontWeight: 800, fontSize: '1.25rem', marginBottom: 8, textAlign: 'center' }}>
-            Bukan Sekadar AI.
-          </h2>
-          <p style={{ color: C.muted, fontSize: '0.88rem', textAlign: 'center', marginBottom: 24, lineHeight: 1.6 }}>
-            Bayangkan memiliki seseorang yang:
-          </p>
-
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginBottom: 24 }}>
-            {[
-              'Mengenal kekuatanmu',
-              'Mengingat tujuanmu',
-              'Membantu saat kamu bingung',
-              'Menunjukkan langkah berikutnya',
-              'Mengingatkanmu ketika mulai kehilangan arah',
-              'Menemanimu hingga tujuan tercapai',
-            ].map((item, i) => (
-              <div key={i} style={{
-                display: 'flex', alignItems: 'center', gap: 12,
-                padding: '12px 16px', borderRadius: 12,
-                background: 'rgba(37,211,102,0.05)', border: '1px solid rgba(37,211,102,0.12)',
-              }}>
-                <span style={{ color: '#25D366', fontWeight: 700, fontSize: '0.85rem', flexShrink: 0 }}>✓</span>
-                <span style={{ color: 'rgba(255,255,255,0.8)', fontSize: '0.85rem' }}>{item}</span>
-              </div>
-            ))}
-          </div>
-
-          <div style={{ textAlign: 'center', padding: '20px', background: 'rgba(79,70,229,0.08)', border: `1px solid ${C.border}`, borderRadius: 16 }}>
-            <p style={{ color: C.muted, fontSize: '0.85rem', margin: '0 0 6px' }}>Itulah</p>
-            <p style={{ color: '#fff', fontWeight: 900, fontSize: '1.4rem', margin: 0, background: C.grad, WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>
-              Diah Anna.
+        <FadeIn delay={0.35}>
+          <div style={{ background: C.surface, border: `1px solid ${C.border}`, borderRadius: 16, padding: '24px 20px', marginTop: 36 }}>
+            <p style={{ color: C.muted, fontSize: '0.88rem', lineHeight: 1.7, margin: '0 0 12px' }}>
+              Sampai akhirnya... bukan Diah Anna yang berkata.<br />Tetapi kamu.
+            </p>
+            <p style={{ color: '#fff', fontWeight: 700, fontStyle: 'italic', fontSize: '1rem', lineHeight: 1.65, margin: 0 }}>
+              "Sekarang aku tahu harus melangkah ke mana."
             </p>
           </div>
+        </FadeIn>
+
+      </section>
+
+      <Divider />
+
+      {/* ════════════════════════════════════════════════════════════════════
+          HUMAN JOURNEY — 3 langkah, panah ke bawah, bukan progress bar
+      ════════════════════════════════════════════════════════════════════ */}
+      <section style={{ background: C.lightBg, padding: '72px 24px' }}>
+        <div style={{ maxWidth: 480, margin: '0 auto' }}>
+
+          <FadeIn>
+            <p style={{ fontSize: '0.72rem', fontWeight: 700, letterSpacing: '2px', textTransform: 'uppercase', color: C.lightMuted, marginBottom: 8 }}>Perjalananmu</p>
+            <h2 style={{ fontSize: '1.8rem', fontWeight: 900, letterSpacing: '-0.04em', color: C.lightText, lineHeight: 1.15, marginBottom: 48 }}>
+              Dimulai dari Sini.
+            </h2>
+          </FadeIn>
+
+          {[
+            {
+              step: '01', title: 'Kenali Dirimu.',
+              body: ['Setiap keputusan yang baik dimulai dari pemahaman yang benar.', 'Kenali minatmu. Kekuatanmu. Nilai hidupmu.', 'Semakin kamu mengenal dirimu — semakin kecil kemungkinan kamu menjalani hidup milik orang lain.'],
+            },
+            {
+              step: '02', title: 'Tentukan Arahmu.',
+              body: ['Tidak ada satu jalan yang benar untuk semua orang.', 'Diah Anna membantumu memahami berbagai kemungkinan, membuka perspektif baru, menimbang pilihan dengan lebih jernih.', 'Agar keputusan yang kamu ambil — benar-benar menjadi keputusanmu.'],
+            },
+            {
+              step: '03', title: 'Bangun Masa Depanmu.',
+              body: ['Karier tidak selesai ketika kamu memilih.', 'Justru di situlah perjalanan dimulai.', 'Diah Anna akan terus menemanimu berkembang. Satu langkah. Satu keputusan. Satu perubahan dalam satu waktu.'],
+            },
+          ].map((s, i) => (
+            <div key={i}>
+              <FadeIn delay={i * 0.08}>
+                <div style={{ display: 'flex', gap: 20, paddingBottom: 8 }}>
+                  <div style={{ paddingTop: 4 }}>
+                    <span style={{ display: 'block', fontSize: '0.65rem', fontWeight: 800, color: C.primary, letterSpacing: '1px', marginBottom: 6 }}>{s.step}</span>
+                    {i < 2 && <div style={{ width: 1, height: '100%', minHeight: 60, background: C.lightBdr, margin: '4px auto' }} />}
+                  </div>
+                  <div style={{ paddingBottom: 40 }}>
+                    <h3 style={{ fontSize: '1.35rem', fontWeight: 900, letterSpacing: '-0.03em', color: C.lightText, marginBottom: 16, lineHeight: 1.2 }}>{s.title}</h3>
+                    {s.body.map((line, j) => (
+                      <p key={j} style={{ fontSize: '0.9rem', lineHeight: 1.8, color: j === 0 ? `rgba(13,13,26,0.75)` : C.lightMuted, margin: j === 0 ? '0 0 8px' : '0 0 6px' }}>{line}</p>
+                    ))}
+                  </div>
+                </div>
+              </FadeIn>
+              {i < 2 && (
+                <FadeIn delay={i * 0.08 + 0.04}>
+                  <p style={{ color: `rgba(79,70,229,0.4)`, fontSize: '1.1rem', textAlign: 'left', marginLeft: 28, marginBottom: 0, lineHeight: 1 }}>↓</p>
+                </FadeIn>
+              )}
+            </div>
+          ))}
+
         </div>
+      </section>
 
-        {/* ══════════════════════════════════
-            SECTION 5 — FINAL CTA
-        ══════════════════════════════════ */}
-        <div style={{
-          padding: '40px 0 60px',
-          textAlign: 'center',
-          opacity: visible ? 1 : 0,
-          transition: 'opacity 0.7s ease 0.5s',
-          borderTop: '1px solid rgba(255,255,255,0.05)',
-        }}>
-          <h2 style={{ color: '#fff', fontWeight: 900, fontSize: '1.3rem', marginBottom: 8, lineHeight: 1.3 }}>
-            Satu Keputusan Kecil Hari Ini
-          </h2>
-          <p style={{ color: C.muted, fontSize: '0.9rem', marginBottom: 32, lineHeight: 1.7 }}>
-            Bisa menghemat bertahun-tahun kebingungan di masa depan.
-          </p>
+      {/* ════════════════════════════════════════════════════════════════════
+          PRODUCT EXPERIENCE — chat sederhana, ditempatkan SETELAH belief
+      ════════════════════════════════════════════════════════════════════ */}
+      <section style={{ background: C.bg, padding: '72px 24px' }}>
+        <div style={{ maxWidth: 480, margin: '0 auto' }}>
 
-          <CTAButton label="Mulai Bersama Diah Anna" />
+          <FadeIn>
+            <p style={{ fontSize: '0.72rem', fontWeight: 700, letterSpacing: '2px', textTransform: 'uppercase', color: C.muted, marginBottom: 8 }}>
+              Beginilah Diah Anna menemanimu.
+            </p>
+            <h2 style={{ fontSize: '1.6rem', fontWeight: 900, letterSpacing: '-0.04em', color: '#fff', lineHeight: 1.2, marginBottom: 32 }}>
+              Sesederhana ini.
+            </h2>
+          </FadeIn>
 
-          <p style={{ color: 'rgba(255,255,255,0.18)', fontSize: '0.7rem', marginTop: 16 }}>
-            Gratis · Tidak perlu kartu kredit · Mulai dalam 2 menit
-          </p>
+          {/* Chat bubbles */}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginBottom: 32 }}>
+            {CHAT_DEMO.slice(0, chatIdx).map((msg, i) => (
+              <FadeIn key={i} delay={0}>
+                <div style={{ display: 'flex', justifyContent: msg.role === 'user' ? 'flex-end' : 'flex-start', gap: 10, alignItems: 'flex-end' }}>
+                  {msg.role === 'diah' && (
+                    <img src="/diah-anna.png" alt="Diah Anna" style={{ width: 28, height: 28, borderRadius: '50%', objectFit: 'cover', objectPosition: 'top', flexShrink: 0, border: '1.5px solid rgba(79,70,229,0.4)' }} />
+                  )}
+                  <div style={{
+                    maxWidth: '78%', padding: '10px 14px', borderRadius: msg.role === 'user' ? '14px 14px 4px 14px' : '14px 14px 14px 4px',
+                    background: msg.role === 'user' ? C.grad : 'rgba(255,255,255,0.06)',
+                    border: msg.role === 'user' ? 'none' : `1px solid rgba(255,255,255,0.08)`,
+                    color: '#fff', fontSize: '0.88rem', lineHeight: 1.55,
+                  }}>
+                    {msg.text}
+                  </div>
+                </div>
+              </FadeIn>
+            ))}
+          </div>
+
+          {/* CTA setelah demo */}
+          <FadeIn delay={0.1}>
+            <p style={{ color: C.muted, fontSize: '0.85rem', lineHeight: 1.75, marginBottom: 20 }}>
+              Belum perlu CV.<br />
+              Belum perlu tes.<br />
+              Cukup mulai bercerita.
+            </p>
+            <CTAButton />
+          </FadeIn>
+
         </div>
+      </section>
 
-        {/* ══════════════════════════════════
-            SECTION — FAQ
-        ══════════════════════════════════ */}
-        <div style={{
-          padding: '40px 0',
-          opacity: visible ? 1 : 0,
-          transition: 'opacity 0.7s ease 0.55s',
-          borderTop: '1px solid rgba(255,255,255,0.05)',
-        }}>
-          <h2 style={{ color: '#fff', fontWeight: 800, fontSize: '1.15rem', textAlign: 'center', marginBottom: 24 }}>
-            Pertanyaan yang Sering Ditanyakan
-          </h2>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+      {/* ════════════════════════════════════════════════════════════════════
+          WHY VERNEKS — 4 alasan, teks saja, no cards, LIGHT BG
+      ════════════════════════════════════════════════════════════════════ */}
+      <section style={{ background: C.lightBg, padding: '72px 24px' }}>
+        <div style={{ maxWidth: 480, margin: '0 auto' }}>
+
+          <FadeIn>
+            <h2 style={{ fontSize: '1.8rem', fontWeight: 900, letterSpacing: '-0.04em', color: C.lightText, lineHeight: 1.15, marginBottom: 48 }}>
+              Mengapa Orang Bertahan<br />Bersama Verneks?
+            </h2>
+          </FadeIn>
+
+          {[
+            { emoji: '❤️', head: 'Mereka merasa didengar.', sub: 'Bukan dihakimi.' },
+            { emoji: '💡', head: 'Mereka mulai mengenal dirinya.', sub: 'Sedikit demi sedikit. Percakapan demi percakapan.' },
+            { emoji: '🧭', head: 'Mereka menemukan arah yang lebih jelas.', sub: 'Bukan karena diberi jawaban. Tetapi karena menemukan jawabannya sendiri.' },
+            { emoji: '🌱', head: 'Mereka terus berkembang.', sub: 'Diah Anna mengingat perjalanan mereka. Bukan hanya percakapan hari ini.' },
+          ].map((item, i) => (
+            <FadeIn key={i} delay={i * 0.07}>
+              <div style={{ paddingBottom: 36, marginBottom: 4 }}>
+                <div style={{ display: 'flex', gap: 16, alignItems: 'flex-start' }}>
+                  <span style={{ fontSize: '1.4rem', flexShrink: 0, lineHeight: 1.2 }}>{item.emoji}</span>
+                  <div>
+                    <p style={{ fontWeight: 700, fontSize: '0.98rem', color: C.lightText, marginBottom: 4, lineHeight: 1.4 }}>{item.head}</p>
+                    <p style={{ color: C.lightMuted, fontSize: '0.88rem', lineHeight: 1.7, margin: 0 }}>{item.sub}</p>
+                  </div>
+                </div>
+              </div>
+              {i < 3 && <div style={{ height: 1, background: C.lightBdr, marginBottom: 32 }} />}
+            </FadeIn>
+          ))}
+
+        </div>
+      </section>
+
+      {/* ════════════════════════════════════════════════════════════════════
+          TESTIMONIALS — 3, editorial style, dark bg
+      ════════════════════════════════════════════════════════════════════ */}
+      <section style={{ background: C.bg, padding: '72px 24px' }}>
+        <div style={{ maxWidth: 480, margin: '0 auto' }}>
+
+          <FadeIn>
+            <p style={{ fontSize: '0.72rem', fontWeight: 700, letterSpacing: '2px', textTransform: 'uppercase', color: C.muted, marginBottom: 8 }}>Cerita Mereka</p>
+            <h2 style={{ fontSize: '1.6rem', fontWeight: 900, letterSpacing: '-0.04em', color: '#fff', lineHeight: 1.2, marginBottom: 48 }}>
+              Dalam kata-kata<br />mereka sendiri.
+            </h2>
+          </FadeIn>
+
+          {TESTIMONIALS.map((t, i) => (
+            <FadeIn key={i} delay={i * 0.08}>
+              <div style={{ marginBottom: i < TESTIMONIALS.length - 1 ? 48 : 0 }}>
+                <p style={{ fontSize: '1.5rem', color: C.primary, fontWeight: 900, lineHeight: 1, marginBottom: 16, opacity: 0.5 }}>"</p>
+                <p style={{ color: 'rgba(255,255,255,0.85)', fontSize: '0.95rem', lineHeight: 1.8, fontStyle: 'italic', marginBottom: 16 }}>
+                  {t.quote}
+                </p>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                  <div style={{ width: 28, height: 1, background: C.primary, opacity: 0.5 }} />
+                  <div>
+                    <span style={{ color: '#fff', fontSize: '0.82rem', fontWeight: 700 }}>{t.name}</span>
+                    <span style={{ color: C.muted, fontSize: '0.78rem' }}> · {t.city}</span>
+                    <p style={{ color: 'rgba(255,255,255,0.28)', fontSize: '0.72rem', margin: '2px 0 0', fontStyle: 'italic' }}>{t.context}</p>
+                  </div>
+                </div>
+              </div>
+              {i < TESTIMONIALS.length - 1 && <div style={{ height: 1, background: C.faint, margin: '0 0 48px' }} />}
+            </FadeIn>
+          ))}
+
+        </div>
+      </section>
+
+      {/* ════════════════════════════════════════════════════════════════════
+          PHILOSOPHY — "Kami Tidak Membangun AI. Kami Membangun Manusia."
+      ════════════════════════════════════════════════════════════════════ */}
+      <section style={{ background: C.lightBg, padding: '72px 24px' }}>
+        <div style={{ maxWidth: 480, margin: '0 auto' }}>
+
+          <FadeIn>
+            <h2 style={{ fontSize: '1.9rem', fontWeight: 900, letterSpacing: '-0.04em', color: C.lightText, lineHeight: 1.15, marginBottom: 36 }}>
+              Kami Tidak Membangun AI.<br /><br />
+              Kami Membangun Manusia.
+            </h2>
+          </FadeIn>
+
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
             {[
-              { q: 'Apakah benar-benar gratis?', a: 'Ya. Kamu bisa mulai Discovery, lihat Career DNA, dan ngobrol dengan Diah Anna tanpa bayar apapun. Tidak perlu kartu kredit.' },
-              { q: 'Apakah data saya aman?', a: 'Data kamu disimpan dengan enkripsi dan tidak pernah dibagikan ke pihak ketiga. Kamu bisa hapus akunmu kapan saja.' },
-              { q: 'Apa bedanya dengan tes karier biasa?', a: 'Verneks bukan tes — ini percakapan. Diah Anna menggali situasimu secara personal dan mengingat konteksmu dari sesi ke sesi berikutnya.' },
-              { q: 'Harus upload CV dulu?', a: 'Tidak perlu. Cukup ceritakan situasimu ke Diah Anna. Dia yang akan membantu memetakan potensimu dari percakapan.' },
-              { q: 'Cocok untuk siapa saja?', a: 'Ya — fresh graduate, profesional yang ingin pivot karier, atau siapapun yang merasa belum punya arah yang jelas.' },
-            ].map((item, i) => <FAQItem key={i} q={item.q} a={item.a} />)}
+              'Teknologi akan terus berubah. Model AI akan terus berkembang.',
+              'Tetapi manusia akan selalu membutuhkan kemampuan untuk mengenal dirinya, mengambil keputusan, dan membangun masa depannya.',
+              'Kami percaya — AI terbaik bukan AI yang membuatmu bergantung. Tetapi AI yang membuatmu semakin mampu mengambil keputusan sendiri.',
+            ].map((text, i) => (
+              <FadeIn key={i} delay={i * 0.07}>
+                <p style={{ color: i === 0 ? C.lightMuted : i === 2 ? C.lightText : `rgba(13,13,26,0.7)`, fontSize: '0.95rem', lineHeight: 1.8, margin: 0, fontWeight: i === 2 ? 600 : 400 }}>
+                  {text}
+                </p>
+              </FadeIn>
+            ))}
+          </div>
+
+          <FadeIn delay={0.25}>
+            <div style={{ borderTop: `1px solid ${C.lightBdr}`, marginTop: 40, paddingTop: 32 }}>
+              <p style={{ color: C.lightMuted, fontSize: '0.92rem', lineHeight: 1.8, marginBottom: 8 }}>
+                Jika suatu hari nanti kamu tidak lagi membutuhkan Diah Anna...
+              </p>
+              <p style={{ color: C.lightText, fontSize: '0.92rem', lineHeight: 1.8, fontWeight: 600, margin: 0 }}>
+                maka kami percaya — ia telah berhasil menjalankan tugasnya.
+              </p>
+            </div>
+          </FadeIn>
+
+        </div>
+      </section>
+
+      {/* ════════════════════════════════════════════════════════════════════
+          CLOSING CTA
+      ════════════════════════════════════════════════════════════════════ */}
+      <section style={{ background: C.bg, padding: '80px 24px 88px' }}>
+        <div style={{ maxWidth: 480, margin: '0 auto', textAlign: 'center' }}>
+
+          <FadeIn>
+            <p style={{ fontSize: '0.72rem', fontWeight: 700, letterSpacing: '2px', textTransform: 'uppercase', color: C.muted, marginBottom: 24 }}>
+              Karier Jangan Asal.
+            </p>
+            <h2 style={{ fontSize: '2rem', fontWeight: 900, letterSpacing: '-0.04em', color: '#fff', lineHeight: 1.15, marginBottom: 12 }}>
+              Kenali Dirimu.
+            </h2>
+            <h2 style={{ fontSize: '2rem', fontWeight: 900, letterSpacing: '-0.04em', background: C.grad, WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', lineHeight: 1.15, marginBottom: 12 }}>
+              Tentukan Arahmu.
+            </h2>
+            <h2 style={{ fontSize: '2rem', fontWeight: 900, letterSpacing: '-0.04em', color: '#fff', lineHeight: 1.15, marginBottom: 36 }}>
+              Bangun Masa Depanmu.
+            </h2>
+          </FadeIn>
+
+          <FadeIn delay={0.1}>
+            <p style={{ color: C.muted, fontSize: '0.88rem', lineHeight: 1.8, marginBottom: 28 }}>
+              Satu keputusan bisa mengubah bertahun-tahun hidupmu.<br />
+              Mulailah dari mengenal dirimu.
+            </p>
+            <div style={{ display: 'flex', justifyContent: 'center' }}>
+              <CTAButton />
+            </div>
+            <p style={{ color: 'rgba(255,255,255,0.2)', fontSize: '0.75rem', marginTop: 16 }}>
+              Sudah punya akun?{' '}
+              <span onClick={handleGoogle} style={{ color: C.secondary, fontWeight: 700, cursor: 'pointer' }}>Masuk di sini</span>
+            </p>
+          </FadeIn>
+
+        </div>
+      </section>
+
+      {/* ── FAQ TERSEMBUNYI (untuk SEO schema — tidak ditampilkan visual) ── */}
+      <section style={{ padding: '0 24px 48px', maxWidth: 480, margin: '0 auto' }}>
+        {FAQS.map((faq, i) => (
+          <div key={i} style={{ borderTop: `1px solid ${C.faint}`, padding: '16px 0' }}>
+            <button
+              onClick={() => setOpenFaq(openFaq === i ? null : i)}
+              style={{ width: '100%', background: 'none', border: 'none', cursor: 'pointer', textAlign: 'left', fontFamily: 'inherit', display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12 }}
+            >
+              <span style={{ color: 'rgba(255,255,255,0.55)', fontSize: '0.85rem', lineHeight: 1.6, fontWeight: 500 }}>{faq.q}</span>
+              <span style={{ color: C.muted, fontSize: '0.85rem', flexShrink: 0 }}>{openFaq === i ? '−' : '+'}</span>
+            </button>
+            {openFaq === i && (
+              <p style={{ color: C.muted, fontSize: '0.83rem', lineHeight: 1.7, margin: '10px 0 0', paddingRight: 24 }}>{faq.a}</p>
+            )}
+          </div>
+        ))}
+      </section>
+
+      {/* ── FOOTER ──────────────────────────────────────────────────────────── */}
+      <footer style={{ borderTop: `1px solid ${C.faint}`, padding: '28px 24px', textAlign: 'center' }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, marginBottom: 10 }}>
+          <VerneksLogo size={24} />
+          <div>
+            <div style={{ color: '#fff', fontWeight: 800, fontSize: '0.85rem', lineHeight: 1.1 }}>Verneks</div>
+            <div style={{ background: C.grad, WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', fontSize: '0.55rem', fontWeight: 700, letterSpacing: '1px' }}>KARIER JANGAN ASAL.</div>
           </div>
         </div>
+        <p style={{ color: 'rgba(255,255,255,0.18)', fontSize: '0.72rem', margin: '0 0 10px' }}>
+          Membantu manusia mengenal dirinya, menentukan arahnya, dan membangun masa depannya.
+        </p>
+        <p style={{ color: 'rgba(255,255,255,0.12)', fontSize: '0.7rem', margin: 0 }}>
+          © Verneks · Dibangun untuk membantu lebih banyak orang mengambil keputusan karier dengan lebih sadar.
+        </p>
+      </footer>
 
-        {/* ══════════════════════════════════
-            FOOTER
-        ══════════════════════════════════ */}
-        <div style={{
-          padding: '28px 0 60px',
-          borderTop: '1px solid rgba(255,255,255,0.05)',
-          textAlign: 'center',
-        }}>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, marginBottom: 8 }}>
-            <VerneksLogo size={20} />
-            <span style={{ color: 'rgba(255,255,255,0.45)', fontWeight: 700, fontSize: '0.88rem' }}>Verneks</span>
-          </div>
-          <p style={{ color: 'rgba(255,255,255,0.18)', fontSize: '0.72rem', margin: '0 0 4px' }}>
-            AI Career Companion untuk profesional Indonesia
-          </p>
-          <p style={{ color: 'rgba(255,255,255,0.12)', fontSize: '0.68rem', margin: 0 }}>
-            © 2025 Verneks · verneks.my.id
-          </p>
-        </div>
+      <style>{`
+        @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800;900&display=swap');
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body { background: #06060F; }
+        ::-webkit-scrollbar { display: none; }
+        button { font-family: inherit; }
+        h1, h2, h3, h4 { margin: 0; }
+        @media (prefers-reduced-motion: reduce) {
+          * { transition: none !important; animation: none !important; }
+        }
+      `}</style>
 
-      </div>
     </div>
   )
 }
