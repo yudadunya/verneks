@@ -22,6 +22,7 @@ export function useSubscription(userId) {
   const [plan, setPlan]           = useState('free')
   const [loading, setLoading]     = useState(true)
   const [isExpired, setIsExpired] = useState(false)
+  const [expiresAt, setExpiresAt] = useState(null)
 
   useEffect(() => {
     if (!userId) { setLoading(false); return }
@@ -47,24 +48,36 @@ export function useSubscription(userId) {
         if (!expired && data.status === 'active') {
           setPlan(data.plan)
           setIsExpired(false)
+          setExpiresAt(data.plan === 'premium' ? (data.expires_at || null) : null)
         } else if (expired && data.plan === 'premium') {
           // Pernah premium tapi sudah habis
           setPlan('free')
           setIsExpired(true)
+          setExpiresAt(null)
         } else {
           setPlan('free')
           setIsExpired(false)
+          setExpiresAt(null)
         }
       } else {
         setPlan('free')
         setIsExpired(false)
+        setExpiresAt(null)
       }
     } catch (e) {
       console.error('[useSubscription] fetchPlan exception:', e)
       setPlan('free')
       setIsExpired(false)
+      setExpiresAt(null)
     }
     setLoading(false)
+  }
+
+  // Sisa hari premium (null kalau bukan premium / tidak ada tanggal kedaluwarsa)
+  const getDaysRemaining = () => {
+    if (plan !== 'premium' || !expiresAt) return null
+    const diffMs = new Date(expiresAt) - new Date()
+    return Math.max(0, Math.ceil(diffMs / (1000 * 60 * 60 * 24)))
   }
 
   // Cek usage — chat: limit harian, fitur (cv-review/ats/interview/cv-maker): limit bulanan
@@ -139,5 +152,5 @@ export function useSubscription(userId) {
     if (error) console.error('[useSubscription] logUsage error:', error.message)
   }
 
-  return { plan, loading, checkUsage, logUsage, fetchPlan, getRemainingChat, isExpired }
+  return { plan, loading, checkUsage, logUsage, fetchPlan, getRemainingChat, isExpired, expiresAt, getDaysRemaining }
 }

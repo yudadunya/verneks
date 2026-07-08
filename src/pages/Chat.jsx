@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect, useCallback } from 'react'
+import { useState, useRef, useEffect, useCallback, useMemo } from 'react'
 import { supabase } from '../lib/supabase'
 import { useNavigate, useLocation } from 'react-router-dom'
 import Onboarding from '../components/Onboarding'
@@ -45,6 +45,8 @@ const DEFAULT_SUBSCRIPTION = {
   fetchPlan: () => {},
   getRemainingChat: async () => 0,
   isExpired: false,
+  expiresAt: null,
+  getDaysRemaining: () => null,
 }
 
 // NOTE: getNextFocus() dihapus dari sini.
@@ -54,7 +56,15 @@ const DEFAULT_SUBSCRIPTION = {
 export default function Chat({ user, chatMessages = [], setChatMessages, subscription = DEFAULT_SUBSCRIPTION }) {
   const navigate = useNavigate()
   const location = useLocation()
-  const { plan, loading: subLoading, checkUsage, isExpired } = subscription
+  const { plan, loading: subLoading, checkUsage, isExpired, getDaysRemaining } = subscription
+
+  // Sisa hari premium — dihitung dari expires_at, dipakai untuk badge navbar & reminder perpanjangan
+  const daysRemaining = useMemo(() => {
+    if (plan !== 'premium') return null
+    return getDaysRemaining ? getDaysRemaining() : null
+  }, [plan, getDaysRemaining, subscription.expiresAt])
+
+  const showRenewalReminder = plan === 'premium' && daysRemaining !== null && daysRemaining <= 7
 
   // Ref untuk selalu punya history terbaru tanpa closure stale
   const [waitingForPositive, setWaitingForPositive] = useState(false)
@@ -399,14 +409,57 @@ export default function Chat({ user, chatMessages = [], setChatMessages, subscri
 
       <div style={{ background: 'var(--wa-header)', padding: '10px 16px', display: 'flex', alignItems: 'center', gap: '12px', flexShrink: 0, zIndex: 10 }}>
         <img src="/diah-anna.png" alt="Diah Anna" style={{ width: 42, height: 42, borderRadius: '50%', objectFit: 'cover', flexShrink: 0, border: '2px solid rgba(37,211,102,0.4)' }}/>
-        <div style={{ flex: 1 }}>
+        <div style={{ flex: 1, minWidth: 0 }}>
           <div style={{ color: '#fff', fontWeight: 700, fontSize: '1rem', lineHeight: 1.2, display: 'flex', alignItems: 'center', gap: 5 }}>
             Diah Anna
             <img src="/icons/verified.png" width="16" height="16" alt="verified" style={{ flexShrink: 0, marginTop: 1 }} />
           </div>
           <div style={{ color: 'rgba(255,255,255,0.65)', fontSize: '0.73rem' }}>Career Companion • aktif memantau</div>
         </div>
+
+        {plan === 'premium' && daysRemaining !== null && (
+          <div
+            title={daysRemaining <= 7 ? 'Paket Premium kamu akan segera berakhir' : 'Sisa masa aktif Premium'}
+            style={{
+              flexShrink: 0,
+              display: 'flex', alignItems: 'center', gap: 4,
+              padding: '5px 10px',
+              borderRadius: 999,
+              fontSize: '0.68rem', fontWeight: 700,
+              color: '#fff',
+              background: daysRemaining <= 7 ? 'rgba(255,159,10,0.22)' : 'rgba(37,211,102,0.18)',
+              border: `1px solid ${daysRemaining <= 7 ? 'rgba(255,159,10,0.55)' : 'rgba(37,211,102,0.4)'}`,
+              whiteSpace: 'nowrap',
+            }}
+          >
+            ⭐ {daysRemaining === 0 ? 'Hari ini terakhir' : `${daysRemaining} hari lagi`}
+          </div>
+        )}
       </div>
+
+      {showRenewalReminder && (
+        <div
+          onClick={() => navigate('/pricing')}
+          style={{
+            background: 'linear-gradient(90deg,#FFF7E6,#FFEFCF)',
+            borderBottom: '1px solid #F5D28C',
+            padding: '8px 16px',
+            display: 'flex', alignItems: 'center', gap: 8,
+            flexShrink: 0, cursor: 'pointer',
+          }}
+        >
+          <span style={{ fontSize: '1.05rem' }}>⏳</span>
+          <div style={{ flex: 1, fontSize: '0.75rem', color: '#7A4A00', lineHeight: 1.35 }}>
+            <strong>
+              {daysRemaining === 0
+                ? 'Paket Premium kamu habis hari ini.'
+                : `Paket Premium kamu tinggal ${daysRemaining} hari lagi.`}
+            </strong>{' '}
+            Perpanjang sekarang biar akses tanpa batas tidak putus.
+          </div>
+          <span style={{ fontSize: '0.72rem', fontWeight: 700, color: 'var(--wa-green-dark)', flexShrink: 0 }}>Perpanjang ›</span>
+        </div>
+      )}
 
       <div style={{ flex: 1, overflowY: 'auto', padding: '10px 10px 4px', display: 'flex', flexDirection: 'column', gap: '2px' }}>
 
