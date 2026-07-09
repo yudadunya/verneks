@@ -2,13 +2,14 @@
  * _lib/ai.js — Universal AI wrapper untuk Verneks (Updated)
  *
  * Routing:
- * - plan='premium' → Claude (Sonnet) utama, fallback ke DeepSeek → Cerebras
- * - plan='free'    → Cerebras utama, fallback ke DeepSeek → Gemini
+ * - plan='premium' → Claude (Sonnet) utama, fallback ke DeepSeek → Cerebras → Groq
+ * - plan='free'    → Cerebras utama, fallback ke DeepSeek → Groq → Gemini
  *
  * Models (Juni 2026):
  * - Cerebras  : gpt-oss-120b         (free, cepat, 1M token/hari)
  * - DeepSeek  : deepseek-v4-flash     (murah $0.14/1M, setara Claude Haiku)
- * - Gemini    : gemini-2.5-flash      (gemini-1.5-flash & 2.0-flash sudah retired per Juni 2026)
+ * - Groq      : llama-3.1-8b-instant  (cepat, murah $0.05/1M input, $0.08/1M output)
+ * - Gemini    : gemini-2.5-flash-lite (gemini-1.5-flash & 2.0-flash sudah retired per Juni 2026)
  * - Claude    : claude-sonnet-4-6     (premium, paling pintar)
  */
 import Anthropic from '@anthropic-ai/sdk'
@@ -17,6 +18,7 @@ import { GoogleGenerativeAI } from '@google/generative-ai'
 const MODELS = {
   cerebras: { fast: 'gpt-oss-120b',          smart: 'gpt-oss-120b' },
   deepseek: { fast: 'deepseek-v4-flash',       smart: 'deepseek-v4-flash' },
+  groq:     { fast: 'llama-3.1-8b-instant',    smart: 'llama-3.3-70b-versatile' },
   claude:   { fast: 'claude-haiku-4-5-20251001', smart: 'claude-sonnet-4-6' },
   gemini:   { fast: 'gemini-2.5-flash-lite',   smart: 'gemini-2.5-flash' },
 }
@@ -46,6 +48,16 @@ async function callClaude({ system, messages, maxTokens, model }) {
     messages: normalized,
   })
   return msg.content[0].text
+}
+
+// ── Groq (OpenAI-compatible) ──────────────────────────────────────────────────
+async function callGroq({ system, messages, maxTokens, model }) {
+  return callOpenAICompat({
+    system, messages, maxTokens,
+    model:   model || MODELS.groq.fast,
+    baseUrl: 'https://api.groq.com/openai/v1',
+    apiKey:  process.env.GROQ_API_KEY,
+  })
 }
 
 // ── OpenAI-compatible (Cerebras & DeepSeek) ──────────────────────────────────
@@ -138,7 +150,7 @@ async function withRetry(fn, maxRetries = 1) {
   throw lastErr
 }
 
-// ── Free tier: Cerebras → DeepSeek → Gemini ──────────────────────────────────
+// ── Free tier: Cerebras → DeepSeek → Groq → Gemini ──────────────────────────
 async function callFreeChat({ system, messages, maxTokens, tier }) {
   try {
     return await callCerebras({ system, messages, maxTokens, model: MODELS.cerebras[tier] })
@@ -147,11 +159,12 @@ async function callFreeChat({ system, messages, maxTokens, tier }) {
     try {
       return await callDeepSeek({ system, messages, maxTokens, model: MODELS.deepseek[tier] })
     } catch (e2) {
-      console.warn('[ai] DeepSeek gagal, fallback ke Gemini:', e2.message)
+      console.warn('[ai] DeepSeek gagal, fallback ke Groq:', e2.message)
       try {
-        return await callGemini({ system, messages, maxTokens, model: MODELS.gemini[tier] })
+        return await callGroq({ system, messages, maxTokens, model: MODELS.groq[tier] })
       } catch (e3) {
-        throw new Error(`Semua provider gagal. Cerebras: ${e1.message} | DeepSeek: ${e2.message} | Gemini: ${e3.message}`)
+        console.warn('[ai] Groq gagal, fallback ke Gemini:', e3.message)
+        return await callGemini({ system, messages, maxTokens, model: MODELS.gemini[tier] })
       }
     }
   }
@@ -166,17 +179,18 @@ async function callFreeText({ system, prompt, maxTokens, tier }) {
     try {
       return await callDeepSeek({ system, messages, maxTokens, model: MODELS.deepseek[tier] })
     } catch (e2) {
-      console.warn('[ai] DeepSeek gagal, fallback ke Gemini:', e2.message)
+      console.warn('[ai] DeepSeek gagal, fallback ke Groq:', e2.message)
       try {
-        return await callGeminiText({ system, prompt, maxTokens, model: MODELS.gemini[tier] })
+        return await callGroq({ system, messages, maxTokens, model: MODELS.groq[tier] })
       } catch (e3) {
-        throw new Error(`Semua provider gagal. Cerebras: ${e1.message} | DeepSeek: ${e2.message} | Gemini: ${e3.message}`)
+        console.warn('[ai] Groq gagal, fallback ke Gemini:', e3.message)
+        return await callGeminiText({ system, prompt, maxTokens, model: MODELS.gemini[tier] })
       }
     }
   }
 }
 
-// ── Premium tier: Claude (smart only) → Cerebras (fast优先) → DeepSeek ───────
+// ── Premium tier: Claude (smart only) → DeepSeek → Cerebras → Groq ───────
 async function callPremiumChat({ system, messages, maxTokens, tier }) {
   // Untuk fast tier: prioritaskan Cerebras (hemat cost)
   if (tier === 'fast') {
@@ -187,8 +201,13 @@ async function callPremiumChat({ system, messages, maxTokens, tier }) {
       try {
         return await callDeepSeek({ system, messages, maxTokens, model: MODELS.deepseek.fast })
       } catch (e2) {
-        console.warn('[ai] Premium fast: DeepSeek gagal, fallback ke Claude Haiku:', e2.message)
-        return await callClaude({ system, messages, maxTokens, model: MODELS.claude.fast })
+        console.warn('[ai] Premium fast: DeepSeek gagal, fallback ke Groq:', e2.message)
+        try {
+          return await callGroq({ system, messages, maxTokens, model: MODELS.groq.fast })
+        } catch (e3) {
+          console.warn('[ai] Premium fast: Groq gagal, fallback ke Claude Haiku:', e3.message)
+          return await callClaude({ system, messages, maxTokens, model: MODELS.claude.fast })
+        }
       }
     }
   }
@@ -201,7 +220,12 @@ async function callPremiumChat({ system, messages, maxTokens, tier }) {
       return await callDeepSeek({ system, messages, maxTokens, model: MODELS.deepseek.smart })
     } catch (e2) {
       console.warn('[ai] DeepSeek gagal, fallback ke Cerebras:', e2.message)
-      return await callCerebras({ system, messages, maxTokens, model: MODELS.cerebras.smart })
+      try {
+        return await callCerebras({ system, messages, maxTokens, model: MODELS.cerebras.smart })
+      } catch (e3) {
+        console.warn('[ai] Cerebras gagal, fallback ke Groq:', e3.message)
+        return await callGroq({ system, messages, maxTokens, model: MODELS.groq.smart })
+      }
     }
   }
 }
@@ -217,8 +241,13 @@ async function callPremiumText({ system, prompt, maxTokens, tier }) {
       try {
         return await callDeepSeek({ system, messages, maxTokens, model: MODELS.deepseek.fast })
       } catch (e2) {
-        console.warn('[ai] Premium fast: DeepSeek gagal, fallback ke Claude Haiku:', e2.message)
-        return await callClaude({ system, messages, maxTokens, model: MODELS.claude.fast })
+        console.warn('[ai] Premium fast: DeepSeek gagal, fallback ke Groq:', e2.message)
+        try {
+          return await callGroq({ system, messages, maxTokens, model: MODELS.groq.fast })
+        } catch (e3) {
+          console.warn('[ai] Premium fast: Groq gagal, fallback ke Claude Haiku:', e3.message)
+          return await callClaude({ system, messages, maxTokens, model: MODELS.claude.fast })
+        }
       }
     }
   }
@@ -231,7 +260,12 @@ async function callPremiumText({ system, prompt, maxTokens, tier }) {
       return await callDeepSeek({ system, messages, maxTokens, model: MODELS.deepseek.fast })
     } catch (e2) {
       console.warn('[ai] DeepSeek gagal, fallback ke Cerebras:', e2.message)
-      return await callCerebras({ system, messages, maxTokens, model: MODELS.cerebras[tier] })
+      try {
+        return await callCerebras({ system, messages, maxTokens, model: MODELS.cerebras[tier] })
+      } catch (e3) {
+        console.warn('[ai] Cerebras gagal, fallback ke Groq:', e3.message)
+        return await callGroq({ system, messages, maxTokens, model: MODELS.groq[tier] })
+      }
     }
   }
 }
