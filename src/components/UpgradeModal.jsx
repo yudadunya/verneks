@@ -3,6 +3,7 @@ import { useState, useEffect } from 'react'
 import { supabase } from '../lib/supabase'
 
 const PAYMENT_URL = 'http://lynk.id/yudadunya/r3o5ldq5qkex/checkout'
+const PROMO_DURATION_MS = 24 * 60 * 60 * 1000 // 24 jam dalam millisecond
 
 // Generate GPS steps dari data user — fallback ke generic kalau data kosong
 function buildGpsSteps(gpsFromDb, gapSkills, targetPosisi) {
@@ -37,6 +38,16 @@ function buildGpsSteps(gpsFromDb, gapSkills, targetPosisi) {
   ]
 }
 
+// Format waktu sisa menjadi string yang readable
+function formatTimeRemaining(ms) {
+  if (ms <= 0) return null
+  const totalSeconds = Math.floor(ms / 1000)
+  const hours = Math.floor(totalSeconds / 3600)
+  const minutes = Math.floor((totalSeconds % 3600) / 60)
+  const seconds = totalSeconds % 60
+  return `${hours}j ${minutes}m ${seconds}d`
+}
+
 export default function UpgradeModal({ user, onClose, initialData = null }) {
   const [profile,  setProfile]  = useState(initialData?.profile  || null)
   const [growth,   setGrowth]   = useState(initialData?.growth   || null)
@@ -49,6 +60,10 @@ export default function UpgradeModal({ user, onClose, initialData = null }) {
   const [redeemLoading, setRedeemLoading] = useState(false)
   const [redeemMsg,    setRedeemMsg]    = useState(null)  // { type: 'ok'|'err', text }
   const [redeemDone,   setRedeemDone]   = useState(false)
+
+  // Timer state
+  const [timeRemaining, setTimeRemaining] = useState(24 * 60 * 60 * 1000)
+  const [isPromoActive, setIsPromoActive] = useState(true)
 
   useEffect(() => {
     // Kalau data sudah dikirim dari Dashboard — langsung pakai, tidak perlu fetch
@@ -63,13 +78,50 @@ export default function UpgradeModal({ user, onClose, initialData = null }) {
     })
   }, [user?.id])
 
+  // Handle promo timer
+  useEffect(() => {
+    const initPromo = () => {
+      const stored = localStorage.getItem('promo_start_time')
+      let startTime = stored ? parseInt(stored, 10) : null
+
+      // Kalau tidak ada record atau sudah expired, mulai promo baru
+      if (!startTime || Date.now() - startTime > PROMO_DURATION_MS) {
+        startTime = Date.now()
+        localStorage.setItem('promo_start_time', startTime.toString())
+      }
+
+      return startTime
+    }
+
+    const startTime = initPromo()
+
+    const updateTimer = () => {
+      const elapsed = Date.now() - startTime
+      const remaining = Math.max(0, PROMO_DURATION_MS - elapsed)
+      
+      setTimeRemaining(remaining)
+      setIsPromoActive(remaining > 0)
+    }
+
+    // Update immediately
+    updateTimer()
+
+    // Update setiap detik
+    const interval = setInterval(updateTimer, 1000)
+
+    return () => clearInterval(interval)
+  }, [])
+
   const target    = profile?.target_posisi || 'Target Karier Kamu'
   const readiness = growth?.progress_percent || profile?.career_readiness || 0
   const gapPct    = Math.max(0, 100 - readiness)
   const gaps      = (profile?.skill_gaps || profile?.gap_skills || []).slice(0, 4)
   const gpsSteps  = buildGpsSteps(profile?.gps_steps, gaps, target)
   const mentorMsg = profile?.mentor_message
-    || `Berdasarkan hasil analisisku, target ${target} sangat realistis untuk kamu capai. Yang paling penting sekarang bukan belajar lebih banyak, tetapi belajar hal yang tepat dalam urutan yang tepat. Career GPS Premium akan menunjukkan langkah tersebut secara spesifik untuk profilmu.`
+    || `Berdasarkan percakapan kita, aku sudah melihat pola yang jelas di situasi karir kamu — dan ada jalur spesifik yang bisa mempercepat perjalananmu ke ${target}. Aku pengen bantu kamu eksekusi step by step, bukan cuma kasih insight sekali lalu hilang. Ini yang bisa kita lakukan bareng kalau kamu mau lanjut lebih serius.`
+
+  const discountPercentage = Math.round(((599000 - 199000) / 599000) * 100)
+  const timeFormatted = timeRemaining ? formatTimeRemaining(timeRemaining) : null
 
   return (
     <>
@@ -109,10 +161,10 @@ export default function UpgradeModal({ user, onClose, initialData = null }) {
           <div style={{ textAlign: 'center', marginBottom: 20 }}>
             <div style={{ fontSize: '1.5rem', marginBottom: 6 }}>🚀</div>
             <div style={{ color: '#fff', fontWeight: 800, fontSize: '1.1rem', letterSpacing: '-0.3px', marginBottom: 4 }}>
-              Buka Career GPS Premium
+              Lanjutkan Perjalanan Ini Bersama Diah Anna
             </div>
             <div style={{ color: 'rgba(255,255,255,0.4)', fontSize: '0.8rem', lineHeight: 1.5 }}>
-              Kamu sudah mengetahui DNA Karier dan posisi kamu saat ini.<br/>
+              Kamu sudah tahu DNA Karier dan posisimu sekarang.<br/>
               Sekarang saatnya mendapatkan panduan yang jelas.
             </div>
           </div>
@@ -141,7 +193,8 @@ export default function UpgradeModal({ user, onClose, initialData = null }) {
                   <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
                     {gaps.map((g, i) => (
                       <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 7, fontSize: '0.8rem', color: 'rgba(255,255,255,0.65)' }}>
-                        <span style={{ color: '#EF5350', fontWeight: 700, fontSize: '0.72rem' }}>❌</span> {g}
+                        <span style={{ color: '#FFB74D', fontWeight: 900 }}>#{i+1}</span>
+                        <span>{g}</span>
                       </div>
                     ))}
                   </div>
@@ -150,68 +203,49 @@ export default function UpgradeModal({ user, onClose, initialData = null }) {
             </div>
           )}
 
-          {/* ── Feature Cards ── */}
-          {[
-            { icon: '🗺️', title: 'Career GPS Personal', points: [
-              'Roadmap disusun berdasarkan target, pengalaman, dan genome kamu',
-              '✓ Langkah apa yang harus dilakukan sekarang',
-              '✓ Skill yang paling penting dipelajari',
-              '✓ Prioritas yang memberikan dampak terbesar',
-              '✓ Urutan belajar yang tepat',
-            ]},
-            { icon: '💬', title: 'Diah Anna AI Mentor', points: [
-              'Mentor karier yang memahami dan mengingat profilmu',
-              '✓ Chat tanpa batas',
-              '✓ Konsultasi kapan saja',
-              '✓ Jawaban sesuai kondisi dan tujuan kariermu',
-              '✓ Mengingat perjalanan dan progresmu',
-            ]},
-            { icon: '📈', title: 'Progress Tracking', points: [
-              'Jangan lagi belajar tanpa arah.',
-              '✓ Pantau Career Readiness Score',
-              '✓ Lihat perkembangan mingguan',
-              '✓ Tracking milestone yang sudah dicapai',
-              '✓ Tetap fokus pada target',
-            ]},
-            { icon: '💼', title: 'Opportunity Matching', points: [
-              'Peluang yang sesuai dengan DNA dan tujuan kariermu.',
-              '✓ Rekomendasi yang lebih relevan',
-              '✓ Fokus pada peluang yang cocok',
-              '✓ Tidak perlu mencari dari nol',
-            ]},
-          ].map((card, i) => (
-            <div key={i} style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.07)', borderRadius: 12, padding: '13px', marginBottom: 10 }}>
-              <div style={{ color: '#fff', fontWeight: 700, fontSize: '0.85rem', marginBottom: 8 }}>{card.icon} {card.title}</div>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-                {card.points.map((p, j) => (
-                  <div key={j} style={{ fontSize: '0.78rem', color: p.startsWith('✓') ? 'rgba(255,255,255,0.65)' : 'rgba(255,255,255,0.4)', lineHeight: 1.5 }}>{p}</div>
-                ))}
-              </div>
-            </div>
-          ))}
-
-          {/* ── GPS Preview ── */}
-          <div style={{ background: 'rgba(52,183,241,0.06)', border: '1px solid rgba(52,183,241,0.18)', borderRadius: 12, padding: '13px', marginBottom: 14 }}>
-            <div style={{ color: '#34B7F1', fontWeight: 700, fontSize: '0.82rem', marginBottom: 10 }}>Preview Roadmap Kamu</div>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-              {gpsSteps.map((step, i) => {
-                const isFree = step.free !== undefined ? step.free : i < 2
-                const isDone = step.done
-                const label  = step.label || step.title || `Langkah ${i+1}`
-                return (
-                  <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 8, position: 'relative' }}>
-                    <span style={{
-                      width: 22, height: 22, borderRadius: '50%', flexShrink: 0,
-                      background: isDone ? '#25D366' : isFree ? 'rgba(52,183,241,0.2)' : 'rgba(255,255,255,0.05)',
-                      display: 'flex', alignItems: 'center', justifyContent: 'center',
-                      fontSize: '0.62rem', fontWeight: 700,
-                      color: isDone ? '#fff' : isFree ? '#34B7F1' : 'rgba(255,255,255,0.15)',
+          {/* ── GPS Roadmap ── */}
+          <div style={{ background: 'rgba(52,183,241,0.07)', border: '1px solid rgba(52,183,241,0.15)', borderRadius: 12, padding: '14px', marginBottom: 18 }}>
+            <div style={{ color: '#34B7F1', fontWeight: 700, fontSize: '0.78rem', marginBottom: 12 }}>🗺️ Jalan Menuju {target}</div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+              {gpsSteps.map(({ label, done, free }, i) => (
+                <div key={i}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 5 }}>
+                    <span style={{ 
+                      fontSize: '1.2rem',
+                      opacity: done ? 1 : isFree ? 0.6 : 0.3
                     }}>
-                      {isDone ? '✓' : isFree ? i+1 : '🔒'}
+                      {done ? '✅' : '⭕'}
+                    </span>
+                    <span style={{ 
+                      fontSize: '0.8rem', 
+                      color: done ? 'rgba(255,255,255,0.7)' : 'rgba(255,255,255,0.5)',
+                      fontWeight: done ? 600 : 400
+                    }}>{label}</span>
+                    {free && <span style={{ fontSize: '0.6rem', color: '#25D366', fontWeight: 700, background: 'rgba(37,211,102,0.15)', padding: '2px 6px', borderRadius: 4 }}>GRATIS</span>}
+                  </div>
+                  {i < gpsSteps.length - 1 && (
+                    <div style={{ marginLeft: 7, height: 20, width: 2, background: 'rgba(52,183,241,0.3)' }} />
+                  )}
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* ── GPS Steps Desktop View (Full)  ── */}
+          <div style={{ marginBottom: 18, display: 'none' }}>
+            <div style={{ fontSize: '0.75rem', color: 'rgba(255,255,255,0.3)', marginBottom: 10, textTransform: 'uppercase', letterSpacing: '1px' }}>📍 Alur Lengkap Bersama Mentormu</div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 0 }}>
+              {gpsSteps.map(({ label, done, free }, i) => {
+                const isFree = free
+                return (
+                  <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '11px 0', borderBottom: i < gpsSteps.length - 1 ? '1px solid rgba(255,255,255,0.08)' : 'none' }}>
+                    <span style={{ fontSize: '1.1rem', flexShrink: 0 }}>
+                      {done ? '✅' : isFree ? '✨' : '🔒'}
                     </span>
                     <span style={{
-                      fontSize: '0.8rem', fontWeight: 600,
-                      color: isDone ? '#25D366' : isFree ? 'rgba(255,255,255,0.78)' : 'rgba(255,255,255,0.18)',
+                      fontSize: '0.82rem',
+                      color: 'rgba(255,255,255,0.7)',
+                      flex: 1,
                       filter: !isFree ? 'blur(3.5px)' : 'none',
                       userSelect: !isFree ? 'none' : 'auto',
                     }}>{label}</span>
@@ -232,15 +266,56 @@ export default function UpgradeModal({ user, onClose, initialData = null }) {
 
           {/* ── Pricing ── */}
           <div style={{ textAlign: 'center', marginBottom: 14 }}>
+            {/* Timer Banner */}
+            {isPromoActive && (
+              <div style={{
+                background: 'linear-gradient(135deg, rgba(255,183,77,0.2), rgba(239,83,80,0.15))',
+                border: '1px solid rgba(255,183,77,0.4)',
+                borderRadius: 10,
+                padding: '10px 12px',
+                marginBottom: 10,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: 8,
+              }}>
+                <span style={{ fontSize: '0.95rem' }}>⏰</span>
+                <span style={{ fontSize: '0.78rem', fontWeight: 700, color: '#FFB74D' }}>
+                  HARGA SPESIAL BERAKHIR DALAM {timeFormatted}
+                </span>
+              </div>
+            )}
+
+            {/* Original price / Discount badge */}
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10, marginBottom: 3 }}>
-              <span style={{ color: 'rgba(255,255,255,0.28)', fontSize: '0.82rem', textDecoration: 'line-through' }}>Rp599.000/bln</span>
-              <span style={{ background: '#EF5350', color: '#fff', fontSize: '0.6rem', fontWeight: 800, padding: '2px 7px', borderRadius: 99 }}>HEMAT 67%</span>
+              <span style={{ color: 'rgba(255,255,255,0.28)', fontSize: '0.82rem', textDecoration: 'line-through' }}>Rp599.000</span>
+              {isPromoActive ? (
+                <span style={{ background: '#EF5350', color: '#fff', fontSize: '0.6rem', fontWeight: 800, padding: '2px 7px', borderRadius: 99 }}>HEMAT {discountPercentage}%</span>
+              ) : (
+                <span style={{ background: 'rgba(239,83,80,0.2)', color: '#EF5350', fontSize: '0.6rem', fontWeight: 800, padding: '2px 7px', borderRadius: 99, border: '1px solid rgba(239,83,80,0.3)' }}>PROMO BERAKHIR</span>
+              )}
             </div>
-            <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'center', gap: 4 }}>
-              <span style={{ color: '#FFB74D', fontWeight: 900, fontSize: '1.6rem' }}>Rp199.000</span>
-              <span style={{ color: 'rgba(255,255,255,0.35)', fontSize: '0.82rem' }}> periode akses 1 bulan</span>
+
+            {/* Current price */}
+            <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'center', gap: 6 }}>
+              <span style={{ color: isPromoActive ? '#FFB74D' : '#EF5350', fontWeight: 900, fontSize: '1.6rem' }}>
+                Rp{isPromoActive ? '199.000' : '599.000'}
+              </span>
+              <span style={{ 
+                background: isPromoActive ? 'rgba(255,183,77,0.15)' : 'rgba(239,83,80,0.15)',
+                color: isPromoActive ? '#FFB74D' : '#EF5350',
+                fontSize: '0.68rem', 
+                fontWeight: 800, 
+                padding: '3px 10px', 
+                borderRadius: 99, 
+                border: isPromoActive ? '1px solid rgba(255,183,77,0.3)' : '1px solid rgba(239,83,80,0.3)'
+              }}>
+                SEKALI BAYAR
+              </span>
             </div>
-            <div style={{ color: 'rgba(255,255,255,0.25)', fontSize: '0.7rem', marginTop: 2 }}>Semua fitur premium · Unlimited · Sekali Bayar</div>
+            <div style={{ color: 'rgba(255,255,255,0.25)', fontSize: '0.7rem', marginTop: 4 }}>
+              {isPromoActive ? 'Akses penuh 30 hari · Tidak ada biaya tersembunyi · Bukan langganan' : 'Harga normal berlaku'}
+            </div>
           </div>
 
           {/* ── CTAs ── */}
@@ -255,7 +330,7 @@ export default function UpgradeModal({ user, onClose, initialData = null }) {
               borderRadius: 14, textDecoration: 'none', textAlign: 'center',
               boxShadow: '0 4px 20px rgba(37,211,102,0.42)',
             }}>
-            🚀 Buka Career GPS Saya
+            🚀 Ya, Lanjutkan Bersama Diah Anna
           </a>
 
           <button
@@ -302,7 +377,7 @@ export default function UpgradeModal({ user, onClose, initialData = null }) {
                         if (!user?.id) return
                         setRedeemLoading(true); setRedeemMsg(null)
                         try {
-                          const res  = await fetch('/api/redeem-code', {
+                          const res  = await fetch('/api/utils?action=redeem', {
                             method: 'POST',
                             headers: { 'Content-Type': 'application/json' },
                             body: JSON.stringify({ code: redeemCode, userId: user.id }),

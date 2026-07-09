@@ -62,8 +62,8 @@ export default function UpgradeModal({ user, onClose, initialData = null }) {
   const [redeemDone,   setRedeemDone]   = useState(false)
 
   // Timer state
-  const [timeRemaining, setTimeRemaining] = useState(null)
-  const [isPromoActive, setIsPromoActive] = useState(false)
+  const [timeRemaining, setTimeRemaining] = useState(24 * 60 * 60 * 1000)
+  const [isPromoActive, setIsPromoActive] = useState(true)
 
   useEffect(() => {
     // Kalau data sudah dikirim dari Dashboard — langsung pakai, tidak perlu fetch
@@ -267,7 +267,7 @@ export default function UpgradeModal({ user, onClose, initialData = null }) {
           {/* ── Pricing ── */}
           <div style={{ textAlign: 'center', marginBottom: 14 }}>
             {/* Timer Banner */}
-            {isPromoActive && timeFormatted && (
+            {isPromoActive && (
               <div style={{
                 background: 'linear-gradient(135deg, rgba(255,183,77,0.2), rgba(239,83,80,0.15))',
                 border: '1px solid rgba(255,183,77,0.4)',
