@@ -675,20 +675,20 @@ export default function Dashboard({ user, loading = false, subscription = DEFAUL
   useEffect(() => {
     if (loading) return // tunggu App.jsx selesai getSession
     if (!user) { navigate('/'); return }
+    
+    // Fetch data utama dari Supabase
     Promise.all([
       supabase.from('user_career_profiles').select('*').eq('user_id', user.id).maybeSingle(),
       supabase.from('user_genome_scores').select('*').eq('user_id', user.id).maybeSingle(),
       supabase.from('user_growth_state').select('*').eq('user_id', user.id).maybeSingle(),
       supabase.from('user_next_actions').select('*').eq('user_id', user.id).order('created_at', { ascending: false }).limit(3),
       supabase.from('career_events').select('*').eq('user_id', user.id).order('created_at', { ascending: false }).limit(5),
-      supabase.from('user_weekly_reviews').select('summary, week_start').eq('user_id', user.id).order('week_start', { ascending: false }).limit(1).maybeSingle(),
-    ]).then(([{ data: p }, { data: g }, { data: gw }, { data: acts }, { data: evs }, { data: wr }]) => {
+    ]).then(([{ data: p }, { data: g }, { data: gw }, { data: acts }, { data: evs }]) => {
       setProfile(p)
       setGenome(g)
       setGrowth(gw)
       setActions(acts || [])
       setEvents(evs || [])
-      setWeeklyReview(wr || null)
       setDataLoading(false)
 
       // Backfill user lama: kalau summary kosong tapi ada career data → refresh otomatis
@@ -710,6 +710,20 @@ export default function Dashboard({ user, loading = false, subscription = DEFAUL
         }).catch(() => {})
       }
     })
+
+    // Fetch weekly review via API (bukan langsung Supabase)
+    fetch('/api/utils?action=weekly-review', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ userId: user.id })
+    })
+    .then(r => r.json())
+    .then(res => {
+      if (res.success && res.review) {
+        setWeeklyReview(res.review)
+      }
+    })
+    .catch(() => setWeeklyReview(null))
   }, [user?.id])
 
   const firstName = user?.user_metadata?.full_name?.split(' ')[0]
