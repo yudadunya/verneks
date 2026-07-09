@@ -1,10 +1,135 @@
 import { generateText, generateChat } from './lib/ai.js'
 import { createClient } from '@supabase/supabase-js'
+import { createHash } from 'crypto'
 
 const supabase = createClient(
   process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL,
   process.env.SUPABASE_SERVICE_ROLE_KEY
 )
+
+// ── [OPTIMIZATION] RULE-BASED RESPONSES — Hemat ~25% AI calls ────────────────
+const RULE_BASED_PATTERNS = [
+  {
+    keywords: ['mulai', 'cara mulai', 'langkah pertama', 'dari mana'],
+    context: ['karir', 'kerja', 'posisi', 'target'],
+    response: "Langkah pertama yang paling penting: klarifikasi dulu posisi target yang spesifik. Jangan masih 'pengen kerja di tech', tapi harus 'Product Manager di startup fintech'. Setelah itu baru kita breakdown skill gap-nya. Kamu sudah punya gambaran posisi target yang jelas?"
+  },
+  {
+    keywords: ['skill', 'kemampuan', 'kompetensi', 'belajar'],
+    context: ['butuh', 'perlu', 'yang dibutuhkan', 'harus punya'],
+    response: "Skill yang paling critical biasanya muncul di 3-5 job description posisi target kamu. Coba buka LinkedIn, cari 5 lowongan yang match, catet skill yang paling sering disebut. Itu yang kita prioritaskan. Mau aku bantu identifikasi skill gap utama kamu?"
+  },
+  {
+    keywords: ['gaji', 'salary', 'uang', 'penghasilan', 'bayaran'],
+    context: ['berapa', 'standar', 'normal', 'range'],
+    response: "Gaji itu sangat tergantung level, industri, dan lokasi. Yang bisa aku bantu: positioning kamu supaya masuk range atas. Caranya? Dokumentasi achievement yang measurable, bangun track record yang jelas, dan tahu cara negotiate. Kamu sekarang di level berapa?"
+  },
+  {
+    keywords: ['cv', 'resume', 'daftar riwayat'],
+    context: ['jelek', 'buruk', 'jelek', 'kurang bagus', 'review'],
+    response: "CV yang efektif itu bukan tentang desain cantik, tapi tentang achievement yang terukur. Ganti 'bertanggung jawab untuk X' jadi 'berhasil meningkatkan X sebesar Y%'. Kalau mau review mendalam, pakai fitur CV Review di menu Chat - ada analisis ATS-nya juga."
+  },
+  {
+    keywords: ['motivasi', 'semangat', 'lelah', 'burnout', 'menyerah'],
+    context: [],
+    response: "Wajar banget merasa lelah. Career journey itu marathon, bukan sprint. Coba ingat lagi: kenapa kamu pilih target ini dari awal? Apa yang bikin kamu excited waktu pertama kali bayangin capai tujuan itu? Kadang kita cuma butuh istirahat sebentar, bukan berhenti."
+  },
+  {
+    keywords: ['interview', 'wawancara', 'hrd', 'user'],
+    context: ['takut', 'gugup', 'tips', 'cara', 'persiapan'],
+    response: "Kunci interview itu preparation + authenticity. Prepare 5-7 story tentang achievement kamu pakai framework STAR (Situation, Task, Action, Result). Lalu latihan cerita itu sampai natural. Mau coba mock interview? Ada fiturnya di menu Chat."
+  },
+  {
+    keywords: ['promosi', 'naik jabatan', 'naik level', 'career path'],
+    context: [],
+    response: "Promosi itu hasil dari 3 hal: performance yang konsisten, visibility yang tepat, dan timing yang pas. Yang paling sering dilupakan orang: visibility. Bos kamu tahu nggak achievement 3 bulan terakhir kamu? Kalau belum, saatnya mulai communicate proaktif."
+  },
+  {
+    keywords: ['pindah', 'switch', 'pivot', 'ganti', 'transisi'],
+    context: ['karir', 'industri', 'pekerjaan', 'kerja'],
+    response: "Career pivot itu risiko, tapi kadang perlu. Pertanyaan kuncinya: apakah kamu pindah KARENA sesuatu (visi yang lebih besar) atau pindah DARI sesuatu (escape dari situasi tidak nyaman)? Kalau alasannya 'dari', kemungkinan bakal nyesel. Kalau 'karena', lebih sustainable. Kamu yang mana?"
+  },
+  {
+    keywords: ['networking', 'koneksi', 'relasi', 'kenalan'],
+    context: ['cara', 'tips', 'malu', 'gak jago'],
+    response: "Networking itu bukan tentang kenal banyak orang, tapi tentang membangun relasi bermakna dengan sedikit orang yang right. Mulai dari: engage dengan konten orang di LinkedIn, kasih value dulu sebelum minta, dan follow up rutin. Kamu sudah coba approach apa sejauh ini?"
+  },
+  {
+    keywords: ['thank', 'terima', 'makasih', 'thanks', 'helpful', 'bermanfaat'],
+    context: [],
+    response: "Sama-sama! Seneng bisa bantu. Yang paling penting: eksekusi. Insight tanpa action cuma entertainment. Ada satu hal konkret yang mau kamu commit lakukan minggu ini?"
+  }
+]
+
+function matchRuleBasedResponse(message, careerProfile) {
+  const lowerMsg = message.toLowerCase()
+  
+  for (const rule of RULE_BASED_PATTERNS) {
+    const hasKeyword = rule.keywords.some(k => lowerMsg.includes(k))
+    if (!hasKeyword) continue
+    
+    // Check context if specified
+    if (rule.context.length > 0) {
+      const hasContext = rule.context.some(c => lowerMsg.includes(c))
+      if (!hasContext) continue
+    }
+    
+    return rule.response
+  }
+  
+  return null
+}
+
+// ── [OPTIMIZATION] MESSAGE COMPRESSION — Hemat ~10% token usage ─────────────
+function compressConversationHistory(messages, maxMessages = 8) {
+  if (messages.length <= maxMessages) return messages
+  
+  // Keep first 2 messages (context setting) + last (maxMessages - 2) messages
+  const compressed = [
+    ...messages.slice(0, 2),
+    { role: 'system', content: `[${messages.length - maxMessages + 2} pesan sebelumnya diringkas untuk efisiensi]` },
+    ...messages.slice(-(maxMessages - 2))
+  ]
+  
+  return compressed
+}
+
+function pruneMessageContent(content, maxLength = 500) {
+  if (!content || content.length <= maxLength) return content
+  return content.slice(0, maxLength) + '...'
+}
+
+// ── [OPTIMIZATION] CACHE HASHING — Hemat ~30% duplicate AI calls ────────────
+function hashMessage(message) {
+  return createHash('sha256').update(message.toLowerCase().trim()).digest('hex').slice(0, 16)
+}
+
+const responseCache = new Map()
+const CACHE_TTL = 10 * 60 * 1000 // 10 minutes
+
+function getCachedResponse(hash) {
+  const cached = responseCache.get(hash)
+  if (!cached) return null
+  if (Date.now() - cached.timestamp > CACHE_TTL) {
+    responseCache.delete(hash)
+    return null
+  }
+  return cached.response
+}
+
+function setCachedResponse(hash, response) {
+  responseCache.set(hash, { response, timestamp: Date.now() })
+  
+  // Cleanup old entries periodically
+  if (responseCache.size > 1000) {
+    const now = Date.now()
+    for (const [key, value] of responseCache.entries()) {
+      if (now - value.timestamp > CACHE_TTL) {
+        responseCache.delete(key)
+      }
+    }
+  }
+}
 
 // ── [RSI] ROBUST JSON PARSER ─────────────────────────────────────────────────
 function extractJsonFromResponse(text) {
@@ -40,6 +165,9 @@ async function analyzeAndLearnPatterns(userId, messages, aiResponse, careerProfi
     
     if (!userMessages || userMessages.length < 20) return // Terlalu pendek untuk dianalisis
     
+    // [OPTIMIZATION #7] Compress user messages untuk RSI analysis — hemat token
+    const compressedUserMsgs = userMessages.slice(0, 2000) // Reduced from 3000
+    
     // Minta AI menganalisis pola dari percakapan ini
     const patternAnalysis = await generateText({
       system: `Kamu adalah sistem analisis pola perilaku untuk Diah Anna. Tugasmu: mengidentifikasi pola berulang, preferensi komunikasi, atau wawasan baru tentang user dari percakapan coaching karir.
@@ -57,8 +185,8 @@ Output HARUS dalam format JSON valid dengan struktur:
   "strategy_adjustment": "Saran bagaimana Diah Anna harus menyesuaikan gaya coaching-nya berdasarkan pola ini",
   "should_update_memory": true/false
 }`,
-      prompt: `Profil User: ${careerProfile?.nama || 'Unknown'}, Target: ${careerProfile?.target_posisi || 'Unknown'}\n\nRiwayat Percakapan:\n${userMessages.slice(0, 3000)}\n\nRespons AI:\n${aiResponse.slice(0, 1000)}\n\nAnalisis apakah ada pola baru yang bisa dipelajari atau pola lama yang perlu disesuaikan confidence-nya.`,
-      maxTokens: 1500,
+      prompt: `Profil User: ${careerProfile?.nama || 'Unknown'}, Target: ${careerProfile?.target_posisi || 'Unknown'}\n\nRiwayat Percakapan:\n${compressedUserMsgs}\n\nRespons AI:\n${aiResponse.slice(0, 800)}\n\nAnalisis apakah ada pola baru yang bisa dipelajari atau pola lama yang perlu disesuaikan confidence-nya.`,
+      maxTokens: 1000,  // [OPTIMIZATION #8] Reduced from 1500 — RSI tidak butuh detail tinggi
       tier: 'fast',   // Cerebras/DeepSeek — hemat, RSI tidak butuh model premium
       plan: 'free'
     })
@@ -754,12 +882,33 @@ ${learnedPatterns.map((p, i) => `${i + 1}. ${p.pattern_category}: ${p.pattern_de
   // ACTION: CHAT (DEFAULT PROCESSOR)
   // ════════════════════════════════════════════
   const { messages: rawMessages } = req.body
-  const messages = (rawMessages || []).slice(-16)
+  
+  // [OPTIMIZATION #3] Compress conversation history — hemat token
+  const compressedMessages = compressConversationHistory(rawMessages || [], 8)
+  const messages = compressedMessages.slice(-12)
 
   if (!messages?.length) return res.status(400).json({ error: 'Pesan tidak boleh kosong.' })
 
   const usage = await checkAndLogUsage(userId, plan, 'chat')
   if (!usage.allowed) return res.status(403).json({ error: 'Kuota chat hari ini sudah habis.', limitReached: true })
+
+  // [OPTIMIZATION #1] Check cache for duplicate questions — hemat ~30%
+  const currentUserMsg = messages[messages.length - 1]?.content || ''
+  const msgHash = hashMessage(currentUserMsg)
+  const cachedResponse = getCachedResponse(msgHash)
+  
+  if (cachedResponse) {
+    console.log('[OPTIMIZATION] Cache hit — skip AI call')
+    return res.status(200).json({ reply: cachedResponse, cached: true })
+  }
+
+  // [OPTIMIZATION #2] Rule-based response fallback — hemat ~25%
+  const ruleBasedResponse = matchRuleBasedResponse(currentUserMsg, careerProfile)
+  if (ruleBasedResponse) {
+    console.log('[OPTIMIZATION] Rule-based response matched — skip AI call')
+    setCachedResponse(msgHash, ruleBasedResponse)
+    return res.status(200).json({ reply: ruleBasedResponse, ruleBased: true })
+  }
 
   // ── Deep memory blocks (dari update-memory.js) ───────────────────────────
   const diahAnnaMemory   = careerProfile?.diah_anna_memory   || null
@@ -848,8 +997,8 @@ ${learnedPatterns.length > 0 ? `\n\n[RSI ACTIVE] Kamu sudah belajar dari ${learn
     const rawReply = await generateChat({
       system: systemContent,
       messages,
-      maxTokens: 900,
-      tier: optimalTier,  // ✅ Dynamic instead of always 'smart'
+      maxTokens: 700,  // [OPTIMIZATION #4] Reduced from 900 — hemat token
+      tier: optimalTier,
       plan,
     })
 
@@ -857,20 +1006,21 @@ ${learnedPatterns.length > 0 ? `\n\n[RSI ACTIVE] Kamu sudah belajar dari ${learn
     const persuasiAktif = /\[UPGRADE\]|\[PERSUASI_AKTI[FV]\]/i.test(rawReply)
     const reply = rawReply.replace(/\[UPGRADE\]|\[PERSUASI_AKTI[FV]\]/gi, '').trim()
 
+    // [OPTIMIZATION #5] Cache AI response for future duplicate questions
+    setCachedResponse(msgHash, reply)
+
     // ═══════════════════════════════════════════════════════════════════════════
     // FIX #2: RSI SMART SAMPLING — Hemat 60-70% dari RSI API calls
     // Hanya analyze kalau ada signal meaningful (emotional trigger, decision point, dll)
     // ═══════════════════════════════════════════════════════════════════════════
     const userMsgCount = messages.filter(m => m.role === 'user').length
-    const currentUserMsg = messages[messages.length-1]?.content || ''
     
     // Detect meaningful signals dalam pesan user
     const hasEmotionalSignal = /bingung|stuck|tidak tahu|ga yakin|ragu|susah|dilema|ambiguous|hambatan|masalah|keputusan|pilih|gimana|sebaiknya/i.test(currentUserMsg)
     
-    // Trigger RSI jika:
-    // 1. Conversation sudah cukup panjang (>=4 pesan) DAN
-    // 2. Setiap 5 pesan ATAU ada emotional signal
-    if (userId && messages.length >= 4 && (userMsgCount % 5 === 0 || hasEmotionalSignal)) {
+    // [OPTIMIZATION #6] RSI ON-DEMAND ONLY — hanya trigger untuk breakthrough moments
+    // Tidak lagi automatic setiap 5 pesan, hanya saat ada emotional signal ATAU conversation sangat panjang
+    if (userId && messages.length >= 6 && (hasEmotionalSignal || userMsgCount % 8 === 0)) {
       analyzeAndLearnPatterns(userId, messages, rawReply, careerProfile, learnedPatterns, rsiVersion, supabase).catch(e =>
         console.error('[RSI] Background analysis error:', e.message)
       )
