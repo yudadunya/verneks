@@ -286,12 +286,12 @@ export default function UpgradeModal({ user, onClose, initialData = null }) {
                 <div style={{ color: '#EF5350', fontWeight: 700, fontSize: '0.7rem', marginBottom: 6, textTransform: 'uppercase', letterSpacing: '0.5px' }}>⏰ Promo Berakhir Dalam:</div>
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}>
                   {formatTimeLeft().split(':').map((unit, i) => (
-                    <React.Fragment key={i}>
-                      <div style={{ background: 'rgba(239,83,80,0.2)', borderRadius: 6, padding: '4px 8px', minWidth: '32px', textAlign: 'center' }}>
+                    <>
+                      <div key={i} style={{ background: 'rgba(239,83,80,0.2)', borderRadius: 6, padding: '4px 8px', minWidth: '32px', textAlign: 'center' }}>
                         <span style={{ color: '#fff', fontWeight: 800, fontSize: '1rem' }}>{unit}</span>
                       </div>
                       {i < 2 && <span style={{ color: 'rgba(255,255,255,0.3)', fontSize: '1rem', fontWeight: 700 }}>:</span>}
-                    </React.Fragment>
+                    </>
                   ))}
                 </div>
                 <div style={{ color: 'rgba(255,255,255,0.35)', fontSize: '0.65rem', marginTop: 6 }}>Setelah itu harga kembali ke Rp599.000</div>
