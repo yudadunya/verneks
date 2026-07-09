@@ -212,7 +212,7 @@ export default function UpgradeModal({ user, onClose, initialData = null }) {
                   <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 5 }}>
                     <span style={{ 
                       fontSize: '1.2rem',
-                      opacity: done ? 1 : isFree ? 0.6 : 0.3
+                      opacity: done ? 1 : free ? 0.6 : 0.3
                     }}>
                       {done ? '✅' : '⭕'}
                     </span>
