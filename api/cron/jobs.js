@@ -1,12 +1,13 @@
 /**
  * api/cron/jobs.js — Router untuk semua cron jobs
- * Routing via query param: ?job=weekly-review | compress-memory | cleanup
+ * Routing via query param: ?job=weekly-review | compress-memory | cleanup | send-chat-reminders
  *
- * Menggabungkan: weekly-review.js + compress-memory.js + cleanup-chat-history.js
+ * Menggabungkan: weekly-review.js + compress-memory.js + cleanup-chat-history.js + email-reminders.js
  * vercel.json cron paths diupdate ke /api/cron/jobs?job=...
  */
 import { generateText } from '../lib/ai.js'
 import { createClient } from '@supabase/supabase-js'
+import { sendChatReminderEmail, sendWeeklyReviewEmail } from '../lib/email.js'
 
 const supabase = createClient(
   process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL,
@@ -67,6 +68,9 @@ export default async function handler(req, res) {
     if (error) return res.status(500).json({ error: error.message })
     if (!users?.length) return res.status(200).json({ success: true, processed: 0 })
 
+    // Fetch semua auth users untuk kirim email
+    const { data: { users: authUsers } } = await supabase.auth.admin.listUsers()
+
     const results = []
     for (const user of users) {
       try {
@@ -98,6 +102,16 @@ export default async function handler(req, res) {
           user_id: user.user_id, week_start: weekStart, summary: summary.trim(),
         }, { onConflict: 'user_id,week_start' })
 
+        // Send email ke user setelah review di-generate
+        try {
+          const authUser = authUsers?.find(u => u.id === user.user_id)
+          if (authUser?.email) {
+            await sendWeeklyReviewEmail(authUser.email, user.nama || 'User', summary.trim())
+          }
+        } catch (emailErr) {
+          console.error(`[weekly-review email failed for ${user.user_id}]`, emailErr)
+        }
+
         // Update running_insight kalau belum diupdate minggu ini
         const alreadyUpdated = user.running_insight_updated_at
           && new Date(user.running_insight_updated_at) >= sevenDaysAgo
@@ -125,6 +139,59 @@ export default async function handler(req, res) {
       success: true, weekStart,
       processed: results.length,
       generated: results.filter(r => r.status === 'generated').length,
+    })
+  }
+
+  // ── SEND CHAT REMINDERS ──────────────────────────────────────────────────
+  if (job === 'send-chat-reminders') {
+    const twoDaysAgo = new Date(Date.now() - 2 * 86400000).toISOString()
+
+    // Ambil semua users yang tidak chat 2 hari terakhir
+    const { data: users, error: usersErr } = await supabase
+      .from('user_career_profiles')
+      .select('user_id, nama')
+      .not('user_id', 'is', null)
+      .limit(100)
+
+    if (usersErr) return res.status(500).json({ error: usersErr.message })
+    if (!users?.length) return res.status(200).json({ success: true, sent: 0 })
+
+    const results = []
+    const { data: { users: authUsers } } = await supabase.auth.admin.listUsers()
+
+    for (const profile of users) {
+      try {
+        // Cek last chat
+        const { data: lastChat } = await supabase
+          .from('user_session_notes')
+          .select('created_at')
+          .eq('user_id', profile.user_id)
+          .order('created_at', { ascending: false })
+          .limit(1)
+          .maybeSingle()
+
+        // Kalau tidak ada chat atau chat > 2 hari, kirim email
+        if (!lastChat || new Date(lastChat.created_at) < new Date(twoDaysAgo)) {
+          const authUser = authUsers.find(u => u.id === profile.user_id)
+          if (authUser?.email) {
+            const emailResult = await sendChatReminderEmail(authUser.email, profile.nama || 'User')
+            if (emailResult.success) {
+              results.push({ userId: profile.user_id, status: 'sent' })
+            } else {
+              results.push({ userId: profile.user_id, status: 'failed', error: emailResult.error })
+            }
+          }
+        }
+      } catch (e) {
+        results.push({ userId: profile.user_id, status: 'failed', error: e.message })
+      }
+    }
+
+    const sent = results.filter(r => r.status === 'sent').length
+    return res.status(200).json({
+      success: true,
+      processed: results.length,
+      sent,
     })
   }
 

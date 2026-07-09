@@ -1,12 +1,13 @@
 /**
  * api/utils.js — Router untuk endpoint-endpoint kecil
- * Routing via query param: ?action=redeem | refresh-profile | job-match | admin
+ * Routing via query param: ?action=redeem | refresh-profile | job-match | admin | weekly-review | send-chat-reminder | send-weekly-review-email
  *
- * Menggabungkan: redeem-code.js + refresh-profile.js + job-match.js + admin.js
+ * Menggabungkan: redeem-code.js + refresh-profile.js + job-match.js + admin.js + email.js
  * Semua endpoint lama dihapus dari repo supaya tidak melewati limit 12 functions.
  */
 import { createClient } from '@supabase/supabase-js'
 import { generateText } from './lib/ai.js'
+import { sendChatReminderEmail, sendWeeklyReviewEmail } from './lib/email.js'
 
 const supabase = createClient(
   process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL,
@@ -282,9 +283,105 @@ JANGAN generik. JANGAN klise. Tulis seperti teman senior yang genuinely peduli.`
         .update({ last_weekly_review: weekStartStr })
         .eq('user_id', userId)
 
+      // Send email otomatis ke user
+      const { data: { users } } = await supabase.auth.admin.listUsers()
+      const user = users.find(u => u.id === userId)
+      if (user) {
+        await sendWeeklyReviewEmail(user.email, profile?.nama || 'User', reviewText)
+      }
+
       return res.status(200).json({ success: true, review: newReview, cached: false })
     } catch (e) {
       console.error('[weekly-review]', e)
+      return res.status(500).json({ error: e.message })
+    }
+  }
+
+  // ── SEND CHAT REMINDER EMAIL ────────────────────────────────────────────
+  if (action === 'send-chat-reminder') {
+    if (req.method !== 'POST') return res.status(405).end()
+    const { userId } = req.body
+    if (!userId) return res.status(400).json({ error: 'Missing userId' })
+
+    try {
+      // Ambil user email dan nama dari Supabase
+      const { data: { users }, error: authErr } = await supabase.auth.admin.listUsers()
+      const user = users.find(u => u.id === userId)
+      if (!user) return res.status(404).json({ error: 'User not found' })
+
+      const { data: profile } = await supabase
+        .from('user_career_profiles')
+        .select('nama')
+        .eq('user_id', userId)
+        .maybeSingle()
+
+      const userEmail = user.email
+      const userName = profile?.nama || user.user_metadata?.full_name || 'User'
+
+      // Cek last chat timestamp
+      const { data: lastSession } = await supabase
+        .from('user_session_notes')
+        .select('created_at')
+        .eq('user_id', userId)
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .maybeSingle()
+
+      if (!lastSession) {
+        return res.status(200).json({ skipped: true, reason: 'no_chat_history' })
+      }
+
+      const lastChatTime = new Date(lastSession.created_at)
+      const daysSinceChat = Math.floor((Date.now() - lastChatTime) / (1000 * 60 * 60 * 24))
+
+      // Hanya kirim kalau >= 2 hari tidak chat
+      if (daysSinceChat < 2) {
+        return res.status(200).json({ skipped: true, reason: 'recent_chat', daysSinceChat })
+      }
+
+      // Send email
+      const emailResult = await sendChatReminderEmail(userEmail, userName)
+      if (emailResult.error) {
+        return res.status(500).json({ error: emailResult.error })
+      }
+
+      return res.status(200).json({ success: true, daysSinceChat, emailSent: true })
+    } catch (e) {
+      console.error('[send-chat-reminder]', e)
+      return res.status(500).json({ error: e.message })
+    }
+  }
+
+  // ── SEND WEEKLY REVIEW EMAIL ────────────────────────────────────────────
+  if (action === 'send-weekly-review-email') {
+    if (req.method !== 'POST') return res.status(405).end()
+    const { userId, reviewText } = req.body
+    if (!userId || !reviewText) return res.status(400).json({ error: 'Missing userId or reviewText' })
+
+    try {
+      // Ambil user email dan nama dari Supabase
+      const { data: { users } } = await supabase.auth.admin.listUsers()
+      const user = users.find(u => u.id === userId)
+      if (!user) return res.status(404).json({ error: 'User not found' })
+
+      const { data: profile } = await supabase
+        .from('user_career_profiles')
+        .select('nama')
+        .eq('user_id', userId)
+        .maybeSingle()
+
+      const userEmail = user.email
+      const userName = profile?.nama || user.user_metadata?.full_name || 'User'
+
+      // Send email
+      const emailResult = await sendWeeklyReviewEmail(userEmail, userName, reviewText)
+      if (emailResult.error) {
+        return res.status(500).json({ error: emailResult.error })
+      }
+
+      return res.status(200).json({ success: true, emailSent: true })
+    } catch (e) {
+      console.error('[send-weekly-review-email]', e)
       return res.status(500).json({ error: e.message })
     }
   }
