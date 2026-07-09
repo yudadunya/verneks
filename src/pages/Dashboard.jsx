@@ -196,7 +196,7 @@ function FreeDashboard({ user, profile, genome, growth, onUpgrade, weeklyReview 
       )}
 
       {/* ═══ CATATAN DIAH ANNA MINGGU INI ═══════════════════════════════════ */}
-      {weeklyReview?.summary && (
+      {weeklyReview?.review_text && (
         <div style={{
           ...S.card({ background: 'linear-gradient(135deg, rgba(79,70,229,0.08), rgba(6,182,212,0.05))', border: '1px solid rgba(79,70,229,0.2)' }),
           ...fade(0.05, visible),
@@ -208,7 +208,7 @@ function FreeDashboard({ user, profile, genome, growth, onUpgrade, weeklyReview 
                 📝 CATATAN DIAH ANNA MINGGU INI
               </div>
               <div style={{ color: 'rgba(255,255,255,0.75)', fontSize: '0.83rem', lineHeight: 1.6 }}>
-                {weeklyReview.summary}
+                {weeklyReview.review_text}
               </div>
             </div>
           </div>
