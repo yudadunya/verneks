@@ -987,17 +987,16 @@ ${learnedPatterns.length > 0 ? `\n\n[RSI ACTIVE] Kamu sudah belajar dari ${learn
     // Routing dinamis: gunakan Haiku (cheap) untuk short convos, Sonnet untuk complex
     // ═══════════════════════════════════════════════════════════════════════════
     const shouldUseSmart = 
-      messages.length > 8 ||  // Long conversation = butuh context + nuance
-      /bingung|stuck|dilema|keputusan|sulit|ragu|ambiguous|complicated/i.test(messages[messages.length-1]?.content || '') ||  // Emotional complexity detected
-      plan === 'premium' ||   // Premium users always get smart tier
-      depthScore > 60         // Well-known users get better quality
+      messages.length > 10 ||  // Very long conversation = butuh context + nuance
+      /bingung|stuck|dilema|keputusan|sulit|ragu|ambiguous|complicated|depresi|ansietas/i.test(messages[messages.length-1]?.content || '') ||  // High emotional complexity only
+      depthScore > 75         // Only well-known users with high trust get smart tier
     
     const optimalTier = shouldUseSmart ? 'smart' : 'fast'
     
     const rawReply = await generateChat({
       system: systemContent,
       messages,
-      maxTokens: 700,  // [OPTIMIZATION #4] Reduced from 900 — hemat token
+      maxTokens: 900,  // Increased from 700 to prevent truncation for long responses
       tier: optimalTier,
       plan,
     })
