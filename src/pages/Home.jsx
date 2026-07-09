@@ -31,27 +31,27 @@ const FAQS = [
 ]
 
 // ─── CHAT DEMO ────────────────────────────────────────────────────────────────
-// Sesederhana mungkin — emosi dulu, fitur belakangan.
+// Menampilkan value Diah Anna: empati, pertanyaan reflektif, bukan judgment
 const CHAT_DEMO = [
-  { role: 'user', text: 'Aku udah 3 tahun kerja, tapi nggak tau harus ke mana...' },
-  { role: 'diah', text: 'Aku dengar. Boleh aku tanya satu hal?' },
-  { role: 'user', text: 'Boleh.' },
-  { role: 'diah', text: 'Kapan terakhir kamu melakukan sesuatu yang terasa benar-benar sesuai dengan dirimu?' },
+  { role: 'user', text: 'Aku udah 3 tahun kerja di bidang marketing, tapi rasanya kosong...' },
+  { role: 'diah', text: 'Aku dengar kamu merasa ada yang kurang. Bisa cerita lebih lanjut — kapan terakhir kali kamu merasa benar-benar termotivasi dengan pekerjaanmu?' },
+  { role: 'user', text: 'Jujur... aku nggak bisa ingat. Setiap hari cuma ngejar target.' },
+  { role: 'diah', text: 'Terima kasih sudah berbagi. Target memang penting, tapi mari kita eksplorasi: apa yang membuatmu merasa bermakna di luar pekerjaan? Hobi? Aktivitas yang bikin lupa waktu?' },
 ]
 
 // ─── TESTIMONIALS ─────────────────────────────────────────────────────────────
 const TESTIMONIALS = [
   {
-    quote: 'Aku kira masalahku adalah salah pilih jurusan. Setelah ngobrol dengan Diah Anna, aku sadar — aku hanya belum pernah benar-benar mengenal diriku sendiri. Bukan jurusannya yang salah.',
-    name: 'Andi', city: 'Surabaya', context: 'Kini bekerja sebagai UX Designer',
+    quote: 'Dulu aku merasa terjebak di pekerjaan yang nggak bikin happy. Setelah ngobrol sama Diah Anna, aku sadar bahwa masalahnya bukan pekerjaannya — tapi aku belum kenal diri sendiri. Sekarang aku lebih percaya diri mengambil keputusan.',
+    name: 'Andi', city: 'Surabaya', context: 'UX Designer, sebelumnya Marketing Executive',
   },
   {
-    quote: 'Yang berubah bukan pekerjaanku terlebih dahulu. Yang berubah adalah cara aku mengambil keputusan. Sekarang aku lebih tahu apa yang aku cari — dan kenapa.',
-    name: 'Rina', city: 'Jakarta', context: 'Profesional, 4 tahun pengalaman',
+    quote: 'Yang paling berharga dari Verneks adalah cara Diah Anna mendengarkan tanpa menghakimi. Dia nggak langsung kasih solusi, tapi membimbingku untuk menemukan jawabanku sendiri. Sekarang aku tahu apa yang benar-benar aku inginkan.',
+    name: 'Rina', city: 'Jakarta', context: 'Product Manager, 4 tahun pengalaman',
   },
   {
-    quote: 'Diah Anna tidak pernah menyuruhku memilih. Tapi sekarang aku jauh lebih yakin dengan pilihanku sendiri.',
-    name: 'Reza', city: 'Bandung', context: 'Fresh graduate',
+    quote: 'Sebagai fresh graduate, aku bingung mau mulai dari mana. Diah Anna membantuku mengenali kekuatan dan minatku. Hasilnya? Aku dapat clarity yang selama ini nggak aku temukan dari career counselor manapun.',
+    name: 'Reza', city: 'Bandung', context: 'Software Engineer, Fresh Graduate 2024',
   },
 ]
 
