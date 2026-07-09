@@ -42,6 +42,18 @@ export default function UpgradeModal({ user, onClose, initialData = null }) {
   const [growth,   setGrowth]   = useState(initialData?.growth   || null)
   const [genome,   setGenome]   = useState(initialData?.genome   || null)
   const [loading,  setLoading]  = useState(!initialData)
+  
+  // Countdown timer state
+  const [timeLeft, setTimeLeft] = useState(() => {
+    const savedTime = localStorage.getItem('premiumDiscountEndTime')
+    if (savedTime) {
+      const endTime = parseInt(savedTime, 10)
+      const remaining = endTime - Date.now()
+      return remaining > 0 ? remaining : 24 * 60 * 60 * 1000
+    }
+    return 24 * 60 * 60 * 1000 // 24 jam default
+  })
+  const [discountExpired, setDiscountExpired] = useState(false)
 
   // Redeem code state
   const [showRedeem,   setShowRedeem]   = useState(false)
@@ -49,6 +61,43 @@ export default function UpgradeModal({ user, onClose, initialData = null }) {
   const [redeemLoading, setRedeemLoading] = useState(false)
   const [redeemMsg,    setRedeemMsg]    = useState(null)  // { type: 'ok'|'err', text }
   const [redeemDone,   setRedeemDone]   = useState(false)
+
+  // Setup countdown timer
+  useEffect(() => {
+    const savedTime = localStorage.getItem('premiumDiscountEndTime')
+    if (!savedTime) {
+      const endTime = Date.now() + 24 * 60 * 60 * 1000
+      localStorage.setItem('premiumDiscountEndTime', endTime.toString())
+    }
+
+    const timer = setInterval(() => {
+      const endTime = parseInt(localStorage.getItem('premiumDiscountEndTime') || '0', 10)
+      const remaining = endTime - Date.now()
+      
+      if (remaining <= 0) {
+        setTimeLeft(0)
+        setDiscountExpired(true)
+        clearInterval(timer)
+      } else {
+        setTimeLeft(remaining)
+      }
+    }, 1000)
+
+    return () => clearInterval(timer)
+  }, [])
+
+  // Format countdown time
+  const formatTimeLeft = () => {
+    const hours = Math.floor(timeLeft / (1000 * 60 * 60))
+    const minutes = Math.floor((timeLeft % (1000 * 60 * 60)) / (1000 * 60))
+    const seconds = Math.floor((timeLeft % (1000 * 60)) / 1000)
+    return `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`
+  }
+
+  // Pricing based on discount status
+  const currentPrice = discountExpired ? 599000 : 199000
+  const originalPrice = 599000
+  const discountPercent = discountExpired ? 0 : 67
 
   useEffect(() => {
     // Kalau data sudah dikirim dari Dashboard — langsung pakai, tidak perlu fetch
@@ -232,12 +281,32 @@ export default function UpgradeModal({ user, onClose, initialData = null }) {
 
           {/* ── Pricing ── */}
           <div style={{ textAlign: 'center', marginBottom: 14 }}>
+            {!discountExpired && (
+              <div style={{ background: 'linear-gradient(135deg, rgba(239,83,80,0.15), rgba(239,83,80,0.05))', border: '1px solid rgba(239,83,80,0.3)', borderRadius: 10, padding: '10px', marginBottom: 12 }}>
+                <div style={{ color: '#EF5350', fontWeight: 700, fontSize: '0.7rem', marginBottom: 6, textTransform: 'uppercase', letterSpacing: '0.5px' }}>⏰ Promo Berakhir Dalam:</div>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}>
+                  {formatTimeLeft().split(':').map((unit, i) => (
+                    <React.Fragment key={i}>
+                      <div style={{ background: 'rgba(239,83,80,0.2)', borderRadius: 6, padding: '4px 8px', minWidth: '32px', textAlign: 'center' }}>
+                        <span style={{ color: '#fff', fontWeight: 800, fontSize: '1rem' }}>{unit}</span>
+                      </div>
+                      {i < 2 && <span style={{ color: 'rgba(255,255,255,0.3)', fontSize: '1rem', fontWeight: 700 }}>:</span>}
+                    </React.Fragment>
+                  ))}
+                </div>
+                <div style={{ color: 'rgba(255,255,255,0.35)', fontSize: '0.65rem', marginTop: 6 }}>Setelah itu harga kembali ke Rp599.000</div>
+              </div>
+            )}
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10, marginBottom: 3 }}>
               <span style={{ color: 'rgba(255,255,255,0.28)', fontSize: '0.82rem', textDecoration: 'line-through' }}>Rp599.000/bln</span>
-              <span style={{ background: '#EF5350', color: '#fff', fontSize: '0.6rem', fontWeight: 800, padding: '2px 7px', borderRadius: 99 }}>HEMAT 67%</span>
+              {discountPercent > 0 && (
+                <span style={{ background: '#EF5350', color: '#fff', fontSize: '0.6rem', fontWeight: 800, padding: '2px 7px', borderRadius: 99 }}>HEMAT {discountPercent}%</span>
+              )}
             </div>
             <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'center', gap: 4 }}>
-              <span style={{ color: '#FFB74D', fontWeight: 900, fontSize: '1.6rem' }}>Rp199.000</span>
+              <span style={{ color: currentPrice === 199000 ? '#FFB74D' : 'rgba(255,255,255,0.5)', fontWeight: 900, fontSize: currentPrice === 199000 ? '1.6rem' : '1.3rem' }}>
+                Rp{currentPrice.toLocaleString('id-ID')}
+              </span>
               <span style={{ color: 'rgba(255,255,255,0.35)', fontSize: '0.82rem' }}> periode akses 1 bulan</span>
             </div>
             <div style={{ color: 'rgba(255,255,255,0.25)', fontSize: '0.7rem', marginTop: 2 }}>Semua fitur premium · Unlimited · Sekali Bayar</div>
