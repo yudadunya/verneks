@@ -176,8 +176,23 @@ async function callFreeText({ system, prompt, maxTokens, tier }) {
   }
 }
 
-// ── Premium tier: Claude → DeepSeek → Cerebras ───────────────────────────────
+// ── Premium tier: Claude (smart only) → Cerebras (fast优先) → DeepSeek ───────
 async function callPremiumChat({ system, messages, maxTokens, tier }) {
+  // Untuk fast tier: prioritaskan Cerebras (hemat cost)
+  if (tier === 'fast') {
+    try {
+      return await callCerebras({ system, messages, maxTokens, model: MODELS.cerebras.fast })
+    } catch (e1) {
+      console.warn('[ai] Premium fast: Cerebras gagal, fallback ke DeepSeek:', e1.message)
+      try {
+        return await callDeepSeek({ system, messages, maxTokens, model: MODELS.deepseek.fast })
+      } catch (e2) {
+        console.warn('[ai] Premium fast: DeepSeek gagal, fallback ke Claude Haiku:', e2.message)
+        return await callClaude({ system, messages, maxTokens, model: MODELS.claude.fast })
+      }
+    }
+  }
+  // Untuk smart tier: Claude Sonnet utama
   try {
     return await callClaude({ system, messages, maxTokens, model: MODELS.claude.smart })
   } catch (e1) {
@@ -186,13 +201,28 @@ async function callPremiumChat({ system, messages, maxTokens, tier }) {
       return await callDeepSeek({ system, messages, maxTokens, model: MODELS.deepseek.smart })
     } catch (e2) {
       console.warn('[ai] DeepSeek gagal, fallback ke Cerebras:', e2.message)
-      return await callCerebras({ system, messages, maxTokens, model: MODELS.cerebras[tier] })
+      return await callCerebras({ system, messages, maxTokens, model: MODELS.cerebras.smart })
     }
   }
 }
 
 async function callPremiumText({ system, prompt, maxTokens, tier }) {
   const messages = [{ role: 'user', content: prompt }]
+  // Untuk fast tier: prioritaskan Cerebras (hemat cost)
+  if (tier === 'fast') {
+    try {
+      return await callCerebras({ system, messages, maxTokens, model: MODELS.cerebras.fast })
+    } catch (e1) {
+      console.warn('[ai] Premium fast: Cerebras gagal, fallback ke DeepSeek:', e1.message)
+      try {
+        return await callDeepSeek({ system, messages, maxTokens, model: MODELS.deepseek.fast })
+      } catch (e2) {
+        console.warn('[ai] Premium fast: DeepSeek gagal, fallback ke Claude Haiku:', e2.message)
+        return await callClaude({ system, messages, maxTokens, model: MODELS.claude.fast })
+      }
+    }
+  }
+  // Untuk smart tier: Claude Sonnet/Haiku utama
   try {
     return await callClaude({ system, messages, maxTokens, model: MODELS.claude.fast })
   } catch (e1) {
