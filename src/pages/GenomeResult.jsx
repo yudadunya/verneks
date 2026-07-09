@@ -2,12 +2,12 @@ import { useState, useEffect, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 
 const GENOME_MAP = [
-  { key: 'analytical',    label: 'Analytical',    emoji: '🧠', color: '#34B7F1', insight: 'Kamu berpikir sistematis dan suka menganalisis data sebelum memutuskan. Ini aset besar di era berbasis data.' },
-  { key: 'leadership',    label: 'Leadership',    emoji: '👑', color: '#F48FB1', insight: 'Kamu punya insting untuk memimpin dan mengarahkan orang lain. Tim yang kamu pimpin cenderung punya arah yang jelas.' },
-  { key: 'builder',       label: 'Builder',       emoji: '⚙️', color: '#25D366', insight: 'Kamu suka membangun sesuatu dari nol dan mengeksekusi ide. Gap antara konsep dan produk terasa kecil di tanganmu.' },
-  { key: 'creator',       label: 'Creator',       emoji: '🎨', color: '#FFB74D', insight: 'Kamu nyaman dengan ambiguitas dan selalu punya sudut pandang segar. Kreativitasmu bukan sekadar estetika — tapi problem-solving.' },
-  { key: 'communication', label: 'Communication', emoji: '💬', color: '#CE93D8', insight: 'Kamu mampu menyederhanakan hal kompleks dan membuat orang mengerti. Skill ini makin langka dan makin berharga.' },
-  { key: 'risk_taking',   label: 'Risk Taking',   emoji: '🚀', color: '#EF9A9A', insight: 'Kamu nyaman mencoba hal baru dibanding kebanyakan orang. Toleransi risikomu tinggi — modal utama builder dan founder.' },
+  { key: 'analytical',    label: 'Analytical',    emoji: '🧠', color: '#34B7F1', insight: 'Kamu berpikir sistematis dan suka menganalisis data sebelum memutuskan. Ini aset besar di era berbasis data.', career_fit: 'Data Scientist, Business Analyst, Strategy Consultant' },
+  { key: 'leadership',    label: 'Leadership',    emoji: '👑', color: '#F48FB1', insight: 'Kamu punya insting untuk memimpin dan mengarahkan orang lain. Tim yang kamu pimpin cenderung punya arah yang jelas.', career_fit: 'Product Manager, Team Lead, Operations Director' },
+  { key: 'builder',       label: 'Builder',       emoji: '⚙️', color: '#25D366', insight: 'Kamu suka membangun sesuatu dari nol dan mengeksekusi ide. Gap antara konsep dan produk terasa kecil di tanganmu.', career_fit: 'Software Engineer, Project Manager, Entrepreneur' },
+  { key: 'creator',       label: 'Creator',       emoji: '🎨', color: '#FFB74D', insight: 'Kamu nyaman dengan ambiguitas dan selalu punya sudut pandang segar. Kreativitasmu bukan sekadar estetika — tapi problem-solving.', career_fit: 'UX Designer, Content Creator, Marketing Strategist' },
+  { key: 'communication', label: 'Communication', emoji: '💬', color: '#CE93D8', insight: 'Kamu mampu menyederhanakan hal kompleks dan membuat orang mengerti. Skill ini makin langka dan makin berharga.', career_fit: 'Sales, Public Relations, Training & Development' },
+  { key: 'risk_taking',   label: 'Risk Taking',   emoji: '🚀', color: '#EF9A9A', insight: 'Kamu nyaman mencoba hal baru dibanding kebanyakan orang. Toleransi risikomu tinggi — modal utama builder dan founder.', career_fit: 'Founder, Business Development, Investment Banker' },
 ]
 
 const READINESS_FACTORS = [
@@ -153,8 +153,11 @@ export default function GenomeResult() {
                   </div>
                 </div>
                 {isExp && (
-                  <div style={{ marginTop:8, padding:'10px 12px', background:`${g.color}11`, border:`1px solid ${g.color}22`, borderRadius:9, fontSize:'0.8rem', color:'rgba(255,255,255,0.6)', lineHeight:1.6 }}>
-                    {g.insight}
+                  <div style={{ marginTop:8, padding:'10px 12px', background:`${g.color}11`, border:`1px solid ${g.color}22`, borderRadius:9 }}>
+                    <div style={{ fontSize:'0.8rem', color:'rgba(255,255,255,0.6)', lineHeight:1.6, marginBottom:8 }}>{g.insight}</div>
+                    <div style={{ fontSize:'0.75rem', color:g.color, fontWeight:600, borderTop:`1px solid ${g.color}33`, paddingTop:8 }}>
+                      🎯 Cocok untuk: {g.career_fit}
+                    </div>
                   </div>
                 )}
               </div>
@@ -246,14 +249,14 @@ export default function GenomeResult() {
           <img src="/diah-anna.png" alt="" style={{ width:28, height:28, borderRadius:'50%', objectFit:'cover', flexShrink:0 }} />
           <div style={{ fontSize:'0.82rem', color:'rgba(255,255,255,0.75)', lineHeight:1.55 }}>
             <strong style={{ color:'#25D366' }}>Diah Anna:</strong>{' '}
-            Saya sudah menyiapkan roadmap khusus untuk menutup gap ini. Tinggal satu langkah lagi untuk membukanya.
+            Saya sudah menyiapkan roadmap lengkap dengan {lockedCount} langkah personal untuk menutup gap kamu. Unlock sekarang untuk mulai bertumbuh.
           </div>
         </div>
         <button onClick={() => navigate('/paywall')} style={{ width:'100%', padding:'15px', background:'linear-gradient(135deg,#25D366,#128C7E)', color:'#fff', fontWeight:800, fontSize:'1rem', borderRadius:14, border:'none', cursor:'pointer', boxShadow:'0 4px 24px rgba(37,211,102,0.45)' }}>
-          🎯 Buka Roadmap Lengkap
+          🎯 Buka Roadmap Lengkap — Gratis 7 Hari
         </button>
         <div style={{ textAlign:'center', marginTop:7, color:'rgba(255,255,255,0.2)', fontSize:'0.68rem' }}>
-          Career GPS · Unlimited Mentor · Progress Tracking
+          Career GPS · Unlimited Chat dengan Diah Anna · Progress Tracking · Batal Kapan Saja
         </div>
       </div>
     </div>
