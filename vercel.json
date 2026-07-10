@@ -88,6 +88,10 @@
     {
       "path": "/api/cron/jobs?job=cleanup",
       "schedule": "0 3 * * *"
+    },
+    {
+      "path": "/api/cron/jobs?job=send-chat-reminders",
+      "schedule": "0 10 * * *"
     }
   ]
 }
