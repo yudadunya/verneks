@@ -2,6 +2,7 @@ import { BrowserRouter, Routes, Route } from 'react-router-dom'
 import { useState, useEffect, lazy, Suspense } from 'react'
 import { supabase } from './lib/supabase'
 import { useSubscription } from './hooks/useSubscription'
+import { requestNotificationPermission, listenForMessages, registerServiceWorker } from './lib/firebase'
 
 // Lazy load semua halaman ok
 const Home         = lazy(() => import('./pages/Home'))
@@ -239,6 +240,18 @@ export default function App() {
         if (_event === 'SIGNED_IN') {
           setTimeout(() => {
             syncDiscoveryData(u, setChatMessages)
+            
+            // Setup Firebase push notifications
+            try {
+              registerServiceWorker()
+              requestNotificationPermission(u.id)
+              listenForMessages((msg) => {
+                console.log('Push notification received:', msg)
+                // Bisa trigger toast notification di sini kalau perlu
+              })
+            } catch (firebaseErr) {
+              console.warn('[Firebase setup]', firebaseErr)
+            }
           }, 0)
         }
       } else {
