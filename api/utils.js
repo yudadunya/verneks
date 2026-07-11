@@ -1,13 +1,13 @@
 /**
  * api/utils.js — Router untuk endpoint-endpoint kecil
- * Routing via query param: ?action=redeem | refresh-profile | job-match | admin | weekly-review | send-chat-reminder | send-weekly-review-email
+ * Routing via query param: ?action=redeem | refresh-profile | job-match | admin | weekly-review | send-chat-reminder | send-weekly-review-email | save-fcm-token
  *
- * Menggabungkan: redeem-code.js + refresh-profile.js + job-match.js + admin.js + email.js
+ * Menggabungkan: redeem-code.js + refresh-profile.js + job-match.js + admin.js + notifications.js
  * Semua endpoint lama dihapus dari repo supaya tidak melewati limit 12 functions.
  */
 import { createClient } from '@supabase/supabase-js'
 import { generateText } from './lib/ai.js'
-import { sendChatReminderEmail, sendWeeklyReviewEmail } from './lib/email.js'
+import { saveFcmToken } from './lib/notifications.js'
 
 const supabase = createClient(
   process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL,
@@ -382,6 +382,24 @@ JANGAN generik. JANGAN klise. Tulis seperti teman senior yang genuinely peduli.`
       return res.status(200).json({ success: true, emailSent: true })
     } catch (e) {
       console.error('[send-weekly-review-email]', e)
+      return res.status(500).json({ error: e.message })
+    }
+  }
+
+  // ── SAVE FCM TOKEN ──────────────────────────────────────────────────────
+  if (action === 'save-fcm-token') {
+    if (req.method !== 'POST') return res.status(405).end()
+    const { userId, token } = req.body
+    if (!userId || !token) return res.status(400).json({ error: 'Missing userId or token' })
+
+    try {
+      const result = await saveFcmToken(userId, token)
+      if (result.error) {
+        return res.status(500).json({ error: result.error })
+      }
+      return res.status(200).json({ success: true })
+    } catch (e) {
+      console.error('[save-fcm-token]', e)
       return res.status(500).json({ error: e.message })
     }
   }
