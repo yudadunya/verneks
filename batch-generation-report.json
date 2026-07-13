@@ -1,0 +1,131 @@
+{
+  "timestamp": "2026-07-13T22:47:54.764Z",
+  "totalTime": "3 minutes",
+  "results": {
+    "total": 20,
+    "success": 19,
+    "failed": 1
+  },
+  "guides": [
+    {
+      "id": "1",
+      "slug": "career-pivot-framework",
+      "status": "success",
+      "wordCount": 923
+    },
+    {
+      "id": "2",
+      "slug": "skill-gap-analysis",
+      "status": "success",
+      "wordCount": 827
+    },
+    {
+      "id": "3",
+      "slug": "salary-benchmarks-indonesia",
+      "status": "success",
+      "wordCount": 734
+    },
+    {
+      "id": "4",
+      "slug": "job-search-strategies",
+      "status": "success",
+      "wordCount": 897
+    },
+    {
+      "id": "5",
+      "slug": "linkedin-optimization",
+      "status": "success",
+      "wordCount": 900
+    },
+    {
+      "id": "6",
+      "slug": "career-assessment",
+      "status": "success",
+      "wordCount": 931
+    },
+    {
+      "id": "7",
+      "slug": "finding-target-role",
+      "status": "success",
+      "wordCount": 892
+    },
+    {
+      "id": "8",
+      "slug": "networking-career-change",
+      "status": "success",
+      "wordCount": 1215
+    },
+    {
+      "id": "9",
+      "slug": "cover-letter-resume",
+      "status": "success",
+      "wordCount": 946
+    },
+    {
+      "id": "10",
+      "slug": "interview-preparation",
+      "status": "success",
+      "wordCount": 1169
+    },
+    {
+      "id": "11",
+      "slug": "negotiation-tactics",
+      "status": "success",
+      "wordCount": 870
+    },
+    {
+      "id": "12",
+      "slug": "freelance-vs-corporate",
+      "status": "success",
+      "wordCount": 783
+    },
+    {
+      "id": "13",
+      "slug": "career-goals",
+      "status": "success",
+      "wordCount": 865
+    },
+    {
+      "id": "14",
+      "slug": "mentorship-guide",
+      "status": "success",
+      "wordCount": 1198
+    },
+    {
+      "id": "15",
+      "slug": "using-ai-career-planning",
+      "status": "success",
+      "wordCount": 944
+    },
+    {
+      "id": "16",
+      "slug": "ai-skills-needed",
+      "status": "success",
+      "wordCount": 1186
+    },
+    {
+      "id": "17",
+      "slug": "future-proof-career",
+      "status": "success",
+      "wordCount": 900
+    },
+    {
+      "id": "18",
+      "slug": "career-trends-2024",
+      "status": "failed",
+      "error": "Semua provider gagal. Cerebras: [https://api.cerebras.ai/v1] 429: {\"message\":\"Requests per minute limit exceeded - too many requests sent.\",\"type\":\"too_many_requests_error\",\"param\":\"quota\",\"code\":\"request_quota_exceeded\"} | DeepSeek: [https://api.deepseek.com/v1] 402: {\"error\":{\"message\":\"Insufficient Balance\",\"type\":\"unknown_error\",\"param\":null,\"code\":\"invalid_request_error\"}} | Gemini: [GoogleGenerativeAI Error]: Error fetching from https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-lite:generateContent: [503 Service Unavailable] This model is currently experiencing high demand. Spikes in demand are usually temporary. Please try again later."
+    },
+    {
+      "id": "19",
+      "slug": "remote-work-career",
+      "status": "success",
+      "wordCount": 1157
+    },
+    {
+      "id": "20",
+      "slug": "career-pivot-stories",
+      "status": "success",
+      "wordCount": 862
+    }
+  ]
+}

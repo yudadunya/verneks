@@ -1,57 +1,118 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+  <!-- Homepage -->
   <url>
     <loc>https://verneks.my.id/</loc>
-    <lastmod>2026-06-30</lastmod>
-    <changefreq>weekly</changefreq>
     <priority>1.0</priority>
-  </url>
-  <url>
-    <loc>https://verneks.my.id/blog</loc>
-    <lastmod>2026-06-30</lastmod>
     <changefreq>weekly</changefreq>
+  </url>
+  
+  <!-- Main pages -->
+  <url>
+    <loc>https://verneks.my.id/chat</loc>
     <priority>0.9</priority>
+    <changefreq>weekly</changefreq>
+  </url>
+
+  <!-- Career Library Guides (20 guides) -->
+  <url>
+    <loc>https://verneks.my.id/library/career-pivot-framework</loc>
+    <priority>0.8</priority>
+    <changefreq>monthly</changefreq>
   </url>
   <url>
-    <loc>https://verneks.my.id/pricing</loc>
-    <lastmod>2026-06-30</lastmod>
-    <changefreq>monthly</changefreq>
+    <loc>https://verneks.my.id/library/skill-gap-analysis</loc>
     <priority>0.8</priority>
+    <changefreq>monthly</changefreq>
   </url>
   <url>
-    <loc>https://verneks.my.id/blog/cara-lolos-ats-2024</loc>
-    <lastmod>2026-06-30</lastmod>
-    <changefreq>monthly</changefreq>
+    <loc>https://verneks.my.id/library/salary-benchmarks-indonesia</loc>
     <priority>0.8</priority>
+    <changefreq>monthly</changefreq>
   </url>
   <url>
-    <loc>https://verneks.my.id/blog/tips-interview-kerja-fresh-graduate</loc>
-    <lastmod>2026-06-30</lastmod>
-    <changefreq>monthly</changefreq>
+    <loc>https://verneks.my.id/library/job-search-strategies</loc>
     <priority>0.8</priority>
+    <changefreq>monthly</changefreq>
   </url>
   <url>
-    <loc>https://verneks.my.id/blog/cara-negosiasi-gaji-saat-interview</loc>
-    <lastmod>2026-06-30</lastmod>
-    <changefreq>monthly</changefreq>
+    <loc>https://verneks.my.id/library/linkedin-optimization</loc>
     <priority>0.8</priority>
+    <changefreq>monthly</changefreq>
   </url>
   <url>
-    <loc>https://verneks.my.id/blog/cara-switch-karir-tanpa-pengalaman</loc>
-    <lastmod>2026-06-30</lastmod>
-    <changefreq>monthly</changefreq>
+    <loc>https://verneks.my.id/library/career-assessment</loc>
     <priority>0.8</priority>
+    <changefreq>monthly</changefreq>
   </url>
   <url>
-    <loc>https://verneks.my.id/blog/cara-membuat-cv-yang-menarik</loc>
-    <lastmod>2026-06-30</lastmod>
-    <changefreq>monthly</changefreq>
+    <loc>https://verneks.my.id/library/finding-target-role</loc>
     <priority>0.8</priority>
+    <changefreq>monthly</changefreq>
   </url>
   <url>
-    <loc>https://verneks.my.id/blog/linkedin-tips-untuk-dicari-recruiter</loc>
-    <lastmod>2026-06-30</lastmod>
-    <changefreq>monthly</changefreq>
+    <loc>https://verneks.my.id/library/networking-career-change</loc>
     <priority>0.8</priority>
+    <changefreq>monthly</changefreq>
+  </url>
+  <url>
+    <loc>https://verneks.my.id/library/cover-letter-resume</loc>
+    <priority>0.8</priority>
+    <changefreq>monthly</changefreq>
+  </url>
+  <url>
+    <loc>https://verneks.my.id/library/interview-preparation</loc>
+    <priority>0.8</priority>
+    <changefreq>monthly</changefreq>
+  </url>
+  <url>
+    <loc>https://verneks.my.id/library/negotiation-tactics</loc>
+    <priority>0.8</priority>
+    <changefreq>monthly</changefreq>
+  </url>
+  <url>
+    <loc>https://verneks.my.id/library/freelance-vs-corporate</loc>
+    <priority>0.8</priority>
+    <changefreq>monthly</changefreq>
+  </url>
+  <url>
+    <loc>https://verneks.my.id/library/career-goals</loc>
+    <priority>0.8</priority>
+    <changefreq>monthly</changefreq>
+  </url>
+  <url>
+    <loc>https://verneks.my.id/library/mentorship-guide</loc>
+    <priority>0.8</priority>
+    <changefreq>monthly</changefreq>
+  </url>
+  <url>
+    <loc>https://verneks.my.id/library/using-ai-career-planning</loc>
+    <priority>0.8</priority>
+    <changefreq>monthly</changefreq>
+  </url>
+  <url>
+    <loc>https://verneks.my.id/library/ai-skills-needed</loc>
+    <priority>0.8</priority>
+    <changefreq>monthly</changefreq>
+  </url>
+  <url>
+    <loc>https://verneks.my.id/library/future-proof-career</loc>
+    <priority>0.8</priority>
+    <changefreq>monthly</changefreq>
+  </url>
+  <url>
+    <loc>https://verneks.my.id/library/career-trends-2024</loc>
+    <priority>0.8</priority>
+    <changefreq>monthly</changefreq>
+  </url>
+  <url>
+    <loc>https://verneks.my.id/library/remote-work-career</loc>
+    <priority>0.8</priority>
+    <changefreq>monthly</changefreq>
+  </url>
+  <url>
+    <loc>https://verneks.my.id/library/career-pivot-stories</loc>
+    <priority>0.8</priority>
+    <changefreq>monthly</changefreq>
   </url>
 </urlset>

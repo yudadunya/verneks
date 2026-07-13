@@ -1,17 +1,14 @@
 /**
- * CAREER LIBRARY BATCH GENERATION SCRIPT
+ * BATCH GENERATE SCRIPT
  * 
- * Usage:
- *   node batch-generate.js
+ * Generate semua 20 career guides sekaligus
  * 
- * What it does:
- *   1. Load all 20 guide outlines
- *   2. Call /api/ai-content?action=batch-generate
- *   3. Track progress
- *   4. Generate report
- * 
- * Timeline: ~2 hours for 20 guides
- * Output: Results saved to batch-generation-report.json
+ * Cara pakai:
+ * 1. Download file ini
+ * 2. Copy ke folder root project
+ * 3. Set environment: export CRON_SECRET=YUd@067980
+ * 4. Run: node batch-generate-script.js
+ * 5. Wait 2-3 jam untuk semua selesai
  */
 
 import fetch from 'node-fetch'
@@ -22,466 +19,451 @@ import { fileURLToPath } from 'url'
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = path.dirname(__filename)
 
-// ════════════════════════════════════════════════════════════════════════════
-// CONFIGURATION
-// ════════════════════════════════════════════════════════════════════════════
+const API_URL = 'https://lamarcerdas-bwac.vercel.app/api/utils?action=generate-guide'
+const CRON_SECRET = process.env.CRON_SECRET
 
-const API_BASE = process.env.VERCEL_URL 
-  ? `https://${process.env.VERCEL_URL}`
-  : 'http://localhost:3000'
+console.log('🚀 CAREER LIBRARY BATCH GENERATION')
+console.log('====================================\n')
 
-const CRON_SECRET = process.env.CRON_SECRET || 'your-secret-here'
+if (!CRON_SECRET) {
+  console.error('❌ ERROR: CRON_SECRET not set!')
+  console.error('\nSet environment variable:')
+  console.error('  export CRON_SECRET=YUd@067980')
+  process.exit(1)
+}
 
-// ════════════════════════════════════════════════════════════════════════════
-// GUIDE OUTLINES (20 guides)
-// ════════════════════════════════════════════════════════════════════════════
-
+// 20 Career Library Guide Outlines
 const GUIDE_OUTLINES = [
-  // TIER 1: High Intent
   {
     id: '1',
     slug: 'career-pivot-framework',
-    title: 'Panduan Lengkap Career Pivot: Framework Terbukti (2024)',
-    keywords: ['career pivot', 'job change', 'career switch', 'how to change careers'],
+    title: 'Career Pivot Framework: Panduan Lengkap Untuk Berhasil',
+    keywords: ['career pivot', 'job change', 'career switch'],
     structure: {
       sections: [
-        {
-          h2: 'Apakah ini waktu yang tepat untuk pivot?',
-          subsections: ['5 tanda-tanda kamu siap pivot', 'Kapan BUKAN waktu yang tepat', 'Quick assessment tool'],
-          faqs: [
-            { q: 'Apa bedanya career pivot dan job change?', a: '...' },
-            { q: 'Berapa lama pivot karier biasanya?', a: '...' }
-          ]
-        },
-        {
-          h2: '5 Langkah Framework Pivot (Verneks)',
-          subsections: ['Step 1: Career DNA Assessment', 'Step 2: Gap Analysis', 'Step 3: GPS Roadmap', 'Step 4: Execution & Networking', 'Step 5: Land the role']
-        }
+        { h2: 'Apakah Ini Waktu yang Tepat untuk Pivot?', subsections: ['5 Tanda Kesiapan', 'Kapan Bukan Waktu Tepat'] },
+        { h2: '5 Langkah Framework Pivot', subsections: ['Assessment', 'Gap Analysis', 'Roadmap', 'Execution', 'Negotiation'] },
+        { h2: 'Cara Mengatasi Hambatan Umum', subsections: ['Fear', 'Skill Gap', 'Financial Worry'] }
       ],
-      cta: {
-        primary: 'Mau dipandu step-by-step? Chat dengan Diah Anna sekarang'
-      }
+      cta: { primary: 'Mulai pivot journey kamu bersama Diah Anna' }
     },
-    internalLinks: ['skill-gap-analysis', 'networking-career-change']
+    internalLinks: ['skill-gap-analysis', 'networking-career-change'],
+    schema: 'Article'
   },
   {
     id: '2',
     slug: 'skill-gap-analysis',
-    title: 'Skill Gap Analysis: Cara Temukan Skills yang Kurang (Template Included)',
-    keywords: ['skill gap analysis', 'skill assessment', 'professional development'],
+    title: 'Skill Gap Analysis: Identifikasi Keahlian yang Kamu Butuhkan',
+    keywords: ['skill gap', 'skill development', 'career skills'],
     structure: {
       sections: [
-        {
-          h2: 'Apa itu Skill Gap dan Kenapa Penting?',
-          subsections: ['Definisi skill gap', 'Impact terhadap career growth']
-        },
-        {
-          h2: '3 Metode Skill Gap Analysis',
-          subsections: ['Self-Assessment', 'Peer Feedback', 'Job Market Research']
-        }
+        { h2: 'Apa Itu Skill Gap?', subsections: ['Definisi', 'Mengapa Penting'] },
+        { h2: 'Cara Identifikasi Skill Gap Kamu', subsections: ['Self Assessment', 'Market Research', 'Competitor Analysis'] },
+        { h2: 'Action Plan untuk Close Gap', subsections: ['Learning Strategy', 'Timeline', 'Resources'] }
       ],
-      cta: { primary: 'Chat dengan Diah Anna untuk personalized skill gap assessment' }
+      cta: { primary: 'Buat skill development plan kamu sekarang' }
     },
-    internalLinks: ['career-pivot-framework', 'job-search-strategies']
+    internalLinks: ['career-pivot-framework', 'linkedin-optimization'],
+    schema: 'Article'
   },
   {
     id: '3',
     slug: 'salary-benchmarks-indonesia',
-    title: 'Gaji di Indonesia 2024: Benchmark by Role, Region & Experience',
-    keywords: ['salary indonesia', 'gaji 2024', 'salary benchmark', 'berapa gaji'],
+    title: 'Salary Benchmarks Indonesia 2024: Berapa Gaji yang Seharusnya Kamu Dapat?',
+    keywords: ['salary', 'gaji', 'benchmark', 'kompensasi'],
     structure: {
       sections: [
-        {
-          h2: 'Salary Ranges by Popular Roles',
-          subsections: ['Tech roles', 'Business roles', 'Finance roles']
-        },
-        {
-          h2: 'Factors That Impact Salary',
-          subsections: ['Experience level', 'Company size', 'Industry', 'Location']
-        }
+        { h2: 'Salary Range by Role & Experience', subsections: ['Junior', 'Mid-Level', 'Senior'] },
+        { h2: 'Faktor yang Mempengaruhi Gaji', subsections: ['Industry', 'Company Size', 'Location', 'Skills'] },
+        { h2: 'Bagaimana Negosiasi Gaji yang Lebih Tinggi', subsections: ['Research', 'Preparation', 'Negotiation Tips'] }
       ],
-      cta: { primary: 'Chat dengan Diah Anna untuk salary negotiation strategy' }
+      cta: { primary: 'Pastikan gaji kamu sesuai dengan market value' }
     },
-    internalLinks: ['job-search-strategies', 'negotiation-tactics']
+    internalLinks: ['negotiation-tactics', 'career-assessment'],
+    schema: 'Article'
   },
   {
     id: '4',
     slug: 'job-search-strategies',
-    title: 'Job Search Strategy 2024: Framework untuk Land Interview (30 Days)',
-    keywords: ['job search strategy', 'how to find a job', 'job hunting'],
+    title: 'Job Search Strategies yang Terbukti Efektif di Era Digital',
+    keywords: ['job search', 'job hunting', 'career search'],
     structure: {
       sections: [
-        {
-          h2: '30-Day Job Search Framework',
-          subsections: ['Week 1: Preparation', 'Week 2-3: Active search', 'Week 4: Follow-up']
-        },
-        {
-          h2: 'Application Strategy: Quality > Quantity',
-          subsections: ['Where to find jobs', 'Customize application', 'LinkedIn strategy']
-        }
+        { h2: 'Platform Job Search yang Efektif', subsections: ['LinkedIn', 'Job Boards', 'Company Websites', 'Networking'] },
+        { h2: 'Cara Meningkatkan Visibility', subsections: ['Profile Optimization', 'Content Strategy', 'Networking'] },
+        { h2: 'Follow-up Strategy yang Efektif', subsections: ['Email Follow-up', 'Relationship Building'] }
       ],
-      cta: { primary: 'Get personalized job search strategy from Diah Anna' }
+      cta: { primary: 'Optimalkan job search strategy kamu' }
     },
-    internalLinks: ['linkedin-optimization', 'interview-preparation']
+    internalLinks: ['linkedin-optimization', 'cover-letter-resume'],
+    schema: 'Article'
   },
   {
     id: '5',
     slug: 'linkedin-optimization',
-    title: 'LinkedIn Profile Optimization: Get More Interview Calls (Checklist)',
-    keywords: ['linkedin optimization', 'linkedin profile', 'personal branding'],
+    title: 'LinkedIn Profile Optimization: Panduan Lengkap agar Kelihatan Professional',
+    keywords: ['linkedin', 'profile', 'professional branding'],
     structure: {
       sections: [
-        {
-          h2: 'LinkedIn Profile Audit Checklist',
-          subsections: ['Profile photo', 'Headline', 'About section', 'Experience', 'Skills']
-        },
-        {
-          h2: 'Write Headlines That Convert',
-          subsections: ['Bad examples', 'Good examples', 'Formula']
-        }
+        { h2: 'Struktur LinkedIn Profile yang Menarik', subsections: ['Photo', 'Headline', 'Summary', 'Experience'] },
+        { h2: 'Cara Menulis Headline & Summary yang Menarik', subsections: ['Keywords', 'Value Proposition', 'CTA'] },
+        { h2: 'Engagement Strategy', subsections: ['Content Sharing', 'Networking', 'Industry Participation'] }
       ],
-      cta: { primary: 'Let Diah Anna review & optimize your LinkedIn profile' }
+      cta: { primary: 'Upgrade LinkedIn profile kamu hari ini' }
     },
-    internalLinks: ['job-search-strategies', 'cover-letter-resume']
+    internalLinks: ['job-search-strategies', 'networking-career-change'],
+    schema: 'Article'
   },
-
-  // TIER 2: Evergreen
   {
     id: '6',
     slug: 'career-assessment',
-    title: 'Career Assessment: Find Your Strengths, Values & Fit',
-    keywords: ['career assessment', 'career test', 'strengths finder'],
+    title: 'Career Assessment: Temukan Posisi Yang Paling Cocok Untuk Kamu',
+    keywords: ['career assessment', 'career discovery', 'career planning'],
     structure: {
       sections: [
-        {
-          h2: '4 Dimensions of Career Assessment',
-          subsections: ['Strengths', 'Values', 'Interests', 'Work style']
-        }
+        { h2: 'Apa Itu Career Assessment?', subsections: ['Tools', 'Benefit', 'How It Works'] },
+        { h2: 'Self Assessment Framework', subsections: ['Skills', 'Values', 'Interests', 'Personality'] },
+        { h2: 'Menginterpretasi Hasil Assessment', subsections: ['Understanding Results', 'Action Planning'] }
       ],
-      cta: { primary: 'Get Verneks Career Assessment (powered by Diah Anna)' }
+      cta: { primary: 'Mulai career assessment kamu sekarang' }
     },
-    internalLinks: ['career-pivot-framework', 'finding-target-role']
+    internalLinks: ['skill-gap-analysis', 'career-pivot-framework'],
+    schema: 'Article'
   },
   {
     id: '7',
     slug: 'finding-target-role',
-    title: 'How to Find Your Target Role: Step-by-Step Framework',
-    keywords: ['target role', 'career goals', 'job title'],
+    title: 'Bagaimana Menemukan Target Role yang Tepat untuk Karier Kamu?',
+    keywords: ['target role', 'career goal', 'job title'],
     structure: {
       sections: [
-        {
-          h2: 'From Vague Idea to Specific Role',
-          subsections: ['Clarify', 'Research', 'Validate']
-        }
+        { h2: 'Criteria untuk Memilih Target Role', subsections: ['Fit', 'Growth', 'Compensation', 'Culture'] },
+        { h2: 'Research Target Role Secara Mendalam', subsections: ['Job Description Analysis', 'Salary Research', 'Company Culture'] },
+        { h2: 'Validation Sebelum Commit', subsections: ['Informational Interview', 'Shadowing', 'Project Experience'] }
       ],
-      cta: { primary: 'Chat dengan Diah Anna untuk validate target role kamu' }
+      cta: { primary: 'Identifikasi target role kamu sekarang' }
     },
-    internalLinks: ['career-assessment', 'skill-gap-analysis']
+    internalLinks: ['career-assessment', 'networking-career-change'],
+    schema: 'Article'
   },
   {
     id: '8',
     slug: 'networking-career-change',
-    title: 'Networking Strategy for Career Changers: Build Relationships That Lead to Jobs',
-    keywords: ['networking', 'professional network', 'career networking'],
+    title: 'Networking untuk Career Change: Strategi Membangun Koneksi yang Berguna',
+    keywords: ['networking', 'professional network', 'career connections'],
     structure: {
       sections: [
-        {
-          h2: 'Networking Channels (Prioritized)',
-          subsections: ['LinkedIn', 'Events', 'Online communities', 'Informational interviews']
-        }
+        { h2: 'Kenapa Networking Penting untuk Career Change?', subsections: ['Hidden Jobs', 'Mentorship', 'Credibility'] },
+        { h2: 'Cara Membangun Network yang Kuat', subsections: ['Online Networking', 'Events', 'Informational Interviews'] },
+        { h2: 'Networking Etiquette & Best Practices', subsections: ['Follow-up', 'Value Giving', 'Long-term Relationship'] }
       ],
-      cta: { primary: 'Join Verneks community for career-focused networking' }
+      cta: { primary: 'Mulai networking strategy kamu sekarang' }
     },
-    internalLinks: ['linkedin-optimization', 'job-search-strategies']
+    internalLinks: ['linkedin-optimization', 'job-search-strategies'],
+    schema: 'Article'
   },
   {
     id: '9',
     slug: 'cover-letter-resume',
-    title: 'Resume & Cover Letter Masterclass: Templates + Examples That Convert',
-    keywords: ['resume tips', 'cover letter', 'ATS optimization'],
+    title: 'Resume & Cover Letter yang Membuat Recruiter Tertarik',
+    keywords: ['resume', 'cover letter', 'job application'],
     structure: {
       sections: [
-        {
-          h2: 'Resume Structure That Works',
-          subsections: ['Header', 'Summary', 'Experience', 'Skills']
-        }
+        { h2: 'Struktur Resume yang ATS-Friendly', subsections: ['Format', 'Keywords', 'Achievements'] },
+        { h2: 'Cara Menulis Cover Letter yang Menarik', subsections: ['Personalization', 'Storytelling', 'Call to Action'] },
+        { h2: 'Common Mistakes & Cara Menghindarinya', subsections: ['Grammar', 'Relevance', 'Length'] }
       ],
-      cta: { primary: 'Get Diah Anna to review & optimize your resume' }
+      cta: { primary: 'Optimalkan resume & cover letter kamu' }
     },
-    internalLinks: ['job-search-strategies', 'linkedin-optimization']
+    internalLinks: ['linkedin-optimization', 'interview-preparation'],
+    schema: 'Article'
   },
   {
     id: '10',
     slug: 'interview-preparation',
-    title: 'Interview Preparation Checklist: Pass 80% of Interviews (Full Guide)',
-    keywords: ['interview preparation', 'interview tips', 'job interview'],
+    title: 'Interview Preparation: Panduan Lengkap Agar Lolos Wawancara',
+    keywords: ['interview', 'job interview', 'interview tips'],
     structure: {
       sections: [
-        {
-          h2: 'Pre-Interview Preparation (48 hours before)',
-          subsections: ['Research', 'Prepare', 'Practice']
-        },
-        {
-          h2: 'STAR Framework (Behavioral Questions)',
-          subsections: ['Situation', 'Task', 'Action', 'Result']
-        }
+        { h2: 'Tipe-tipe Interview & Cara Menghadapinya', subsections: ['Behavioral', 'Technical', 'Case Study'] },
+        { h2: 'Preparation Checklist', subsections: ['Company Research', 'Practice Questions', 'Logistics'] },
+        { h2: 'During Interview Tips', subsections: ['First Impression', 'Communication', 'Asking Questions'] }
       ],
-      cta: { primary: 'Practice interviews with Diah Anna (AI-powered)' }
+      cta: { primary: 'Siapkan interview kamu bersama Diah Anna' }
     },
-    internalLinks: ['job-search-strategies', 'negotiation-tactics']
+    internalLinks: ['cover-letter-resume', 'negotiation-tactics'],
+    schema: 'Article'
   },
   {
     id: '11',
     slug: 'negotiation-tactics',
-    title: 'Salary Negotiation Tactics: Get 10-20% More (Scripts Included)',
-    keywords: ['salary negotiation', 'negotiate salary', 'job offer'],
+    title: 'Negotiation Tactics: Cara Mendapatkan Gaji & Benefit yang Kamu Inginkan',
+    keywords: ['negotiation', 'salary negotiation', 'benefits'],
     structure: {
       sections: [
-        {
-          h2: 'Negotiation Principles',
-          subsections: ['Research', 'Timing', 'Anchor', 'Walk-away']
-        }
+        { h2: 'Persiapan Sebelum Negotiation', subsections: ['Research', 'Value Proposition', 'Walk-away Point'] },
+        { h2: 'Negotiation Techniques yang Efektif', subsections: ['Anchoring', 'Win-win', 'Non-verbal Communication'] },
+        { h2: 'Handling Objections & Counters', subsections: ['Common Objections', 'Response Strategies'] }
       ],
-      cta: { primary: 'Get coaching dari Diah Anna untuk negotiate confidently' }
+      cta: { primary: 'Raih gaji yang pantas untuk kamu' }
     },
-    internalLinks: ['salary-benchmarks-indonesia', 'job-search-strategies']
+    internalLinks: ['salary-benchmarks-indonesia', 'interview-preparation'],
+    schema: 'Article'
   },
   {
     id: '12',
     slug: 'freelance-vs-corporate',
-    title: 'Freelance vs Corporate Jobs: Which Path is Right for You?',
-    keywords: ['freelance vs employee', 'freelancing career', 'corporate job'],
+    title: 'Freelance vs Corporate: Mana yang Lebih Cocok untuk Kamu?',
+    keywords: ['freelance', 'corporate', 'work style'],
     structure: {
       sections: [
-        {
-          h2: 'Freelance: Pros & Cons',
-          subsections: ['Pros', 'Cons', 'Best for']
-        },
-        {
-          h2: 'Corporate: Pros & Cons',
-          subsections: ['Pros', 'Cons', 'Best for']
-        }
+        { h2: 'Perbandingan Freelance vs Corporate', subsections: ['Income', 'Stability', 'Growth', 'Work-life Balance'] },
+        { h2: 'Siapa yang Cocok Jadi Freelancer?', subsections: ['Personality Traits', 'Skills Required', 'Financial Readiness'] },
+        { h2: 'Transisi Dari Corporate ke Freelance (atau Sebaliknya)', subsections: ['Planning', 'Transition Strategy', 'Support System'] }
       ],
-      cta: { primary: 'Get personalized path recommendation from Diah Anna' }
+      cta: { primary: 'Ketahui pilihan karier yang terbaik untuk kamu' }
     },
-    internalLinks: ['salary-benchmarks-indonesia', 'career-pivot-framework']
+    internalLinks: ['career-pivot-framework', 'career-goals'],
+    schema: 'Article'
   },
   {
     id: '13',
     slug: 'career-goals',
-    title: 'SMART Career Goals: Framework + Template for Real Results',
-    keywords: ['career goals', 'SMART goals', 'goal setting'],
+    title: 'Cara Menetapkan Career Goals yang SMART dan Achievable',
+    keywords: ['career goals', 'goal setting', 'career planning'],
     structure: {
       sections: [
-        {
-          h2: 'SMART Framework for Career Goals',
-          subsections: ['Specific', 'Measurable', 'Achievable', 'Relevant', 'Time-bound']
-        }
+        { h2: 'Mengapa Career Goals Penting?', subsections: ['Direction', 'Motivation', 'Progress Tracking'] },
+        { h2: 'Framework SMART untuk Career Goals', subsections: ['Specific', 'Measurable', 'Achievable', 'Relevant', 'Time-bound'] },
+        { h2: 'Cara Tracking & Adjusting Goals', subsections: ['Milestones', 'Regular Review', 'Pivot Strategy'] }
       ],
-      cta: { primary: 'Build your career goals with Diah Anna\'s guidance' }
+      cta: { primary: 'Buat career goals kamu sekarang' }
     },
-    internalLinks: ['career-assessment', 'finding-target-role']
+    internalLinks: ['career-assessment', 'career-pivot-framework'],
+    schema: 'Article'
   },
   {
     id: '14',
     slug: 'mentorship-guide',
-    title: 'Finding a Mentor & Maximizing Mentorship: Complete Guide',
-    keywords: ['mentor', 'mentorship', 'career mentor'],
+    title: 'Mentorship Guide: Cara Mencari & Memanfaatkan Mentor untuk Karier',
+    keywords: ['mentorship', 'mentor', 'career guidance'],
     structure: {
       sections: [
-        {
-          h2: 'Why Mentorship Matters',
-          subsections: ['Accelerated learning', 'Avoiding mistakes', 'Network', 'Clarity']
-        }
+        { h2: 'Mengapa Mentor Penting?', subsections: ['Guidance', 'Network', 'Accountability'] },
+        { h2: 'Cara Mencari Mentor yang Tepat', subsections: ['Where to Find', 'Criteria', 'Approach'] },
+        { h2: 'Bagaimana Membangun Relationship dengan Mentor', subsections: ['Communication', 'Regular Meetings', 'Gratitude'] }
       ],
-      cta: { primary: 'Get Diah Anna as your AI career mentor' }
+      cta: { primary: 'Mulai mentorship journey kamu' }
     },
-    internalLinks: ['networking-career-change', 'career-assessment']
+    internalLinks: ['networking-career-change', 'career-goals'],
+    schema: 'Article'
   },
-
-  // TIER 3: AI + Trends
   {
     id: '15',
     slug: 'using-ai-career-planning',
-    title: 'Using AI Tools for Career Planning: Complete Toolkit (2024)',
-    keywords: ['AI career planning', 'ChatGPT career', 'AI job search'],
+    title: 'Menggunakan AI untuk Career Planning: Tools & Strategies',
+    keywords: ['AI', 'career planning', 'automation'],
     structure: {
       sections: [
-        {
-          h2: 'AI for Career Discovery',
-          subsections: ['Job matching', 'Skills assessment', 'Market research']
-        }
+        { h2: 'AI Tools untuk Career Planning', subsections: ['Resume Optimizer', 'Interview Prep', 'Salary Estimator'] },
+        { h2: 'Bagaimana AI Dapat Membantu Karier Kamu', subsections: ['Personalization', 'Speed', 'Data-driven Insights'] },
+        { h2: 'Limitations & Ethical Considerations', subsections: ['Bias', 'Privacy', 'Human Touch'] }
       ],
-      cta: { primary: 'Try Diah Anna AI career coach (free trial)' }
+      cta: { primary: 'Leverage AI untuk percepat career growth kamu' }
     },
-    internalLinks: ['job-search-strategies', 'interview-preparation']
+    internalLinks: ['career-assessment', 'job-search-strategies'],
+    schema: 'Article'
   },
   {
     id: '16',
     slug: 'ai-skills-needed',
-    title: 'AI Skills Every Professional Needs in 2024 (And How to Learn)',
-    keywords: ['AI skills', 'prompt engineering', 'ChatGPT skills'],
+    title: 'Skills AI yang Wajib Dimiliki Profesional di Era Digital',
+    keywords: ['AI skills', 'future skills', 'digital skills'],
     structure: {
       sections: [
-        {
-          h2: 'Universal AI Skills (Everyone)',
-          subsections: ['Prompt engineering', 'Tool literacy', 'Critical thinking']
-        }
+        { h2: 'Top 10 AI Skills untuk Non-Tech Professionals', subsections: ['Prompt Engineering', 'Data Literacy', 'Automation'] },
+        { h2: 'Bagaimana Belajar AI Skills?', subsections: ['Online Courses', 'Practice', 'Community'] },
+        { h2: 'Bagaimana Showcase AI Skills Kamu?', subsections: ['Portfolio', 'Projects', 'Certifications'] }
       ],
-      cta: { primary: 'Get personalized AI learning plan from Diah Anna' }
+      cta: { primary: 'Mulai belajar AI skills sekarang' }
     },
-    internalLinks: ['skill-gap-analysis', 'using-ai-career-planning']
+    internalLinks: ['using-ai-career-planning', 'skill-gap-analysis'],
+    schema: 'Article'
   },
   {
     id: '17',
     slug: 'future-proof-career',
-    title: 'Future-Proof Your Career: Adaptability Framework for 2025+',
-    keywords: ['future proof career', 'career resilience', 'continuous learning'],
+    title: 'Bagaimana Membuat Karier Kamu Future-Proof?',
+    keywords: ['future skills', 'future-proof', 'career resilience'],
     structure: {
       sections: [
-        {
-          h2: 'Skills That Are Here to Stay',
-          subsections: ['Adaptability', 'Critical thinking', 'Emotional intelligence']
-        }
+        { h2: 'Trends yang Akan Shape Karier di Masa Depan', subsections: ['Automation', 'AI', 'Remote Work', 'Sustainability'] },
+        { h2: 'Skills & Mindsets yang Kamu Butuhkan', subsections: ['Adaptability', 'Learning Agility', 'Emotional Intelligence'] },
+        { h2: 'Action Plan untuk Future-Proof Karier', subsections: ['Continuous Learning', 'Networking', 'Side Projects'] }
       ],
-      cta: { primary: 'Build future-proof career with Diah Anna\'s guidance' }
+      cta: { primary: 'Amankan masa depan karier kamu sekarang' }
     },
-    internalLinks: ['ai-skills-needed', 'career-goals']
+    internalLinks: ['ai-skills-needed', 'career-goals'],
+    schema: 'Article'
   },
   {
     id: '18',
     slug: 'career-trends-2024',
-    title: 'Career & Job Market Trends 2024-2025: What\'s Hiring, What\'s Fading',
-    keywords: ['job market trends', 'career trends 2024', 'hiring trends'],
+    title: 'Career Trends 2024: Peluang & Tantangan untuk Profesional',
+    keywords: ['career trends', '2024', 'job market'],
     structure: {
       sections: [
-        {
-          h2: 'In-Demand Roles (2024-2025)',
-          subsections: ['Tech', 'Business', 'Creative']
-        }
+        { h2: 'Top Career Opportunities 2024', subsections: ['Tech', 'Healthcare', 'Sustainability', 'Creative'] },
+        { h2: 'Industries yang Pertumbuhannya Cepat', subsections: ['Growth Rate', 'Salary Outlook', 'Skills Needed'] },
+        { h2: 'Bagaimana Posisi Kamu di Market Sekarang?', subsections: ['Competitive Analysis', 'Positioning Strategy'] }
       ],
-      cta: { primary: 'Get personalized trend analysis for your field' }
+      cta: { primary: 'Stay ahead dengan career trends terbaru' }
     },
-    internalLinks: ['ai-skills-needed', 'future-proof-career']
+    internalLinks: ['future-proof-career', 'ai-skills-needed'],
+    schema: 'Article'
   },
   {
     id: '19',
     slug: 'remote-work-career',
-    title: 'Remote Work Career Strategy: Thrive in Distributed Work (2024)',
-    keywords: ['remote work', 'work from home', 'remote career'],
+    title: 'Remote Work Career: Bagaimana Berhasil di Era Kerja Jarak Jauh?',
+    keywords: ['remote work', 'work from home', 'flexible work'],
     structure: {
       sections: [
-        {
-          h2: 'Remote Work Success Factors',
-          subsections: ['Visibility', 'Communication', 'Self-management']
-        }
+        { h2: 'Advantages & Disadvantages Remote Work', subsections: ['Pros', 'Cons', 'Is It For You?'] },
+        { h2: 'Cara Sukses Bekerja Remote', subsections: ['Discipline', 'Communication', 'Work-life Balance', 'Productivity'] },
+        { h2: 'Career Growth dalam Remote Setting', subsections: ['Networking', 'Visibility', 'Upskilling'] }
       ],
-      cta: { primary: 'Get remote work optimization strategy from Diah Anna' }
+      cta: { primary: 'Maksimalkan remote work career kamu' }
     },
-    internalLinks: ['job-search-strategies', 'future-proof-career']
+    internalLinks: ['career-goals', 'freelance-vs-corporate'],
+    schema: 'Article'
   },
   {
     id: '20',
     slug: 'career-pivot-stories',
-    title: 'Career Pivot Success Stories: Marketing → PM, Accountant → Designer, 3 Real Cases',
-    keywords: ['career change stories', 'career pivot success', 'career transition'],
+    title: 'Career Pivot Stories: Inspirasi dari Profesional yang Berhasil Berpindah',
+    keywords: ['career pivot', 'success stories', 'career change'],
     structure: {
       sections: [
-        {
-          h2: 'Case Study 1: Marketing Manager → Product Manager',
-          subsections: ['Before', 'Journey', 'Results', 'Lessons']
-        }
+        { h2: 'Story 1: Dari Banking ke Tech', subsections: ['Journey', 'Challenges', 'Results', 'Lessons'] },
+        { h2: 'Story 2: Dari Corporate ke Entrepreneurship', subsections: ['Journey', 'Challenges', 'Results', 'Lessons'] },
+        { h2: 'Common Patterns dari Successful Pivots', subsections: ['Planning', 'Execution', 'Mindset', 'Support System'] }
       ],
-      cta: { primary: 'Start your career pivot journey with Diah Anna coaching' }
+      cta: { primary: 'Jadilah success story berikutnya' }
     },
-    internalLinks: ['career-pivot-framework', 'networking-career-change']
+    internalLinks: ['career-pivot-framework', 'mentorship-guide'],
+    schema: 'Article'
   }
 ]
 
 // ════════════════════════════════════════════════════════════════════════════
-// MAIN EXECUTION
+// BATCH GENERATION - ONE GUIDE AT A TIME (NOT bulk)
 // ════════════════════════════════════════════════════════════════════════════
 
 async function batchGenerate() {
-  console.log('🚀 Career Library Batch Generation Started')
-  console.log(`📊 Generating ${GUIDE_OUTLINES.length} guides`)
-  console.log(`⏱️  Est. time: ~2 hours (2s delay between each)`)
-  console.log(`🔗 API: ${API_BASE}`)
-  console.log('---')
+  console.log(`📊 Generating ${GUIDE_OUTLINES.length} Career Library Guides`)
+  console.log(`⏱️  Estimated time: ~2-3 hours\n`)
 
   const startTime = Date.now()
   const results = []
 
-  try {
-    const response = await fetch(
-      `${API_BASE}/api/ai-content?action=batch-generate`,
-      {
+  for (let i = 0; i < GUIDE_OUTLINES.length; i++) {
+    const outline = GUIDE_OUTLINES[i]
+    
+    try {
+      console.log(`[${i + 1}/${GUIDE_OUTLINES.length}] Generating: ${outline.slug}...`)
+
+      const response = await fetch(API_URL, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${CRON_SECRET}`
         },
-        body: JSON.stringify({ guideOutlines: GUIDE_OUTLINES }),
-        timeout: 14400000 // 4 hours timeout
-      }
-    )
-
-    if (!response.ok) {
-      throw new Error(`API error: ${response.status} ${response.statusText}`)
-    }
-
-    const data = await response.json()
-
-    const duration = Math.round((Date.now() - startTime) / 1000)
-    const minutes = Math.round(duration / 60)
-
-    console.log('')
-    console.log('✅ BATCH GENERATION COMPLETE')
-    console.log(`⏱️  Total time: ${minutes} minutes`)
-    console.log(`✨ Success: ${data.successCount}/${data.total}`)
-
-    if (data.failureCount > 0) {
-      console.log(`⚠️  Failures: ${data.failureCount}`)
-      console.log('\nFailed guides:')
-      data.results
-        .filter(r => r.status === 'failed')
-        .forEach(r => {
-          console.log(`  ❌ ${r.slug}: ${r.error}`)
+        body: JSON.stringify({
+          guideOutline: outline,
+          guideId: outline.id
         })
-    }
-
-    console.log('\n📋 Generated guides:')
-    data.results
-      .filter(r => r.status === 'success')
-      .forEach(r => {
-        console.log(`  ✅ ${r.slug} (${r.wordCount} words)`)
       })
 
-    // Save report
-    const report = {
-      timestamp: new Date().toISOString(),
-      duration_seconds: duration,
-      total: data.total,
-      success: data.successCount,
-      failures: data.failureCount,
-      results: data.results
+      const data = await response.json()
+
+      if (response.ok && data.success) {
+        console.log(`   ✅ Success (${data.wordCount} words)\n`)
+        results.push({
+          id: outline.id,
+          slug: outline.slug,
+          status: 'success',
+          wordCount: data.wordCount
+        })
+      } else {
+        console.log(`   ❌ Error: ${data.error}\n`)
+        results.push({
+          id: outline.id,
+          slug: outline.slug,
+          status: 'failed',
+          error: data.error
+        })
+      }
+
+      // Delay 2 seconds between requests
+      await new Promise(resolve => setTimeout(resolve, 2000))
+
+    } catch (error) {
+      console.log(`   ❌ Error: ${error.message}\n`)
+      results.push({
+        id: outline.id,
+        slug: outline.slug,
+        status: 'failed',
+        error: error.message
+      })
     }
-
-    fs.writeFileSync(
-      path.join(__dirname, 'batch-generation-report.json'),
-      JSON.stringify(report, null, 2)
-    )
-
-    console.log('\n📄 Report saved: batch-generation-report.json')
-    console.log('\n🎉 Next step: Review content in Supabase > career_library_drafts')
-  } catch (e) {
-    console.error('❌ Error:', e.message)
-    process.exit(1)
   }
+
+  // RESULTS SUMMARY
+  const endTime = Date.now()
+  const totalSeconds = (endTime - startTime) / 1000
+  const totalMinutes = Math.round(totalSeconds / 60)
+
+  const successCount = results.filter(r => r.status === 'success').length
+  const failureCount = results.filter(r => r.status === 'failed').length
+
+  console.log('\n════════════════════════════════════════════════════════════════')
+  console.log('✅ BATCH GENERATION COMPLETE')
+  console.log('════════════════════════════════════════════════════════════════\n')
+
+  console.log(`📊 Results:`)
+  console.log(`   Total: ${results.length} guides`)
+  console.log(`   Success: ${successCount} ✅`)
+  console.log(`   Failed: ${failureCount} ❌`)
+  console.log(`   Time: ${totalMinutes} minutes\n`)
+
+  if (failureCount > 0) {
+    console.log(`⚠️  Failed Guides:`)
+    results.filter(r => r.status === 'failed').forEach(r => {
+      console.log(`   - ${r.slug}: ${r.error}`)
+    })
+    console.log()
+  }
+
+  // Save report
+  const reportPath = path.join(__dirname, 'batch-generation-report.json')
+  fs.writeFileSync(reportPath, JSON.stringify({
+    timestamp: new Date().toISOString(),
+    totalTime: `${totalMinutes} minutes`,
+    results: {
+      total: results.length,
+      success: successCount,
+      failed: failureCount
+    },
+    guides: results
+  }, null, 2))
+
+  console.log(`📄 Report saved: batch-generation-report.json\n`)
+  console.log('🎉 All done! Check Supabase for generated guides.')
+  console.log('Next: Move approved drafts to published table.\n')
 }
 
-// ════════════════════════════════════════════════════════════════════════════
-// RUN
-// ════════════════════════════════════════════════════════════════════════════
-
-batchGenerate()
+batchGenerate().catch(e => {
+  console.error('❌ Fatal error:', e)
+  process.exit(1)
+})
