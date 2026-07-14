@@ -1,260 +1,419 @@
-// api/extract-profile.js — Career Memory Engine V3
-import { generateText } from './lib/ai.js'
+/**
+ * /api/extract-profile
+ * 
+ * POST endpoint
+ * Extract and save user profile from discovery conversation
+ * Called after user completes discovery → genome result
+ * 
+ * Input: Discovery messages + genome data
+ * Output: Saved profile → user can access
+ */
+
 import { createClient } from '@supabase/supabase-js'
+import fetch from 'node-fetch'
 
 const supabase = createClient(
-  process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL,
+  process.env.VITE_SUPABASE_URL,
   process.env.SUPABASE_SERVICE_ROLE_KEY
 )
 
+// ════════════════════════════════════════════════════════════════════════════
+// MAIN HANDLER
+// ════════════════════════════════════════════════════════════════════════════
+
 export default async function handler(req, res) {
-  if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' })
-
-  const { userId, messages } = req.body
-  if (!userId || !messages?.length) return res.status(400).json({ error: 'Missing data' })
-
-  const userMsgCount = messages.filter(m => m.role === 'user').length
-  if (userMsgCount < 3) return res.status(200).json({ skipped: true, reason: 'too_short' })
+  // Only POST
+  if (req.method !== 'POST') {
+    return res.status(405).json({ error: 'Method not allowed' })
+  }
 
   try {
-    // ── Load existing profile ──
-    const { data: existingProfile } = await supabase
-      .from('user_career_profiles')
-      .select('*')
-      .eq('user_id', userId)
-      .maybeSingle()
+    const { userId, messages, genomeData } = req.body
 
-    const existingContext = existingProfile?.summary
-      ? `\nPROFIL SEBELUMNYA:\n${JSON.stringify({
-          nama: existingProfile.nama,
-          posisi_saat_ini: existingProfile.posisi_saat_ini,
-          target_posisi: existingProfile.target_posisi,
-          industri: existingProfile.industri,
-          lama_pengalaman: existingProfile.lama_pengalaman,
-          skill_utama: existingProfile.skill_utama,
-          target_gaji: existingProfile.target_gaji,
-          perusahaan_impian: existingProfile.perusahaan_impian,
-          motivasi: existingProfile.motivasi,
-          hambatan: existingProfile.hambatan,
-          summary: existingProfile.summary,
-          career_dna: existingProfile.career_dna,
-        }, null, 2)}`
-      : ''
+    // Validate input
+    if (!userId || !messages || !genomeData) {
+      return res.status(400).json({ error: 'Missing required fields' })
+    }
 
-    const convoText = messages
-      .slice(-30)
-      .map(m => `${m.role === 'user' ? 'User' : 'Diah Anna'}: ${m.content}`)
-      .join('\n')
+    // Step 1: Parse messages into structured data
+    const extracted = parseDiscoveryMessages(messages)
 
-    // ── Career Memory Engine V3 prompt ──
-    const systemPrompt = `Kamu adalah Career Memory Engine V3 milik Verneks.
+    // Step 2: Combine with genome scores
+    const profile = combineProfileData(extracted, genomeData)
 
-Baca percakapan antara user dan Diah Anna (career coach AI), lalu ekstrak dan analisis semua informasi karir user.
+    // Step 3: Create user model
+    const userModel = buildUserModel(userId, profile)
 
-Kembalikan HANYA JSON VALID, tidak ada teks pengantar/penutup, tidak ada backtick markdown (\`\`\`json), tidak ada preamble.
+    // Step 4: Save to database
+    const savedProfile = await saveProfile(userId, userModel)
 
-{
-  "profile": {
-    "nama": "nama user jika ada, null jika tidak",
-    "usia": "usia jika ada, null jika tidak",
-    "domisili": "kota tempat tinggal jika ada, null jika tidak",
-    "pendidikan": "jenjang pendidikan terakhir jika ada, null jika tidak",
-    "jurusan": "jurusan jika ada, null jika tidak",
-    "posisi_saat_ini": "jabatan saat ini atau 'fresh grad' jika baru lulus, null jika tidak ada",
-    "perusahaan": "nama perusahaan saat ini jika ada, null jika tidak",
-    "industri": "industri saat ini jika ada, null jika tidak",
-    "lama_pengalaman": "total pengalaman kerja jika ada, null jika tidak",
-    "skill_utama": ["skill1", "skill2"] atau null,
-    "gaji_sekarang": "gaji saat ini jika disebutkan, null jika tidak",
-    "target_posisi": "posisi yang dituju jika ada, null jika tidak",
-    "target_industri": "industri yang dituju jika ada, null jika tidak",
-    "target_gaji": "target gaji jika disebutkan, null jika tidak",
-    "perusahaan_impian": "perusahaan impian jika disebutkan, null jika tidak",
-    "timeline_karir": "kapan ingin mencapai goal jika disebutkan, null jika tidak",
-    "tantangan_karir": "tantangan utama yang sedang dihadapi, null jika tidak",
-    "motivasi": "motivasi atau goals jangka panjang jika ada, null jika tidak",
-    "progress_lamaran": "update lamaran aktif jika ada, null jika tidak",
-    "hambatan": "hambatan atau kekhawatiran jika ada, null jika tidak",
-    "gaya_kerja": "preferensi kerja (remote/hybrid/dll) jika ada, null jika tidak",
-    "emotional_state": "kondisi emosional saat ini dalam 1-2 kata (positif/semangat/bingung/khawatir/frustasi/optimis/lelah/excited), null jika tidak jelas",
-    "summary": "2-3 paragraf narasi briefing untuk career coach: siapa user ini, di mana posisinya sekarang, apa yang dia mau, tantangan utama, dan aspek penting lain untuk coaching. Pakai bahasa Indonesia natural.",
-    "topik_dibahas": ["topik1", "topik2"]
-  },
-  "career_dna": {
-    "ambisi": "1 kalimat tentang ambisi karir user berdasarkan percakapan",
-    "gaya_komunikasi": "direct/reflective/ekspresif/analitis berdasarkan cara user bicara",
-    "kekhawatiran_utama": "kekhawatiran terbesar yang tersirat dari percakapan",
-    "preferensi_industri": ["industri1", "industri2"],
-    "nilai_kerja": "hal yang paling penting bagi user dalam bekerja (growth/stabilitas/impact/kreativitas/dll)"
-  },
-  "genome_scores": {
-    "analytical": 0,
-    "leadership": 0,
-    "builder": 0,
-    "creator": 0,
-    "communication": 0,
-    "risk_taking": 0
-  },
-  "growth_state": {
-    "career_stage": "Career Explorer",
-    "progress_percent": 0,
-    "current_focus": "apa yang sedang difokuskan user sekarang",
-    "next_milestone": "milestone karir berikutnya yang realistis",
-    "streak_estimate": 0
-  },
-  "next_action": {
-    "title": "1 aksi konkret yang paling penting dilakukan user sekarang",
-    "description": "penjelasan singkat kenapa aksi ini penting dan bagaimana melakukannya",
-    "estimated_days": 7
-  }
-}
+    // Step 5: Save reflection log
+    await saveReflection(userId, extracted, genomeData)
 
-ATURAN STRICT FORMATTING & ANALISIS:
-1. JANGAN PERNAH membuat karakter raw newline (pindah baris dengan tombol Enter) di dalam isi value string teks JSON, khususnya pada bagian 'summary'. Gunakan literal \\n jika ingin memisahkan paragraf.
-2. genome_scores (nilai 0-100, berdasarkan sinyal percakapan):
-   - analytical: data, logika, riset, problem solving
-   - leadership: cerita memimpin, inisiatif, punya tim, visioner
-   - builder: eksekutor, suka bikin sesuatu, teknis, detail
-   - creator: kreatif, inovatif, suka ide baru, estetika
-   - communication: artikulatif, suka presentasi, jaringan, persuasi
-   - risk_taking: berani ambil keputusan besar, entrepreneurial, toleran ketidakpastian
-3. career_stage (pilih SATU): Career Explorer / Career Builder / Career Professional / Career Expert / Career Leader
-4. progress_percent: estimasi seberapa jauh user dari target karir mereka (0-100).
-${existingContext}`
-
-    const raw = await generateText({
-      system: 'Kamu adalah mesin database JSON murni. Output-mu HANYA berisi string JSON valid tanpa embel-embel markdown block, teks pendahuluan, atau teks penutup apa pun.',
-      prompt: `Percakapan:\n${convoText}`,
-      maxTokens: 1800, // Dinaikkan untuk memberi ruang aman pada text summary multi-paragraf
-      tier: 'smart',
-      plan: 'premium',
+    return res.status(200).json({
+      success: true,
+      profile: savedProfile,
+      message: 'Profile extracted and saved successfully'
     })
-
-    let memory
-    try {
-      const clean = raw.trim().replace(/^```json\s*/i, '').replace(/^```\s*/i, '').replace(/\s*```$/, '').trim()
-      memory = JSON.parse(clean)
-    } catch (e) {
-      console.error('[memory-engine-v3] parse failed:', raw?.slice(0, 300))
-      return res.status(200).json({ skipped: true, reason: 'parse_failed' })
-    }
-
-    const p = memory.profile || {}
-
-    // ── Merge dengan data lama — jangan overwrite dengan null ──
-    const mergeVal = (newVal, oldVal) => (newVal !== null && newVal !== undefined && newVal !== '') ? newVal : (oldVal ?? null)
-
-    // ── 1. Upsert user_career_profiles ──
-    await supabase.from('user_career_profiles').upsert({
-      user_id:              userId,
-      nama:                 mergeVal(p.nama, existingProfile?.nama),
-      usia:                 mergeVal(p.usia, existingProfile?.usia),
-      domisili:             mergeVal(p.domisili, existingProfile?.domisili),
-      pendidikan:           mergeVal(p.pendidikan, existingProfile?.pendidikan),
-      jurusan:              mergeVal(p.jurusan, existingProfile?.jurusan),
-      posisi_saat_ini:      mergeVal(p.posisi_saat_ini, existingProfile?.posisi_saat_ini),
-      perusahaan:           mergeVal(p.perusahaan, existingProfile?.perusahaan),
-      industri:             mergeVal(p.industri, existingProfile?.industri),
-      lama_pengalaman:      mergeVal(p.lama_pengalaman, existingProfile?.lama_pengalaman),
-      skill_utama:          [...new Set([...(existingProfile?.skill_utama || []), ...(p.skill_utama || [])])].slice(0, 15),
-      gaji_sekarang:        mergeVal(p.gaji_sekarang, existingProfile?.gaji_sekarang),
-      target_posisi:        mergeVal(p.target_posisi, existingProfile?.target_posisi),
-      target_industri:      mergeVal(p.target_industri, existingProfile?.target_industri),
-      target_gaji:          mergeVal(p.target_gaji, existingProfile?.target_gaji),
-      perusahaan_impian:    mergeVal(p.perusahaan_impian, existingProfile?.perusahaan_impian),
-      timeline_karir:       mergeVal(p.timeline_karir, existingProfile?.timeline_karir),
-      hambatan:             mergeVal(p.hambatan || p.tantangan_karir, existingProfile?.hambatan),
-      motivasi:             mergeVal(p.motivasi, existingProfile?.motivasi),
-      progress_lamaran:     mergeVal(p.progress_lamaran, existingProfile?.progress_lamaran),
-      gaya_kerja:           mergeVal(p.gaya_kerja, existingProfile?.gaya_kerja),
-      emotional_state:      mergeVal(p.emotional_state, existingProfile?.emotional_state),
-      summary:              p.summary || existingProfile?.summary,
-      career_dna:           memory.career_dna || existingProfile?.career_dna,
-      topik_dibahas:        [...new Set([...(existingProfile?.topik_dibahas || []), ...(p.topik_dibahas || [])])].slice(0, 30),
-      sesi_count:           (existingProfile?.sesi_count || 0) + 1,
-      profile_completeness: (() => {
-        const fields = [p.nama, p.posisi_saat_ini, p.target_posisi, p.industri,
-          p.lama_pengalaman, p.target_gaji, p.motivasi, p.tantangan_karir,
-          p.hambatan, p.skill_utama?.length > 0]
-        const filled = fields.filter(Boolean).length
-        return Math.round((filled / fields.length) * 100)
-      })(),
-      genome_updated_at:    new Date().toISOString(),
-      last_updated:         new Date().toISOString(),
-    }, { onConflict: 'user_id' })
-
-    // ── 2. Upsert user_genome_scores ──
-    const gs = memory.genome_scores || {}
-    const { data: existingGenome } = await supabase
-      .from('user_genome_scores').select('*').eq('user_id', userId).maybeSingle()
-
-    const mergeScore = (newVal, oldVal) => {
-      const n = newVal || 0
-      const o = oldVal || 0
-      if (n === 0) return o
-      if (o === 0) return n
-      return Math.round(n * 0.7 + o * 0.3)
-    }
-
-    await supabase.from('user_genome_scores').upsert({
-      user_id:       userId,
-      analytical:    mergeScore(gs.analytical,    existingGenome?.analytical),
-      leadership:    mergeScore(gs.leadership,    existingGenome?.leadership),
-      builder:       mergeScore(gs.builder,       existingGenome?.builder),
-      creator:       mergeScore(gs.creator,       existingGenome?.creator),
-      communication: mergeScore(gs.communication, existingGenome?.communication),
-      risk_taking:   mergeScore(gs.risk_taking,   existingGenome?.risk_taking),
-      // PERBAIKAN BUG: Akses ke root memory.career_dna, bukan memory.profile.career_dna
-      top_strength:  memory.career_dna ? Object.entries(gs).sort((a,b) => b[1]-a[1])[0]?.[0] || existingGenome?.top_strength : existingGenome?.top_strength,
-      updated_at:    new Date().toISOString(),
-    }, { onConflict: 'user_id' })
-
-    // ── 3. Upsert user_growth_state ──
-    const gw = memory.growth_state || {}
-    const { data: existingGrowth } = await supabase
-      .from('user_growth_state').select('*').eq('user_id', userId).maybeSingle()
-
-    await supabase.from('user_growth_state').upsert({
-      user_id:         userId,
-      career_stage:    gw.career_stage    || existingGrowth?.career_stage    || 'Career Explorer',
-      progress_percent:gw.progress_percent || existingGrowth?.progress_percent || 0,
-      current_focus:   gw.current_focus   || existingGrowth?.current_focus,
-      next_milestone:  gw.next_milestone  || existingGrowth?.next_milestone,
-      streak_days:     (existingGrowth?.streak_days || 0) + 1,
-      gps_steps:       existingGrowth?.gps_steps || existingProfile?.gps_steps || [],
-      last_activity:   new Date().toISOString(),
-      updated_at:      new Date().toISOString(),
-    }, { onConflict: 'user_id' })
-
-    // ── 4. Upsert Next Action (Mencegah duplikasi data menumpuk) ──
-    if (memory.next_action?.title) {
-      await supabase.from('user_next_actions').upsert({
-        user_id:        userId,
-        title:          memory.next_action.title,
-        description:    memory.next_action.description,
-        estimated_days: memory.next_action.estimated_days || 7,
-        is_done:        false,
-        updated_at:     new Date().toISOString(),
-      }, { onConflict: 'user_id, is_done' }) 
-      // Catatan: Pastikan Anda memiliki constraint unik gabungan (user_id, is_done) di Supabase Anda, 
-      // atau gunakan tabel penampung aksi aktif tunggal.
-    }
-
-    // ── 5. Log career event ──
-    await supabase.from('career_events').insert({
-      user_id:       userId,
-      event_type:    'genome_updated',
-      event_payload: {
-        stage:    gw.career_stage,
-        progress: gw.progress_percent,
-      },
-      created_at: new Date().toISOString(),
-    })
-
-    return res.status(200).json({ success: true, version: 'v3' })
 
   } catch (error) {
-    console.error('[career-memory-engine-v3]', error)
-    return res.status(500).json({ error: error.message })
+    console.error('[extract-profile] Error:', error)
+    return res.status(500).json({
+      error: 'Failed to extract profile',
+      details: error.message
+    })
   }
 }
+
+// ════════════════════════════════════════════════════════════════════════════
+// STEP 1: PARSE DISCOVERY MESSAGES
+// ════════════════════════════════════════════════════════════════════════════
+
+function parseDiscoveryMessages(messages) {
+  /**
+   * Extract structured data from conversation
+   * Messages format: [{ role: "user"|"bot", text: "..." }]
+   */
+
+  const extracted = {
+    dream: {
+      ideal_role: null,
+      ideal_industry: null,
+      timeline: null,
+      why: null
+    },
+    current: {
+      role: null,
+      industry: null,
+      years_experience: null,
+      what_works: [],
+      frustrations: []
+    },
+    skills: {
+      top_3: [],
+      technical: [],
+      soft: [],
+      hidden: []
+    },
+    blockers: {
+      main: null,
+      secondary: [],
+      financial_constraint: false,
+      time_constraint: false,
+      location_constraint: false
+    },
+    motivation: {
+      reason_for_change: null,
+      success_definition: null,
+      support_system: null,
+      fear: null
+    },
+    readiness: {
+      commitment_level: 5, // 1-10
+      willing_to_learn: true,
+      ready_for_sacrifice: true,
+      timeline_realistic: true
+    }
+  }
+
+  // Iterate through messages and extract
+  for (const msg of messages) {
+    const text = msg.text?.toLowerCase() || ''
+    
+    // Extract role/industry
+    if (text.includes('saya') && (text.includes('kerja') || text.includes('role'))) {
+      // Attempt extraction
+      if (text.includes('manager')) extracted.current.role = 'Manager'
+      if (text.includes('developer')) extracted.current.role = 'Developer'
+      if (text.includes('analyst')) extracted.current.role = 'Analyst'
+      // ... etc
+    }
+
+    // Extract timeline
+    if (text.includes('tahun') || text.includes('tahun pengalaman')) {
+      const match = text.match(/(\d+)\s*tahun/)
+      if (match) extracted.current.years_experience = parseInt(match[1])
+    }
+
+    // Extract skills (simple keyword matching)
+    if (text.includes('skill') || text.includes('kemampuan')) {
+      // Could use Claude here for better extraction
+      // For now, basic keywords
+      if (text.includes('python')) extracted.skills.technical.push('Python')
+      if (text.includes('javascript')) extracted.skills.technical.push('JavaScript')
+      if (text.includes('leadership')) extracted.skills.soft.push('Leadership')
+      if (text.includes('komunikasi')) extracted.skills.soft.push('Communication')
+    }
+  }
+
+  return extracted
+}
+
+// ════════════════════════════════════════════════════════════════════════════
+// STEP 2: COMBINE WITH GENOME DATA
+// ════════════════════════════════════════════════════════════════════════════
+
+function combineProfileData(extracted, genomeData) {
+  /**
+   * Merge extracted data with genome scores
+   * Genome has: genome_scores, career_stage, growth_state, gps_steps, etc.
+   */
+
+  return {
+    ...extracted,
+    genome: {
+      scores: genomeData.genome_scores,
+      stage: genomeData.career_stage,
+      top_strength: genomeData.top_strength,
+      wow_insight: genomeData.wow_insight,
+      mentor_message: genomeData.mentor_message
+    },
+    growth_state: genomeData.growth_state,
+    gps_steps: genomeData.gps_steps
+  }
+}
+
+// ════════════════════════════════════════════════════════════════════════════
+// STEP 3: BUILD USER MODEL
+// ════════════════════════════════════════════════════════════════════════════
+
+function buildUserModel(userId, profile) {
+  /**
+   * Transform extracted + genome into user_models table format
+   */
+
+  const model = {
+    user_id: userId,
+    
+    // Goals
+    career_goal: profile.dream.ideal_role || 'To be determined',
+    income_goal: null, // Not directly from discovery, but can infer
+    
+    // Current situation
+    current_role: profile.current.role,
+    current_industry: profile.current.industry,
+    years_experience: profile.current.years_experience || 0,
+    
+    // Skills
+    skill_map: {
+      technical: profile.skills.technical,
+      soft: profile.skills.soft,
+      hidden: profile.skills.hidden,
+      gaps: estimateSkillGaps(profile)
+    },
+    
+    // Profile
+    strengths: [
+      profile.genome.top_strength,
+      ...inferStrengths(profile)
+    ].filter(Boolean),
+    
+    weaknesses: [
+      profile.blockers.main,
+      ...profile.blockers.secondary
+    ].filter(Boolean),
+    
+    // Psychology
+    personality_type: inferPersonality(profile), // Can infer from responses
+    learning_style: inferLearningStyle(profile),
+    
+    // Progress & engagement
+    career_readiness: profile.genome.growth_state.career_readiness || 0,
+    readiness_level: inferReadiness(profile.readiness),
+    success_patterns: [profile.genome.top_strength],
+    motivation_driver: profile.motivation.reason_for_change,
+    
+    // Constraints
+    constraints: {
+      financial: profile.blockers.financial_constraint,
+      time: profile.blockers.time_constraint,
+      location: profile.blockers.location_constraint
+    },
+    
+    // Metadata
+    discovery_completed_at: new Date().toISOString(),
+    last_updated: new Date().toISOString(),
+    
+    // Reference
+    genome_data: profile.genome,
+    gps_steps: profile.gps_steps
+  }
+
+  return model
+}
+
+// ════════════════════════════════════════════════════════════════════════════
+// HELPER FUNCTIONS
+// ════════════════════════════════════════════════════════════════════════════
+
+function estimateSkillGaps(profile) {
+  const target_skills = guessTargetSkills(profile.dream.ideal_role)
+  const current_skills = [
+    ...profile.skills.technical,
+    ...profile.skills.soft
+  ]
+  
+  return target_skills.filter(s => !current_skills.includes(s))
+}
+
+function guessTargetSkills(role) {
+  // Simple mapping, can be enhanced
+  const roleSkillMap = {
+    'Product Manager': ['Analytics', 'Communication', 'SQL', 'User Research'],
+    'Developer': ['Coding', 'Problem Solving', 'System Design'],
+    'Manager': ['Leadership', 'Communication', 'Strategic Thinking'],
+    'Analyst': ['Analytics', 'Excel', 'SQL', 'Business Acumen']
+  }
+  
+  return roleSkillMap[role] || []
+}
+
+function inferStrengths(profile) {
+  const strengths = []
+  
+  if (profile.current.what_works.length > 0) {
+    strengths.push(...profile.current.what_works)
+  }
+  
+  if (profile.skills.technical.length > 0) {
+    strengths.push('Technical Skills')
+  }
+  
+  if (profile.motivation.support_system) {
+    strengths.push('Support System')
+  }
+  
+  return strengths
+}
+
+function inferPersonality(profile) {
+  // Very simplified - in reality use assessment
+  if (profile.motivation.fear?.includes('public')) return 'Introvert'
+  if (profile.skills.soft.includes('Leadership')) return 'Extrovert'
+  return 'Ambivert'
+}
+
+function inferLearningStyle(profile) {
+  // Could detect from how they answer
+  // For now, default
+  return 'Practical'
+}
+
+function inferReadiness(readiness) {
+  const score = (
+    readiness.commitment_level / 10 +
+    (readiness.willing_to_learn ? 1 : 0) +
+    (readiness.ready_for_sacrifice ? 1 : 0) +
+    (readiness.timeline_realistic ? 1 : 0)
+  ) / 4
+  
+  if (score > 0.8) return 'High'
+  if (score > 0.5) return 'Medium'
+  return 'Low'
+}
+
+// ════════════════════════════════════════════════════════════════════════════
+// STEP 4: SAVE TO DATABASE
+// ════════════════════════════════════════════════════════════════════════════
+
+async function saveProfile(userId, userModel) {
+  const { data, error } = await supabase
+    .from('user_career_profiles')
+    .upsert(
+      {
+        user_id: userId,
+        ...userModel
+      },
+      { onConflict: 'user_id' }
+    )
+    .select()
+    .single()
+
+  if (error) {
+    throw new Error(`Failed to save profile: ${error.message}`)
+  }
+
+  return data
+}
+
+// ════════════════════════════════════════════════════════════════════════════
+// STEP 5: SAVE REFLECTION LOG
+// ════════════════════════════════════════════════════════════════════════════
+
+async function saveReflection(userId, extracted, genomeData) {
+  /**
+   * Save initial reflection after discovery
+   * Used for future pattern matching
+   */
+
+  const reflection = {
+    user_id: userId,
+    type: 'discovery_completion',
+    insight: {
+      wow_insight: genomeData.wow_insight,
+      mentor_message: genomeData.mentor_message,
+      career_readiness: genomeData.career_readiness,
+      top_strength: genomeData.top_strength
+    },
+    pattern: 'discovery_complete',
+    learning: 'Initial career DNA identified',
+    created_at: new Date().toISOString()
+  }
+
+  const { error } = await supabase
+    .from('reflections')
+    .insert(reflection)
+
+  if (error) {
+    console.warn('[extract-profile] Warning: Failed to save reflection:', error)
+    // Don't throw - reflection is optional
+  }
+}
+
+// ════════════════════════════════════════════════════════════════════════════
+// RESPONSE FORMAT
+// ════════════════════════════════════════════════════════════════════════════
+
+/**
+ * Success response:
+ * {
+ *   "success": true,
+ *   "profile": {
+ *     "user_id": "uuid",
+ *     "career_goal": "...",
+ *     "current_role": "...",
+ *     "skill_map": {...},
+ *     ...
+ *   },
+ *   "message": "Profile extracted and saved successfully"
+ * }
+ * 
+ * Error response:
+ * {
+ *   "error": "...",
+ *   "details": "..."
+ * }
+ */
+
+/**
+ * USAGE:
+ * 
+ * Called from GenomeResult.jsx:
+ * 
+ * fetch('/api/extract-profile', {
+ *   method: 'POST',
+ *   headers: { 'Content-Type': 'application/json' },
+ *   body: JSON.stringify({
+ *     userId: user.id,
+ *     messages: discoveryMessages,
+ *     genomeData: genomeResult
+ *   })
+ * })
+ * .then(r => r.json())
+ * .then(data => {
+ *   if (data.success) {
+ *     // Redirect to /chat
+ *     navigate('/chat')
+ *   }
+ * })
+ */
