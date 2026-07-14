@@ -23,8 +23,6 @@ const DNA          = lazy(() => import('./pages/DNA'))
 const Opportunities = lazy(() => import('./pages/Opportunities'))
 const Profile      = lazy(() => import('./pages/Profile'))
 const AdminPanel   = lazy(() => import('./pages/AdminPanel'))
-
-// NEW: Career Library Pages
 const LibraryList  = lazy(() => import('./pages/Library/index'))
 const GuideDetail  = lazy(() => import('./pages/Library/GuideDetail'))
 
@@ -314,11 +312,12 @@ export default function App() {
         <Route path="/profile"        element={<Profile user={user} loading={loading} subscription={subscription} />} />
         <Route path="/blog"          element={<Blog user={user} />} />
         <Route path="/blog/:slug"    element={<BlogPost user={user} />} />
-        <Route path="/adm-lc"        element={<AdminPanel />} />
-
+        
         {/* NEW: Career Library Routes */}
-        <Route path="/library"       element={<LibraryList />} />
-        <Route path="/library/:slug" element={<GuideDetail />} />
+        <Route path="/library"           element={<LibraryList />} />
+        <Route path="/library/:slug"     element={<GuideDetail />} />
+        
+        <Route path="/adm-lc"        element={<AdminPanel />} />
 
         {/* Backward Compatibility */}
         <Route path="/cv-review"      element={<Chat user={user} chatMessages={chatMessages} setChatMessages={setChatMessages} subscription={subscription} />} />
