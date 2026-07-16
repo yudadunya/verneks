@@ -638,20 +638,18 @@ const CV_FORMAT_PROMPTS = {
 
 const INCOME_SYSTEM = `Kamu adalah Diah Anna, dalam mode "Income Engine" — bukan cuma ngobrol soal karier, tapi bantu user merencanakan kenaikan income secara konkret dan realistis.
 
-MISI: Gali informasi yang dibutuhkan Income Engine lewat percakapan natural (bukan form), lalu arahkan user untuk klik tombol "Lihat Strategi Income" begitu data sudah cukup.
-
-Data yang perlu digali (natural, satu per satu, jangan sekaligus):
-1. Target income bulanan yang diinginkan
-2. Timeline (berapa bulan/tahun)
-3. Income saat ini (total, dari semua sumber)
-4. Waktu luang per minggu untuk side income/freelance (jam)
-5. Risk tolerance — apakah siap resign/switch kerja, atau harus tetap di job sekarang
-6. Skill yang dimiliki yang bisa dimonetisasi
+PENTING: Kamu SUDAH PUNYA profil karier user dari analisis Genome sebelumnya (target posisi, kekuatan, skill gap, career readiness — lihat konteks di bawah). JANGAN tanya ulang hal yang sudah kamu tahu dari situ. Fokus gali HANYA data spesifik income yang belum kamu punya:
+1. Target income bulanan yang diinginkan (angka rupiah)
+2. Timeline (berapa bulan)
+3. Income saat ini total (kalau belum ada di profil)
+4. Risk tolerance — siap switch kerja/build produk, atau harus tetap aman di job sekarang
+5. Waktu luang per minggu untuk side income/freelance (jam)
 
 ATURAN:
 - Maksimal 3 kalimat + 1 pertanyaan per giliran
+- Manfaatkan konteks genome yang sudah ada — contoh: "Karena target kamu ke posisi itu dan kekuatan utamamu di bidang tersebut, ini bisa jadi salah satu jalur income kamu nanti."
 - Bahasa Indonesia santai, hangat, seperti kakak yang paham finansial & karier
-- Setelah 5-6 data di atas terkumpul, bilang: "Oke, aku sudah punya cukup data. Klik 'Lihat Strategi Income' ya, aku siapin breakdown-nya 🎯"
+- Begitu 3 data inti (target, timeline, income sekarang) sudah kamu dapat dari jawaban user, JANGAN minta konfirmasi form apapun — cukup bilang "Oke, aku hitungin strategimu ya..." dan sistem akan otomatis menghitung serta menampilkan hasilnya di chat ini
 - JANGAN pernah kasih janji angka pasti dalam obrolan biasa — angka final hanya dari hasil kalkulasi Income Engine
 - JANGAN sebut diri sebagai AI/chatbot/sistem`
 
@@ -808,6 +806,67 @@ function buildIncomeStrategy(input) {
     recommended_paths: combined,
     monthly_projection: generateMonthlyProjection(currentIncome, combined, timelineMonths),
     total_projected: totalProjected,
+  }
+}
+
+async function saveIncomeStrategy(userId, inputs, strategy) {
+  // Nonaktifkan strategi lama, insert strategi baru sebagai active
+  await supabase.from('income_strategies').update({ is_active: false }).eq('user_id', userId).eq('is_active', true)
+
+  const { error: insertError } = await supabase.from('income_strategies').insert({
+    user_id: userId,
+    current_income: inputs.current_monthly_income,
+    target_income: inputs.target_monthly_income,
+    timeline_months: inputs.timeline_months,
+    feasibility: strategy.feasibility,
+    confidence: strategy.confidence,
+    recommended_paths: strategy.recommended_paths,
+    monthly_projection: strategy.monthly_projection,
+    is_active: true,
+  })
+  if (insertError) console.error('[income-strategy] insert error:', insertError.message)
+
+  await supabase.from('user_career_profiles').update({
+    current_monthly_income: inputs.current_monthly_income,
+    target_monthly_income: inputs.target_monthly_income,
+    income_timeline_months: inputs.timeline_months,
+    income_goal_set_at: new Date().toISOString(),
+  }).eq('user_id', userId)
+}
+
+// Ekstraksi data income dari percakapan 'income-chat' — dipakai supaya Diah
+// Anna bisa otomatis hitung strategi TANPA form terpisah, begitu data yang
+// dibutuhkan sudah lengkap disebut secara natural dalam obrolan.
+async function extractIncomeDataFromChat(apiMessages, careerProfile) {
+  const convoText = apiMessages.slice(-16).map(m => `${m.role === 'user' ? 'User' : 'Diah Anna'}: ${m.content.slice(0, 300)}`).join('\n')
+  const knownIncome = careerProfile?.current_monthly_income || null
+
+  const prompt = `Percakapan income mode:\n${convoText}\n\nData yang sudah tersimpan sebelumnya (kalau ada): income sekarang = ${knownIncome || 'belum diketahui'}.
+
+Ekstrak data berikut dari percakapan HANYA jika disebutkan secara eksplisit oleh user (angka rupiah, bukan estimasi kamu):
+{
+  "current_monthly_income": angka_rupiah_atau_null,
+  "target_monthly_income": angka_rupiah_atau_null,
+  "timeline_months": angka_bulan_atau_null,
+  "risk_tolerance": "low|medium|high|null",
+  "time_available_hours_per_week": angka_jam_atau_null,
+  "ready": true_jika_current_DAN_target_DAN_timeline_sudah_ada_false_jika_belum
+}
+Output HANYA JSON valid, tanpa markdown, tanpa penjelasan.`
+
+  const raw = await generateText({
+    system: 'Kamu adalah mesin ekstraksi JSON. Output HANYA JSON valid.',
+    prompt,
+    maxTokens: 150,
+    tier: 'fast',
+    plan: 'free',
+  })
+
+  try {
+    const clean = raw.trim().replace(/^```json\s*/i, '').replace(/^```\s*/i, '').replace(/\s*```$/, '').trim()
+    return JSON.parse(clean)
+  } catch {
+    return { ready: false }
   }
 }
 
@@ -996,7 +1055,7 @@ async function handleCareerCoach(req, res) {
     if (!usage.allowed) return res.status(403).json({ error: 'Kuota Income Strategy habis. Upgrade ke Premium untuk generate ulang kapan saja.', limitReached: true })
 
     try {
-      const strategy = buildIncomeStrategy({
+      const inputs = {
         current_monthly_income,
         target_monthly_income,
         timeline_months,
@@ -1004,31 +1063,9 @@ async function handleCareerCoach(req, res) {
         time_available_hours_per_week,
         years_in_current_role,
         has_relevant_skills,
-      })
-
-      // Nonaktifkan strategi lama, insert strategi baru sebagai active
-      await supabase.from('income_strategies').update({ is_active: false }).eq('user_id', userId).eq('is_active', true)
-
-      const { error: insertError } = await supabase.from('income_strategies').insert({
-        user_id: userId,
-        current_income: current_monthly_income,
-        target_income: target_monthly_income,
-        timeline_months,
-        feasibility: strategy.feasibility,
-        confidence: strategy.confidence,
-        recommended_paths: strategy.recommended_paths,
-        monthly_projection: strategy.monthly_projection,
-        is_active: true,
-      })
-      if (insertError) console.error('[income-strategy] insert error:', insertError.message)
-
-      await supabase.from('user_career_profiles').update({
-        current_monthly_income,
-        target_monthly_income,
-        income_timeline_months: timeline_months,
-        income_goal_set_at: new Date().toISOString(),
-      }).eq('user_id', userId)
-
+      }
+      const strategy = buildIncomeStrategy(inputs)
+      await saveIncomeStrategy(userId, inputs, strategy)
       return res.status(200).json({ success: true, strategy })
     } catch (error) {
       console.error('[income-strategy] error:', error.message)
@@ -1198,7 +1235,7 @@ ${learnedPatterns.map((p, i) => `${i + 1}. ${p.pattern_category}: ${p.pattern_de
   }
 
   // ════════════════════════════════════════════
-  // ACTION: INCOME ENGINE — DISCOVERY CHAT
+  // ACTION: INCOME ENGINE — DISCOVERY CHAT (genome-aware, auto-compute)
   // ════════════════════════════════════════════
   if (action === 'income-chat') {
     const { messages: incomeMessages } = req.body
@@ -1213,12 +1250,18 @@ ${learnedPatterns.map((p, i) => `${i + 1}. ${p.pattern_category}: ${p.pattern_de
         content: m.text || m.content || '',
       })).filter(m => m.content)
 
-      const contextNote = careerProfile?.target_posisi
-        ? `\n\nKonteks user: target posisi "${careerProfile.target_posisi}", income sekarang ${careerProfile.current_monthly_income ? `Rp ${careerProfile.current_monthly_income}` : 'belum diketahui'}.`
-        : ''
+      // Konteks dari profil Genome yang sudah dianalisis — supaya Diah Anna
+      // tidak nanya ulang hal yang sudah diketahui sistem.
+      const genomeContext = `\n\nKonteks profil user (dari Genome & Career Profile, JANGAN ditanya ulang):
+- Target posisi: ${careerProfile?.target_posisi || 'belum diketahui'}
+- Kekuatan utama: ${genomeData?.top_strength || topGenomeDimensions}
+- Skill gap: ${skillGapsArr.length ? skillGapsArr.join(', ') : 'belum teridentifikasi'}
+- Career readiness: ${careerProfile?.career_readiness || 0}%
+- Income sekarang (kalau sudah pernah diisi): ${careerProfile?.current_monthly_income ? `Rp ${careerProfile.current_monthly_income}` : 'belum diketahui'}
+- Income target (kalau sudah pernah diisi): ${careerProfile?.target_monthly_income ? `Rp ${careerProfile.target_monthly_income}` : 'belum diketahui'}`
 
       const reply = await generateChat({
-        system: INCOME_SYSTEM + contextNote,
+        system: INCOME_SYSTEM + genomeContext,
         messages: apiMessages,
         maxTokens: 250,
         tier: 'fast',
@@ -1226,12 +1269,47 @@ ${learnedPatterns.map((p, i) => `${i + 1}. ${p.pattern_category}: ${p.pattern_de
       })
 
       const userCount = incomeMessages.filter(m => m.role === 'user').length
-      return res.status(200).json({ reply, showStrategyButton: userCount >= 5 })
+
+      // Baru coba extract & auto-compute setelah percakapan cukup (hemat token,
+      // tidak extract di setiap giliran).
+      let strategy = null
+      let strategyLimitReached = false
+      if (userCount >= 3) {
+        const extracted = await extractIncomeDataFromChat(apiMessages, careerProfile)
+        const currentIncome = extracted.current_monthly_income || careerProfile?.current_monthly_income
+        const targetIncome  = extracted.target_monthly_income  || careerProfile?.target_monthly_income
+
+        if (extracted.ready && currentIncome && targetIncome) {
+          const strategyUsage = await checkAndLogUsage(userId, plan, 'income-strategy')
+          if (!strategyUsage.allowed) {
+            strategyLimitReached = true
+          } else {
+            // Genome-informed defaults — tidak perlu tanya ulang skill user,
+            // dipakai dari hasil analisis Genome yang sudah ada.
+            const hasRelevantSkills = (careerProfile?.career_readiness || 0) >= 40 || skillGapsArr.length <= 2
+            const yearsInRole = careerProfile?.posisi_saat_ini ? 2 : 1
+
+            const inputs = {
+              current_monthly_income: currentIncome,
+              target_monthly_income: targetIncome,
+              timeline_months: extracted.timeline_months || 6,
+              risk_tolerance: extracted.risk_tolerance || 'medium',
+              time_available_hours_per_week: extracted.time_available_hours_per_week || 10,
+              years_in_current_role: yearsInRole,
+              has_relevant_skills: hasRelevantSkills,
+            }
+            strategy = buildIncomeStrategy(inputs)
+            await saveIncomeStrategy(userId, inputs, strategy)
+          }
+        }
+      }
+
+      return res.status(200).json({ reply, strategy, strategyLimitReached })
     } catch (error) {
       console.error('[income-chat] error:', error.message)
       return res.status(200).json({
         reply: 'Eh, sori koneksiku lagi keganggu nih. Boleh diulang kalimat terakhirmu? 😊',
-        showStrategyButton: false,
+        strategy: null,
       })
     }
   }
