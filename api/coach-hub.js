@@ -1,12 +1,37 @@
+// api/coach-hub.js
+// ═══════════════════════════════════════════════════════════════════════════
+// FILE GABUNGAN — merge dari 4 endpoint terpisah:
+//   - api/career-coach.js    (target=career-coach)  → handleCareerCoach
+//   - api/chat-history.js    (target=chat-history)   → handleChatHistory
+//   - api/discovery-coach.js (target=discovery-coach)→ handleDiscoveryCoach
+//   - api/end-session.js     (target=end-session)    → handleEndSession
+//
+// Tidak ada logic yang diubah dari file aslinya — hanya digabung jadi satu
+// file + dispatcher di bagian paling bawah. Supaya frontend (Chat.jsx,
+// Discovery.jsx) TIDAK perlu diubah sama sekali, tambahkan rewrites di
+// vercel.json supaya URL lama tetap jalan dan diarahkan ke file ini dengan
+// query `target` (lihat catatan vercel.json yang disertakan terpisah).
+// ═══════════════════════════════════════════════════════════════════════════
+
 import { generateText, generateChat } from './lib/ai.js'
 import { createClient } from '@supabase/supabase-js'
 import { createHash } from 'crypto'
 
-const supabase = createClient(
-  process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL,
-  process.env.SUPABASE_SERVICE_ROLE_KEY
-)
+// Satu client Supabase dipakai bersama oleh semua handler (service role,
+// fallback ke anon key kalau service role tidak ada — sama seperti
+// chat-history.js aslinya; career-coach.js & end-session.js aslinya selalu
+// pakai service role key, jadi kalau SUPABASE_SERVICE_ROLE_KEY tidak ada,
+// perilakunya sama seperti sebelumnya juga: `undefined` diteruskan apa adanya
+// ke createClient untuk 2 handler tsb — TIDAK diubah).
+const supabaseUrl = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL
+const serviceKey  = process.env.SUPABASE_SERVICE_ROLE_KEY
+const anonKey     = process.env.SUPABASE_ANON_KEY || process.env.VITE_SUPABASE_ANON_KEY
+const supabase    = createClient(supabaseUrl, serviceKey || anonKey)
 
+
+// ═══════════════════════════════════════════════════════════════════════════
+// ══════════════════════ HANDLER: CAREER-COACH ═══════════════════════════════
+// ═══════════════════════════════════════════════════════════════════════════
 // ── [OPTIMIZATION] RULE-BASED RESPONSES — Hemat ~25% AI calls ────────────────
 const RULE_BASED_PATTERNS = [
   {
@@ -603,8 +628,8 @@ const CV_FORMAT_PROMPTS = {
   },
 }
 
-// ── MAIN HANDLER ─────────────────────────────────────────────────────────────
-export default async function handler(req, res) {
+
+async function handleCareerCoach(req, res) {
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' })
 
   const { action = 'chat' } = req.body
@@ -1029,5 +1054,311 @@ ${learnedPatterns.length > 0 ? `\n\n[RSI ACTIVE] Kamu sudah belajar dari ${learn
   } catch (error) {
     console.error('[career-coach] chat error:', error)
     return res.status(500).json({ error: 'Diah Anna lagi bersiap, tunggu sebentar ya!' })
+  }
+}
+
+
+// ═══════════════════════════════════════════════════════════════════════════
+// ══════════════════════ HANDLER: CHAT-HISTORY ═══════════════════════════════
+// ═══════════════════════════════════════════════════════════════════════════
+async function handleChatHistory(req, res) {
+  // Allow CORS untuk sendBeacon
+  res.setHeader('Access-Control-Allow-Origin', '*')
+  res.setHeader('Access-Control-Allow-Methods', 'GET,POST,OPTIONS')
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type')
+  if (req.method === 'OPTIONS') return res.status(200).end()
+
+  try {
+    // Parse body — sendBeacon kirim sebagai text/plain kadang
+    let body = req.body
+    if (typeof body === 'string') {
+      try { body = JSON.parse(body) } catch { body = {} }
+    }
+
+    // Parse query params — req.query kadang kosong di Vercel, fallback ke URL manual
+    let query = req.query || {}
+    if (!query.userId && req.url) {
+      const urlObj = new URL(req.url, 'https://verneks.my.id')
+      query = Object.fromEntries(urlObj.searchParams.entries())
+    }
+
+    const isGet   = req.method === 'GET'
+    const userId  = isGet ? query.userId   : body?.userId
+    const date    = isGet ? query.date     : body?.date
+    const messages = isGet ? null          : body?.messages
+
+    const daysBack = isGet ? (query.daysBack || 1) : null
+
+    if (!userId) return res.status(400).json({ error: 'userId required' })
+
+    // ── GET: load history hari ini ──────────────────────────
+    if (isGet) {
+      const today = new Date().toISOString().slice(0, 10)
+
+      const { data, error } = await supabase
+        .from('user_chat_history')
+        .select('session_date, messages')
+        .eq('user_id', userId)
+        .eq('session_date', today)
+        .maybeSingle()
+
+      if (error) {
+        console.error('[chat-history GET] error:', error.message, error.code)
+        return res.status(500).json({ error: error.message, code: error.code })
+      }
+
+      return res.status(200).json({
+        today: data?.messages || [],
+      })
+    }
+
+    // ── POST: upsert history hari ini ──────────────────────
+    if (req.method === 'POST') {
+      if (!messages || !Array.isArray(messages)) {
+        return res.status(400).json({ error: 'messages array required' })
+      }
+
+      const sessionDate = date || new Date().toISOString().slice(0, 10)
+
+      const { error } = await supabase
+        .from('user_chat_history')
+        .upsert({
+          user_id:      userId,
+          session_date: sessionDate,
+          messages:     messages.slice(-50),
+          updated_at:   new Date().toISOString(),
+        }, { onConflict: 'user_id,session_date' })
+
+      if (error) {
+        console.error('[chat-history POST] error:', error.message, error.code, error.details)
+        return res.status(500).json({ error: error.message, code: error.code })
+      }
+
+      return res.status(200).json({ success: true })
+    }
+
+    return res.status(405).json({ error: 'Method not allowed' })
+
+  } catch (err) {
+    console.error('[chat-history] unexpected error:', err.message)
+    return res.status(500).json({ error: err.message })
+  }
+}
+
+
+// ═══════════════════════════════════════════════════════════════════════════
+// ══════════════════════ HANDLER: DISCOVERY-COACH ════════════════════════════
+// ═══════════════════════════════════════════════════════════════════════════
+async function handleDiscoveryCoach(req, res) {
+  if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' })
+
+  const { messages } = req.body
+  if (!messages?.length) return res.status(400).json({ error: 'Missing messages' })
+
+  try {
+    const apiMessages = messages.map(m => ({
+      role: m.role === 'bot' || m.role === 'assistant' ? 'assistant' : 'user',
+      content: m.text || m.content || ''
+    })).filter(m => m.content)
+
+    const reply = await generateChat({
+      system: DISCOVERY_SYSTEM,
+      messages: apiMessages,
+      maxTokens: 220,
+      tier: 'fast',
+      plan: 'free' // Sesuai komentar: mode discovery tidak butuh auth / free tier
+    })
+
+    const userCount = messages.filter(m => m.role === 'user').length
+    
+    // Diselaraskan dengan instruksi prompt (Diah Anna mulai menutup di pertanyaan ke 7-8)
+    return res.status(200).json({
+      reply,
+      showResultButton: userCount >= 7,
+      discoveryComplete: userCount >= 8,
+    })
+  } catch (e) {
+    console.error('[discovery-coach]', e)
+    
+    // Menyediakan respon fallback yang aman dan natural jika seluruh API LLM down
+    return res.status(200).json({
+      reply: "Eh, sori banget koneksiku mendadak agak terganggu nih. Boleh coba ketik ulang kalimat terakhirmu tadi? Aku pengen denger kelanjutannya. 😊",
+      showResultButton: false,
+      discoveryComplete: false
+    })
+  }
+}
+
+
+// ═══════════════════════════════════════════════════════════════════════════
+// ══════════════════════ HANDLER: END-SESSION ════════════════════════════════
+// ═══════════════════════════════════════════════════════════════════════════
+async function handleEndSession(req, res) {
+  if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' })
+
+  try {
+    // Parse body — sendBeacon kirim sebagai text/plain
+    let body = req.body
+    if (typeof body === 'string') {
+      try { body = JSON.parse(body) } catch { body = {} }
+    }
+    if (!body || typeof body !== 'object') body = {}
+
+    const { userId, messages: sessionMsgs, trigger } = body
+    if (!userId) return res.status(400).json({ error: 'userId required' })
+
+    const today = new Date().toISOString().slice(0, 10)
+
+    // ── Step 0: Simpan chat history (selalu) ────────────────────────────────
+    if (Array.isArray(sessionMsgs) && sessionMsgs.length > 0) {
+      try {
+        await supabase.from('user_chat_history').upsert({
+          user_id:      userId,
+          session_date: today,
+          messages:     sessionMsgs.slice(-50),
+          updated_at:   new Date().toISOString(),
+        }, { onConflict: 'user_id,session_date' })
+      } catch(e) { console.error('[end-session] history save error:', e.message) }
+    }
+
+    // Guard: minimal 3 pesan user
+    const userMsgCount = (sessionMsgs || []).filter(m => m.role === 'user').length
+    if (userMsgCount < 3) return res.status(200).json({ skipped: true, reason: 'session_too_short' })
+
+    // Cek capsule hari ini sudah ada
+    const { data: todayCapsule } = await supabase
+      .from('memory_capsule_log').select('id')
+      .eq('user_id', userId).eq('capsule_date', today).maybeSingle()
+    if (todayCapsule) return res.status(200).json({ skipped: true, reason: 'capsule_exists_today' })
+
+    // Load existing memory
+    const { data: existing } = await supabase
+      .from('user_career_profiles')
+      .select('nama, target_posisi, diah_anna_memory, user_depth_profile, depth_score')
+      .eq('user_id', userId).maybeSingle()
+
+    const currentMemory       = existing?.diah_anna_memory    || null
+    const currentDepthProfile = existing?.user_depth_profile  || {}
+    const currentDepthScore   = existing?.depth_score         || 0
+
+    const convoText = (sessionMsgs || []).slice(-20)
+      .map(m => `${m.role === 'user' ? 'User' : 'Diah Anna'}: ${(m.text || m.content || '').slice(0, 300)}`)
+      .filter(l => l.length > 15).join('\n')
+
+    // ── Step 1: Eval — ada hal baru? ────────────────────────────────────────
+    const evalResult = await generateText({
+      system: 'Jawab hanya YA atau TIDAK.',
+      prompt: `Memori lama:\n${currentMemory || '(belum ada)'}\n\nPercakapan:\n${convoText}\n\nAda hal baru yang belum ada di memori lama?`,
+      maxTokens: 5, tier: 'fast', plan: 'free',
+    })
+
+    const hasNewInsight = evalResult.trim().toUpperCase().startsWith('Y')
+
+    if (!hasNewInsight) {
+      try {
+        await supabase.from('memory_capsule_log').upsert({
+          user_id: userId, capsule_date: today,
+          capsule_text: '[no new insight]', granularity: 'daily',
+        }, { onConflict: 'user_id,capsule_date' })
+      } catch(e) { console.error('[end-session] capsule upsert error:', e.message) }
+      return res.status(200).json({ skipped: true, reason: 'no_new_insight' })
+    }
+
+    // ── Step 2: Generate capsule + memory baru (1 call) ─────────────────────
+    const combinedRaw = await generateText({
+      system: 'Output HANYA JSON valid. Tanpa backtick, tanpa preamble.',
+      prompt: `Kamu adalah memori Diah Anna di Verneks.
+User: ${existing?.nama || 'User'} | Target: ${existing?.target_posisi || '-'}
+Memori lama:\n${currentMemory || '(belum ada)'}
+Percakapan:\n${convoText}
+
+JSON:
+{
+  "capsule": "ringkasan hari ini 80-100 kata — apa yang dibahas, apa yang baru terungkap",
+  "new_memory": "tulis ulang memori Diah Anna 150-200 kata, gabungkan lama+baru, narasi personal",
+  "coach_style_fit": "direct-challenger/nurturing-supporter/analytical-guide/creative-explorer",
+  "last_emotional_state": "kondisi emosi user 3 kata",
+  "motivators": ["hal1","hal2"],
+  "blockers": ["hal1","hal2"]
+}`,
+      maxTokens: 500, tier: 'smart', plan: 'premium',
+    })
+
+    let parsed = {}
+    try {
+      const clean = combinedRaw.trim()
+        .replace(/^```json\s*/i,'').replace(/^```\s*/i,'').replace(/\s*```$/,'').trim()
+      parsed = JSON.parse(clean)
+    } catch {
+      console.warn('[end-session] JSON parse failed')
+      return res.status(200).json({ skipped: true, reason: 'parse_failed' })
+    }
+
+    // ── Step 3: Update depth profile ────────────────────────────────────────
+    const newDepthProfile = {
+      ...currentDepthProfile,
+      coach_style_fit:      parsed.coach_style_fit      || currentDepthProfile.coach_style_fit,
+      last_emotional_state: parsed.last_emotional_state || currentDepthProfile.last_emotional_state,
+      emotional_triggers: {
+        motivators: parsed.motivators?.length ? parsed.motivators : (currentDepthProfile.emotional_triggers?.motivators || []),
+        blockers:   parsed.blockers?.length   ? parsed.blockers   : (currentDepthProfile.emotional_triggers?.blockers   || []),
+      },
+    }
+    const newDepthScore = Math.min(100, currentDepthScore + 5)
+
+    // ── Step 4: Simpan semua parallel ───────────────────────────────────────
+    await Promise.all([
+      supabase.from('memory_capsule_log').upsert({
+        user_id: userId, capsule_date: today,
+        capsule_text: parsed.capsule || '', granularity: 'daily',
+      }, { onConflict: 'user_id,capsule_date' }),
+      supabase.from('user_career_profiles').update({
+        diah_anna_memory:   parsed.new_memory?.trim() || currentMemory,
+        user_depth_profile: newDepthProfile,
+        depth_score:        newDepthScore,
+        memory_updated_at:  new Date().toISOString(),
+      }).eq('user_id', userId),
+    ])
+
+    return res.status(200).json({ success: true, depthScore: newDepthScore, trigger: trigger || 'unknown' })
+
+  } catch (error) {
+    console.error('[end-session] error:', error.message, error.stack)
+    return res.status(200).json({ error: error.message })
+  }
+}
+
+
+// ═══════════════════════════════════════════════════════════════════════════
+// ══════════════════════════ DISPATCHER (ROUTER) ═════════════════════════════
+// Menentukan handler mana yang dipanggil berdasarkan `target`.
+// `target` bisa datang dari query string (?target=...) — ini yang dipakai
+// oleh vercel.json rewrites — atau dari body.target kalau dikirim manual.
+// ═══════════════════════════════════════════════════════════════════════════
+export default async function handler(req, res) {
+  let target = req.query?.target
+
+  if (!target) {
+    let body = req.body
+    if (typeof body === 'string') {
+      try { body = JSON.parse(body) } catch { body = {} }
+    }
+    target = body?.target
+  }
+
+  switch (target) {
+    case 'chat-history':
+      return handleChatHistory(req, res)
+    case 'discovery-coach':
+      return handleDiscoveryCoach(req, res)
+    case 'end-session':
+      return handleEndSession(req, res)
+    case 'career-coach':
+      return handleCareerCoach(req, res)
+    default:
+      // Default ke career-coach (endpoint utama/paling sering dipanggil),
+      // sama seperti perilaku career-coach.js sebelumnya kalau tidak ada
+      // routing tambahan.
+      return handleCareerCoach(req, res)
   }
 }

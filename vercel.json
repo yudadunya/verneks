@@ -56,6 +56,22 @@
   ],
   "routes": [
     {
+      "src": "/api/career-coach",
+      "dest": "/api/coach-hub?target=career-coach"
+    },
+    {
+      "src": "/api/chat-history",
+      "dest": "/api/coach-hub?target=chat-history"
+    },
+    {
+      "src": "/api/discovery-coach",
+      "dest": "/api/coach-hub?target=discovery-coach"
+    },
+    {
+      "src": "/api/end-session",
+      "dest": "/api/coach-hub?target=end-session"
+    },
+    {
       "src": "/api/(.*)",
       "dest": "/api/$1"
     },
