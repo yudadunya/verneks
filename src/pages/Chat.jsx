@@ -18,6 +18,42 @@ function renderMd(text) {
     .replace(/\n/g, '<br>')
 }
 
+function fmtRupiah(n) {
+  if (n == null || isNaN(n)) return '-'
+  return 'Rp ' + Math.round(n).toLocaleString('id-ID')
+}
+
+function formatIncomeStrategy(strategy) {
+  const feasibilityLabel = {
+    FEASIBLE: '✅ Realistis dicapai',
+    CLOSE_TO_TARGET: '🟡 Mendekati target',
+    NEEDS_ADJUSTMENT: '🟠 Perlu penyesuaian',
+    ALREADY_ACHIEVED: '🎉 Target sudah tercapai',
+  }[strategy.feasibility] || strategy.feasibility
+
+  let out = `## 📊 Strategi Income Kamu\n\n`
+  out += `**Status:** ${feasibilityLabel}\n`
+  out += `**Tingkat keyakinan:** ${Math.round((strategy.confidence || 0) * 100)}%\n`
+  out += `**Proyeksi akhir:** ${fmtRupiah(strategy.total_projected)}\n\n`
+
+  if (strategy.recommended_paths?.length) {
+    out += `### Jalur yang direkomendasikan\n`
+    strategy.recommended_paths.forEach(p => {
+      out += `- **${p.name}**: potensi +${fmtRupiah(p.potential)}/bulan, mulai penuh bulan ke-${p.timeline_months}, tingkat keberhasilan ${Math.round(p.success_rate * 100)}%\n`
+    })
+    out += `\n`
+  }
+
+  if (strategy.monthly_projection?.length) {
+    out += `### Proyeksi bulanan\n`
+    strategy.monthly_projection.forEach(m => {
+      out += `- Bulan ${m.month}: ${fmtRupiah(m.projected_income)}\n`
+    })
+  }
+
+  return out
+}
+
 async function apiFetch(url, body) {
   const resp = await fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) })
   const text = await resp.text()
@@ -53,6 +89,68 @@ const DEFAULT_SUBSCRIPTION = {
 // Single source of truth sekarang adalah api/career-coach.js (action: 'init-chat'),
 // supaya prioritas next-focus tidak pernah drift antara client dan server.
 
+function IncomeStrategyForm({ onSubmit, onClose, loading }) {
+  const [current, setCurrent] = useState('')
+  const [target, setTarget]   = useState('')
+  const [timeline, setTimeline] = useState('6')
+  const [hours, setHours]     = useState('10')
+  const [risk, setRisk]       = useState('medium')
+
+  const submit = () => {
+    if (!current || !target) return
+    onSubmit({
+      current_monthly_income: Number(current),
+      target_monthly_income: Number(target),
+      timeline_months: Number(timeline) || 6,
+      time_available_hours_per_week: Number(hours) || 10,
+      risk_tolerance: risk,
+    })
+  }
+
+  return (
+    <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', zIndex: 50, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 }}>
+      <div style={{ background: '#fff', borderRadius: 16, padding: 20, width: '100%', maxWidth: 380, maxHeight: '85vh', overflowY: 'auto' }}>
+        <div style={{ fontWeight: 700, fontSize: '1rem', marginBottom: 12 }}>📊 Hitung Strategi Income</div>
+
+        <label style={{ fontSize: '0.78rem', fontWeight: 600, color: '#555' }}>Income sekarang (per bulan, Rp)</label>
+        <input type="number" value={current} onChange={e => setCurrent(e.target.value)} placeholder="60000000"
+          style={{ width: '100%', padding: '9px 12px', borderRadius: 8, border: '1px solid #ddd', margin: '4px 0 10px', fontSize: '0.85rem' }} />
+
+        <label style={{ fontSize: '0.78rem', fontWeight: 600, color: '#555' }}>Target income (per bulan, Rp)</label>
+        <input type="number" value={target} onChange={e => setTarget(e.target.value)} placeholder="100000000"
+          style={{ width: '100%', padding: '9px 12px', borderRadius: 8, border: '1px solid #ddd', margin: '4px 0 10px', fontSize: '0.85rem' }} />
+
+        <label style={{ fontSize: '0.78rem', fontWeight: 600, color: '#555' }}>Timeline (bulan)</label>
+        <input type="number" value={timeline} onChange={e => setTimeline(e.target.value)}
+          style={{ width: '100%', padding: '9px 12px', borderRadius: 8, border: '1px solid #ddd', margin: '4px 0 10px', fontSize: '0.85rem' }} />
+
+        <label style={{ fontSize: '0.78rem', fontWeight: 600, color: '#555' }}>Waktu luang per minggu (jam)</label>
+        <input type="number" value={hours} onChange={e => setHours(e.target.value)}
+          style={{ width: '100%', padding: '9px 12px', borderRadius: 8, border: '1px solid #ddd', margin: '4px 0 10px', fontSize: '0.85rem' }} />
+
+        <label style={{ fontSize: '0.78rem', fontWeight: 600, color: '#555' }}>Risk tolerance</label>
+        <select value={risk} onChange={e => setRisk(e.target.value)}
+          style={{ width: '100%', padding: '9px 12px', borderRadius: 8, border: '1px solid #ddd', margin: '4px 0 14px', fontSize: '0.85rem' }}>
+          <option value="low">Low — mau tetap aman di job sekarang</option>
+          <option value="medium">Medium — terbuka untuk side income/freelance</option>
+          <option value="high">High — siap switch kerja/build produk</option>
+        </select>
+
+        <div style={{ display: 'flex', gap: 8 }}>
+          <button onClick={onClose} disabled={loading}
+            style={{ flex: 1, padding: '10px', borderRadius: 8, border: '1px solid #ddd', background: '#fff', fontWeight: 600, fontSize: '0.85rem' }}>
+            Batal
+          </button>
+          <button onClick={submit} disabled={loading || !current || !target}
+            style={{ flex: 1, padding: '10px', borderRadius: 8, border: 'none', background: 'var(--wa-green)', color: '#fff', fontWeight: 700, fontSize: '0.85rem' }}>
+            {loading ? 'Menghitung...' : 'Hitung Strategi'}
+          </button>
+        </div>
+      </div>
+    </div>
+  )
+}
+
 export default function Chat({ user, chatMessages = [], setChatMessages, subscription = DEFAULT_SUBSCRIPTION }) {
   const navigate = useNavigate()
   const location = useLocation()
@@ -80,6 +178,9 @@ export default function Chat({ user, chatMessages = [], setChatMessages, subscri
   const [mode, setMode]                 = useState('coach')
   const [cvText, setCvText]             = useState('')
   const [interview, setInterview]       = useState({ position: '', level: '', messages: [], qNum: 0 })
+  const [incomeMode, setIncomeMode]     = useState(false)
+  const [showIncomeForm, setShowIncomeForm] = useState(false)
+  const [incomeFormLoading, setIncomeFormLoading] = useState(false)
   
   const coachKey         = user?.id ? `lc_coach_${user.id}` : null
   const greetingFiredRef = useRef(false)
@@ -375,10 +476,17 @@ export default function Chat({ user, chatMessages = [], setChatMessages, subscri
       }, 800)
     }
 
-    apiFetch('/api/career-coach', { messages: newHistory, userId: user?.id })
+    const requestBody = incomeMode
+      ? { action: 'income-chat', messages: newHistory, userId: user?.id }
+      : { messages: newHistory, userId: user?.id }
+
+    apiFetch('/api/career-coach', requestBody)
       .then(data => {
         const replyId = Date.now() + 1
-        pushBot(data.reply)
+        const quickReplies = incomeMode && data.showStrategyButton
+          ? [{ label: '📊 Lihat Strategi Income', action: 'open-income-form' }]
+          : null
+        pushBot(data.reply, quickReplies)
         const fullHistory = [...newHistory, { id: replyId, role: 'assistant', content: data.reply, text: data.reply }]
         setCoachHistory(fullHistory)
         // Save langsung dengan fullHistory yang sudah pasti lengkap
@@ -387,7 +495,7 @@ export default function Chat({ user, chatMessages = [], setChatMessages, subscri
           setWaitingForPositive(true)
         }
         const userMsgCount = fullHistory.filter(m => m.role === 'user').length
-        if (userMsgCount % 5 === 0) {
+        if (!incomeMode && userMsgCount % 5 === 0) {
           apiFetch('/api/extract-profile', { userId: user?.id, messages: fullHistory }).catch(() => {})
         }
       })
@@ -402,10 +510,48 @@ export default function Chat({ user, chatMessages = [], setChatMessages, subscri
       .finally(() => setLoading(false))
   }
 
+  const toggleIncomeMode = () => {
+    const next = !incomeMode
+    setIncomeMode(next)
+    if (next) {
+      pushBot('💰 **Income Mode aktif.** Ceritain, target income bulanan kamu berapa dan dalam berapa bulan pengen tercapai?')
+    } else {
+      pushBot('Oke, kita balik ke obrolan karier biasa ya 😊')
+    }
+  }
+
+  const handleIncomeFormSubmit = (formData) => {
+    setIncomeFormLoading(true)
+    apiFetch('/api/career-coach', { action: 'income-strategy', userId: user?.id, ...formData })
+      .then(data => {
+        pushBot(formatIncomeStrategy(data.strategy))
+        setShowIncomeForm(false)
+        setIncomeMode(false)
+      })
+      .catch(err => {
+        if (err.limitReached) {
+          pushBot('Kuota Income Strategy gratis kamu sudah dipakai 🙏 Upgrade ke Premium untuk generate ulang strategi kapan saja.')
+          setTimeout(() => window.dispatchEvent(new CustomEvent('show-upgrade', { detail: {} })), 1200)
+        } else {
+          pushBot('Gagal menghitung strategi income, coba lagi sebentar ya.')
+        }
+        setShowIncomeForm(false)
+      })
+      .finally(() => setIncomeFormLoading(false))
+  }
+
+
   return (
     <>
     <div ref={containerRef} style={{ position: 'fixed', top: 0, left: '50%', transform: 'translateX(-50%)', width: '100%', maxWidth: 480, height: 'calc(100vh - 65px)', display: 'flex', flexDirection: 'column', background: 'var(--wa-chat-bg)', overflow: 'hidden' }}>
       {showOnboarding && <Onboarding onDone={handleOnboardingDone} user={user} />}
+      {showIncomeForm && (
+        <IncomeStrategyForm
+          loading={incomeFormLoading}
+          onClose={() => setShowIncomeForm(false)}
+          onSubmit={handleIncomeFormSubmit}
+        />
+      )}
 
       <div style={{ background: 'var(--wa-header)', padding: '10px 16px', display: 'flex', alignItems: 'center', gap: '12px', flexShrink: 0, zIndex: 10 }}>
         <img src="/diah-anna.png" alt="Diah Anna" style={{ width: 42, height: 42, borderRadius: '50%', objectFit: 'cover', flexShrink: 0, border: '2px solid rgba(37,211,102,0.4)' }}/>
@@ -435,6 +581,25 @@ export default function Chat({ user, chatMessages = [], setChatMessages, subscri
             ⭐ {daysRemaining === 0 ? 'Hari ini terakhir' : `${daysRemaining} hari lagi`}
           </div>
         )}
+
+        <button
+          onClick={toggleIncomeMode}
+          title="Income Engine — rencanakan kenaikan income"
+          style={{
+            flexShrink: 0,
+            display: 'flex', alignItems: 'center', gap: 4,
+            padding: '5px 10px',
+            borderRadius: 999,
+            fontSize: '0.68rem', fontWeight: 700,
+            color: '#fff',
+            background: incomeMode ? 'rgba(255,215,0,0.28)' : 'rgba(255,255,255,0.12)',
+            border: `1px solid ${incomeMode ? 'rgba(255,215,0,0.7)' : 'rgba(255,255,255,0.25)'}`,
+            whiteSpace: 'nowrap',
+            cursor: 'pointer',
+          }}
+        >
+          💰 {incomeMode ? 'Income Mode' : 'Income'}
+        </button>
       </div>
 
       {showRenewalReminder && (
@@ -472,6 +637,19 @@ export default function Chat({ user, chatMessages = [], setChatMessages, subscri
                 <div dangerouslySetInnerHTML={{ __html: renderMd(msg.text) }} />
               </div>
             </div>
+            {msg.quickReplies && (
+              <div style={{ display: 'flex', justifyContent: 'flex-start', gap: 6, marginTop: 4, flexWrap: 'wrap' }}>
+                {msg.quickReplies.map((qr, i) => (
+                  <button
+                    key={i}
+                    onClick={() => { if (qr.action === 'open-income-form') setShowIncomeForm(true) }}
+                    style={{ background: '#fff', border: '1px solid var(--wa-green)', color: 'var(--wa-green-dark)', borderRadius: 999, padding: '6px 14px', fontSize: '0.78rem', fontWeight: 600, cursor: 'pointer' }}
+                  >
+                    {qr.label}
+                  </button>
+                ))}
+              </div>
+            )}
           </div>
           )
         })}
