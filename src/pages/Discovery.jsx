@@ -508,7 +508,7 @@ export default function Discovery() {
     setLoading(true)
 
     try {
-      const res = await fetch('/api/discovery-coach', {
+      const res = await fetch('/api/user-interactions', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ messages: newMessages })
