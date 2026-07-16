@@ -113,9 +113,9 @@ export default function Chat({ user, chatMessages = [], setChatMessages, subscri
     }
     const payload = JSON.stringify({ userId: user.id, messages: msgs.slice(-50) })
     if (useBeacon && navigator.sendBeacon) {
-      navigator.sendBeacon('/api/user-interactions', new Blob([payload], { type: 'application/json' }))
+      navigator.sendBeacon('/api/chat-history', new Blob([payload], { type: 'application/json' }))
     } else {
-      fetch('/api/user-interactions', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: payload, keepalive: true }).catch(() => {})
+      fetch('/api/chat-history', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: payload, keepalive: true }).catch(() => {})
     }
   }, [user?.id, coachKey])
 
@@ -143,7 +143,7 @@ export default function Chat({ user, chatMessages = [], setChatMessages, subscri
   useEffect(() => {
     if (!user?.id || historyLoaded) return
 
-    fetch(`/api/user-interactions?userId=${user.id}&daysBack=1`)
+    fetch(`/api/chat-history?userId=${user.id}&daysBack=1`)
       .then(r => r.json())
       .then(data => {
         if (data.error) { setHistoryLoaded(true); return }
@@ -195,14 +195,13 @@ export default function Chat({ user, chatMessages = [], setChatMessages, subscri
       userId:   user.id,
       messages: msgs.slice(-50),
       trigger:  triggerType,
-      action:   'end-session',
     })
 
     // sendBeacon pakai Blob text/plain — lebih reliable cross-browser
     if (triggerType !== 'logout' && navigator.sendBeacon) {
-      navigator.sendBeacon('/api/user-interactions', new Blob([payload], { type: 'text/plain' }))
+      navigator.sendBeacon('/api/end-session', new Blob([payload], { type: 'text/plain' }))
     } else {
-      fetch('/api/user-interactions', {
+      fetch('/api/end-session', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: payload,
@@ -246,7 +245,7 @@ export default function Chat({ user, chatMessages = [], setChatMessages, subscri
       setCoachHistory(newHistory);
       setLoading(true);
       
-      apiFetch('/api/user-interactions', { messages: newHistory, userId: user.id, careerProfile: {}, action: 'career-coach' })
+      apiFetch('/api/career-coach', { messages: newHistory, userId: user.id })
         .then(data => {
           pushBot(data.reply);
           setCoachHistory([...newHistory, { role: 'assistant', content: data.reply }]);
@@ -301,7 +300,7 @@ export default function Chat({ user, chatMessages = [], setChatMessages, subscri
     greetingFiredRef.current = true
     const firstName = (user.user_metadata?.name || user.user_metadata?.full_name || '').split(' ')[0]
 
-    apiFetch('/api/user-interactions', { action: 'init-chat', userId: user.id, careerProfile: {} })
+    apiFetch('/api/career-coach', { action: 'init-chat', userId: user.id })
       .then(data => {
         pushBot(data.openingMessage)
         setCoachHistory([
@@ -376,7 +375,7 @@ export default function Chat({ user, chatMessages = [], setChatMessages, subscri
       }, 800)
     }
 
-    apiFetch('/api/user-interactions', { messages: newHistory, userId: user?.id, careerProfile: {}, action: 'career-coach' })
+    apiFetch('/api/career-coach', { messages: newHistory, userId: user?.id })
       .then(data => {
         const replyId = Date.now() + 1
         pushBot(data.reply)
