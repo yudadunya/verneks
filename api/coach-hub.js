@@ -316,8 +316,8 @@ Output HARUS dalam format JSON valid dengan struktur:
 
 // ── KEAMANAN: plan & usage TIDAK PERNAH dipercaya dari client ────────────────
 const LIMITS = {
-  free:    { chat: 15, 'cv-review': 1, ats: 1, coach: 999, interview: 1, 'cv-maker': 1 },
-  premium: { chat: 999, 'cv-review': 999, ats: 999, coach: 999, interview: 999, 'cv-maker': 999 },
+  free:    { chat: 15, 'cv-review': 1, ats: 1, coach: 999, interview: 1, 'cv-maker': 1, 'income-strategy': 1 },
+  premium: { chat: 999, 'cv-review': 999, ats: 999, coach: 999, interview: 999, 'cv-maker': 999, 'income-strategy': 999 },
 }
 
 async function getRealPlan(userId) {
@@ -629,6 +629,188 @@ const CV_FORMAT_PROMPTS = {
 }
 
 
+// ── INCOME ENGINE ─────────────────────────────────────────────────────────────
+// Implementasi dari spesifikasi "Income Engine" (Phase 6). Kalkulasi
+// proyeksi & strategi income sengaja dibuat DETERMINISTIK (JS murni, bukan
+// AI) supaya angka yang ditampilkan ke user konsisten dan bisa di-audit —
+// AI (generateChat) hanya dipakai untuk percakapan/eksplorasi ('income-chat'),
+// bukan untuk itung-itungan rupiah.
+
+const INCOME_SYSTEM = `Kamu adalah Diah Anna, dalam mode "Income Engine" — bukan cuma ngobrol soal karier, tapi bantu user merencanakan kenaikan income secara konkret dan realistis.
+
+MISI: Gali informasi yang dibutuhkan Income Engine lewat percakapan natural (bukan form), lalu arahkan user untuk klik tombol "Lihat Strategi Income" begitu data sudah cukup.
+
+Data yang perlu digali (natural, satu per satu, jangan sekaligus):
+1. Target income bulanan yang diinginkan
+2. Timeline (berapa bulan/tahun)
+3. Income saat ini (total, dari semua sumber)
+4. Waktu luang per minggu untuk side income/freelance (jam)
+5. Risk tolerance — apakah siap resign/switch kerja, atau harus tetap di job sekarang
+6. Skill yang dimiliki yang bisa dimonetisasi
+
+ATURAN:
+- Maksimal 3 kalimat + 1 pertanyaan per giliran
+- Bahasa Indonesia santai, hangat, seperti kakak yang paham finansial & karier
+- Setelah 5-6 data di atas terkumpul, bilang: "Oke, aku sudah punya cukup data. Klik 'Lihat Strategi Income' ya, aku siapin breakdown-nya 🎯"
+- JANGAN pernah kasih janji angka pasti dalam obrolan biasa — angka final hanya dari hasil kalkulasi Income Engine
+- JANGAN sebut diri sebagai AI/chatbot/sistem`
+
+// Path template dasar — persentase "potential" terhadap gap (target - current income)
+// dan tingkat keberhasilan berdasarkan spesifikasi Income Engine.
+function buildIncomePaths(input) {
+  const { current_monthly_income, years_in_current_role = 1, has_relevant_skills = true, time_available_hours_per_week = 10, risk_tolerance = 'medium' } = input
+  const gap = Math.max(0, input.target_monthly_income - current_monthly_income)
+  const paths = []
+
+  // Path 1: Negosiasi gaji — butuh minimal cukup lama di role sekarang
+  if (years_in_current_role >= 1) {
+    paths.push({
+      name: 'Salary Negotiation',
+      potential: Math.round(gap * 0.20),
+      timeline_months: 1,
+      effort: 'low',
+      success_rate: 0.60,
+      steps: [
+        'Riset gaji pasar untuk posisi & levelmu',
+        'Dokumentasikan achievement yang measurable',
+        'Jadwalkan meeting dengan atasan',
+        'Presentasikan kasus negosiasi',
+        'Negosiasi sampai capai kesepakatan',
+      ],
+    })
+  }
+
+  // Path 2: Freelance / consulting — butuh skill relevan
+  if (has_relevant_skills) {
+    paths.push({
+      name: 'Freelance/Consulting',
+      potential: Math.round(gap * 0.40),
+      timeline_months: 3,
+      effort: 'high',
+      success_rate: 0.70,
+      steps: [
+        'Setup portfolio',
+        'Pilih 2-3 platform (Upwork, Fiverr, komunitas lokal)',
+        'Dapatkan 3 klien pertama',
+        'Deliver dengan kualitas tinggi',
+        'Naikkan rate & jumlah klien bertahap',
+      ],
+    })
+  }
+
+  // Path 3: Side income — selalu tersedia, effort rendah
+  paths.push({
+    name: 'Side Income',
+    potential: Math.round(gap * (time_available_hours_per_week >= 10 ? 0.15 : 0.08)),
+    timeline_months: 1,
+    effort: 'low',
+    success_rate: 0.85,
+    steps: [
+      'Pilih jenis side income (mengajar, konten, produk kecil)',
+      'Bangun presence (media sosial/marketplace)',
+      'Dapatkan pelanggan pertama',
+      'Jadikan recurring',
+    ],
+  })
+
+  // Path 4: Product/startup — hanya realistis kalau risk tolerance tinggi & waktu cukup
+  if (risk_tolerance === 'high' && time_available_hours_per_week >= 15) {
+    paths.push({
+      name: 'Product/Startup',
+      potential: Math.round(gap * 0.35),
+      timeline_months: 9,
+      effort: 'very high',
+      success_rate: 0.20,
+      steps: [
+        'Validasi ide produk/digital product',
+        'Bangun MVP',
+        'Dapatkan early users/customers',
+        'Iterasi berdasarkan feedback',
+        'Scale monetisasi',
+      ],
+    })
+  }
+
+  return paths
+}
+
+// Gabungkan path yang paling efisien (potential tertinggi dibagi timeline &
+// effort) sampai gap tertutup atau path habis — implementasi sederhana dari
+// combinePathsOptimally() di spesifikasi.
+function combinePathsOptimally(paths, gap, timelineMonths) {
+  const sorted = [...paths]
+    .filter(p => p.timeline_months <= timelineMonths) // buang path yang timeline-nya lebih lama dari target
+    .sort((a, b) => (b.potential / b.timeline_months) - (a.potential / a.timeline_months))
+
+  const combined = []
+  let covered = 0
+  for (const p of sorted) {
+    if (covered >= gap) break
+    combined.push(p)
+    covered += p.potential
+  }
+  return { combined, totalPotential: covered }
+}
+
+function calculateConfidence(combined) {
+  if (!combined.length) return 0.3
+  const avgSuccess = combined.reduce((sum, p) => sum + p.success_rate, 0) / combined.length
+  return Math.round(avgSuccess * 100) / 100
+}
+
+// Proyeksi income bulan-per-bulan — step-up begitu path mulai aktif
+// (path.timeline_months = bulan ke berapa path itu mulai berkontribusi penuh,
+// dengan ramp-up linear dari bulan mulai sampai selesai).
+function generateMonthlyProjection(currentIncome, combined, timelineMonths) {
+  const projection = []
+  for (let month = 1; month <= timelineMonths; month++) {
+    let monthIncome = currentIncome
+    for (const p of combined) {
+      const rampMonths = Math.max(1, p.timeline_months)
+      if (month >= 1) {
+        const progress = Math.min(1, month / rampMonths)
+        monthIncome += Math.round(p.potential * progress)
+      }
+    }
+    projection.push({ month, projected_income: monthIncome })
+  }
+  return projection
+}
+
+function buildIncomeStrategy(input) {
+  const currentIncome = input.current_monthly_income
+  const targetIncome  = input.target_monthly_income
+  const timelineMonths = input.timeline_months || 6
+  const gap = Math.max(0, targetIncome - currentIncome)
+
+  if (gap <= 0) {
+    return {
+      feasibility: 'ALREADY_ACHIEVED',
+      confidence: 1,
+      recommended_paths: [],
+      monthly_projection: [{ month: 0, projected_income: currentIncome }],
+      total_projected: currentIncome,
+    }
+  }
+
+  const paths = buildIncomePaths(input)
+  const { combined, totalPotential } = combinePathsOptimally(paths, gap, timelineMonths)
+  const confidence = calculateConfidence(combined)
+  const totalProjected = currentIncome + totalPotential
+
+  let feasibility = 'NEEDS_ADJUSTMENT'
+  if (totalProjected >= targetIncome) feasibility = 'FEASIBLE'
+  else if (totalProjected >= targetIncome * 0.8) feasibility = 'CLOSE_TO_TARGET'
+
+  return {
+    feasibility,
+    confidence,
+    recommended_paths: combined,
+    monthly_projection: generateMonthlyProjection(currentIncome, combined, timelineMonths),
+    total_projected: totalProjected,
+  }
+}
+
 async function handleCareerCoach(req, res) {
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' })
 
@@ -790,6 +972,118 @@ async function handleCareerCoach(req, res) {
   }
 
   // ════════════════════════════════════════════
+  // ACTION: INCOME ENGINE — GENERATE STRATEGY
+  // ════════════════════════════════════════════
+  if (action === 'income-strategy') {
+    const {
+      userId,
+      current_monthly_income,
+      target_monthly_income,
+      timeline_months = 6,
+      risk_tolerance = 'medium',
+      time_available_hours_per_week = 10,
+      years_in_current_role = 1,
+      has_relevant_skills = true,
+    } = req.body
+
+    if (!userId) return res.status(400).json({ error: 'userId wajib diisi.' })
+    if (!current_monthly_income || !target_monthly_income) {
+      return res.status(400).json({ error: 'current_monthly_income dan target_monthly_income wajib diisi.' })
+    }
+
+    const plan = await getRealPlan(userId)
+    const usage = await checkAndLogUsage(userId, plan, 'income-strategy')
+    if (!usage.allowed) return res.status(403).json({ error: 'Kuota Income Strategy habis. Upgrade ke Premium untuk generate ulang kapan saja.', limitReached: true })
+
+    try {
+      const strategy = buildIncomeStrategy({
+        current_monthly_income,
+        target_monthly_income,
+        timeline_months,
+        risk_tolerance,
+        time_available_hours_per_week,
+        years_in_current_role,
+        has_relevant_skills,
+      })
+
+      // Nonaktifkan strategi lama, insert strategi baru sebagai active
+      await supabase.from('income_strategies').update({ is_active: false }).eq('user_id', userId).eq('is_active', true)
+
+      const { error: insertError } = await supabase.from('income_strategies').insert({
+        user_id: userId,
+        current_income: current_monthly_income,
+        target_income: target_monthly_income,
+        timeline_months,
+        feasibility: strategy.feasibility,
+        confidence: strategy.confidence,
+        recommended_paths: strategy.recommended_paths,
+        monthly_projection: strategy.monthly_projection,
+        is_active: true,
+      })
+      if (insertError) console.error('[income-strategy] insert error:', insertError.message)
+
+      await supabase.from('user_career_profiles').update({
+        current_monthly_income,
+        target_monthly_income,
+        income_timeline_months: timeline_months,
+        income_goal_set_at: new Date().toISOString(),
+      }).eq('user_id', userId)
+
+      return res.status(200).json({ success: true, strategy })
+    } catch (error) {
+      console.error('[income-strategy] error:', error.message)
+      return res.status(500).json({ error: 'Gagal menghitung strategi income.' })
+    }
+  }
+
+  // ════════════════════════════════════════════
+  // ACTION: INCOME ENGINE — TRACK ACTUAL INCOME (bulanan)
+  // ════════════════════════════════════════════
+  if (action === 'income-track-update') {
+    const { userId, month, actual_main_job = 0, actual_freelance = 0, actual_side_income = 0, actual_other = 0 } = req.body
+    if (!userId || !month) return res.status(400).json({ error: 'userId dan month wajib diisi.' })
+
+    try {
+      const { data: activeStrategy } = await supabase
+        .from('income_strategies').select('monthly_projection')
+        .eq('user_id', userId).eq('is_active', true).maybeSingle()
+
+      const monthNum = new Date(month).getMonth() + 1
+      const projectedEntry = activeStrategy?.monthly_projection?.find(m => m.month === monthNum)
+      const projectedIncome = projectedEntry?.projected_income || null
+
+      const actualTotal = actual_main_job + actual_freelance + actual_side_income + actual_other
+      const variancePct = projectedIncome ? Math.round(((actualTotal - projectedIncome) / projectedIncome) * 10000) / 100 : null
+
+      const { error } = await supabase.from('income_tracking').upsert({
+        user_id: userId,
+        month,
+        projected_income: projectedIncome,
+        actual_main_job,
+        actual_freelance,
+        actual_side_income,
+        actual_other,
+        variance_pct: variancePct,
+        updated_at: new Date().toISOString(),
+      }, { onConflict: 'user_id,month' })
+
+      if (error) return res.status(500).json({ error: error.message })
+
+      const behindProjection = variancePct !== null && variancePct < -10
+      return res.status(200).json({
+        success: true,
+        actual_total: actualTotal,
+        projected_income: projectedIncome,
+        variance_pct: variancePct,
+        behind_projection: behindProjection,
+      })
+    } catch (error) {
+      console.error('[income-track-update] error:', error.message)
+      return res.status(500).json({ error: 'Gagal update tracking income.' })
+    }
+  }
+
+  // ════════════════════════════════════════════
   // FETCH BASE MEMORY DATA & SUBSCRIPTION CHECK
   // ════════════════════════════════════════════
   const { userId } = req.body
@@ -900,6 +1194,45 @@ ${learnedPatterns.map((p, i) => `${i + 1}. ${p.pattern_category}: ${p.pattern_de
     } catch (error) {
       console.error('[init-chat] error:', error);
       return res.status(500).json({ error: 'Gagal inisialisasi panduan Diah Anna.' });
+    }
+  }
+
+  // ════════════════════════════════════════════
+  // ACTION: INCOME ENGINE — DISCOVERY CHAT
+  // ════════════════════════════════════════════
+  if (action === 'income-chat') {
+    const { messages: incomeMessages } = req.body
+    if (!incomeMessages?.length) return res.status(400).json({ error: 'Pesan tidak boleh kosong.' })
+
+    const usage = await checkAndLogUsage(userId, plan, 'chat')
+    if (!usage.allowed) return res.status(403).json({ error: 'Kuota chat hari ini sudah habis.', limitReached: true })
+
+    try {
+      const apiMessages = incomeMessages.map(m => ({
+        role: m.role === 'bot' || m.role === 'assistant' ? 'assistant' : 'user',
+        content: m.text || m.content || '',
+      })).filter(m => m.content)
+
+      const contextNote = careerProfile?.target_posisi
+        ? `\n\nKonteks user: target posisi "${careerProfile.target_posisi}", income sekarang ${careerProfile.current_monthly_income ? `Rp ${careerProfile.current_monthly_income}` : 'belum diketahui'}.`
+        : ''
+
+      const reply = await generateChat({
+        system: INCOME_SYSTEM + contextNote,
+        messages: apiMessages,
+        maxTokens: 250,
+        tier: 'fast',
+        plan,
+      })
+
+      const userCount = incomeMessages.filter(m => m.role === 'user').length
+      return res.status(200).json({ reply, showStrategyButton: userCount >= 5 })
+    } catch (error) {
+      console.error('[income-chat] error:', error.message)
+      return res.status(200).json({
+        reply: 'Eh, sori koneksiku lagi keganggu nih. Boleh diulang kalimat terakhirmu? 😊',
+        showStrategyButton: false,
+      })
     }
   }
 
