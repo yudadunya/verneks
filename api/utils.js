@@ -348,15 +348,17 @@ Output JSON:
   if (action === 'save-fcm-token') {
     if (req.method !== 'POST') return res.status(405).end()
 
-    const { userId, fcmToken } = req.body
-    if (!userId || !fcmToken) {
-      return res.status(400).json({ error: 'Missing userId or fcmToken' })
+    // Frontend (src/lib/firebase.js) kirim field "token", bukan "fcmToken".
+    const { userId, token, fcmToken } = req.body
+    const finalToken = token || fcmToken
+    if (!userId || !finalToken) {
+      return res.status(400).json({ error: 'Missing userId or token' })
     }
 
     try {
       const { error } = await supabase.from('user_push_tokens').upsert({
         user_id: userId,
-        fcm_token: fcmToken,
+        fcm_token: finalToken,
         is_active: true,
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString(),
