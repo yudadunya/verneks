@@ -9,7 +9,6 @@
 
 import { createClient } from '@supabase/supabase-js'
 import { generateText } from './lib/ai.js'
-import { saveFcmToken } from './lib/notifications.js'
 
 const supabase = createClient(
   process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL,
@@ -333,6 +332,9 @@ Output JSON:
   }
 
   // ── SAVE FCM TOKEN (push notification opt-in dari browser) ──────────────
+  // Ditulis langsung di sini (bukan import dari lib/notifications.js) supaya
+  // utils.js TIDAK ikut menyeret dependency berat firebase-admin/nodemailer
+  // yang diinisialisasi di level modul file itu — cukup upsert Supabase biasa.
   if (action === 'save-fcm-token') {
     if (req.method !== 'POST') return res.status(405).end()
 
@@ -341,9 +343,21 @@ Output JSON:
       return res.status(400).json({ error: 'Missing userId or fcmToken' })
     }
 
-    const result = await saveFcmToken(userId, fcmToken)
-    if (result.error) return res.status(500).json({ error: result.error })
-    return res.status(200).json({ success: true })
+    try {
+      const { error } = await supabase.from('user_push_tokens').upsert({
+        user_id: userId,
+        fcm_token: fcmToken,
+        is_active: true,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      }, { onConflict: 'user_id' })
+
+      if (error) return res.status(500).json({ error: error.message })
+      return res.status(200).json({ success: true })
+    } catch (e) {
+      console.error('[save-fcm-token] error:', e.message)
+      return res.status(500).json({ error: 'Gagal menyimpan token notifikasi.' })
+    }
   }
 
   // ── AI-POWERED JOB MATCHING (dipakai Opportunities.jsx) ──────────────────
