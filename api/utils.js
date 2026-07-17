@@ -9,6 +9,7 @@
 
 import { createClient } from '@supabase/supabase-js'
 import { generateText } from './lib/ai.js'
+import { saveFcmToken } from './lib/notifications.js'
 
 const supabase = createClient(
   process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL,
@@ -107,14 +108,20 @@ function createSlug(title) {
 // ════════════════════════════════════════════════════════════════════════════
 
 export default async function handler(req, res) {
-  const authHeader = req.headers['authorization']
-  const isVercelCron = req.headers['x-vercel-cron'] === '1'
-  if (!isVercelCron && authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
-    return res.status(401).json({ error: 'Unauthorized' })
-  }
-
   const action = req.query.action
   if (!action) return res.status(400).json({ error: 'Missing action param' })
+
+  // Hanya action generate-content yang jalan lewat cron/admin yang perlu
+  // proteksi CRON_SECRET. job-match & save-fcm-token dipanggil langsung dari
+  // browser user, jadi tidak punya (dan tidak seharusnya punya) CRON_SECRET.
+  const CRON_PROTECTED_ACTIONS = ['generate-guide', 'optimize-seo', 'batch-generate']
+  if (CRON_PROTECTED_ACTIONS.includes(action)) {
+    const authHeader = req.headers['authorization']
+    const isVercelCron = req.headers['x-vercel-cron'] === '1'
+    if (!isVercelCron && authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
+      return res.status(401).json({ error: 'Unauthorized' })
+    }
+  }
 
   // ── GENERATE SINGLE GUIDE ────────────────────────────────────────────────
   if (action === 'generate-guide') {
@@ -323,6 +330,103 @@ Output JSON:
       failureCount,
       results
     })
+  }
+
+  // ── SAVE FCM TOKEN (push notification opt-in dari browser) ──────────────
+  if (action === 'save-fcm-token') {
+    if (req.method !== 'POST') return res.status(405).end()
+
+    const { userId, fcmToken } = req.body
+    if (!userId || !fcmToken) {
+      return res.status(400).json({ error: 'Missing userId or fcmToken' })
+    }
+
+    const result = await saveFcmToken(userId, fcmToken)
+    if (result.error) return res.status(500).json({ error: result.error })
+    return res.status(200).json({ success: true })
+  }
+
+  // ── AI-POWERED JOB MATCHING (dipakai Opportunities.jsx) ──────────────────
+  if (action === 'job-match') {
+    if (req.method !== 'POST') return res.status(405).end()
+
+    const { userId } = req.body
+    if (!userId) return res.status(400).json({ error: 'Missing userId' })
+
+    try {
+      const [{ data: careerProfile }, { data: genomeData }] = await Promise.all([
+        supabase.from('user_career_profiles')
+          .select('target_posisi, posisi_saat_ini, industri, hambatan, skill_gaps, career_readiness')
+          .eq('user_id', userId).maybeSingle(),
+        supabase.from('user_genome_scores')
+          .select('analytical, leadership, builder, creator, communication, risk_taking, top_strength')
+          .eq('user_id', userId).maybeSingle(),
+      ])
+
+      // Profil belum cukup lengkap untuk matching yang akurat — pesan ini
+      // dicek secara eksak oleh Opportunities.jsx untuk redirect ke Discovery.
+      if (!careerProfile?.target_posisi || !genomeData) {
+        return res.status(400).json({ error: 'Profil belum lengkap' })
+      }
+
+      const genomeSummary = Object.entries({
+        analytical: genomeData.analytical, leadership: genomeData.leadership,
+        builder: genomeData.builder, creator: genomeData.creator,
+        communication: genomeData.communication, risk_taking: genomeData.risk_taking,
+      })
+        .sort((a, b) => (b[1] || 0) - (a[1] || 0))
+        .map(([k, v]) => `${k}: ${v || 0}`)
+        .join(', ')
+
+      const jobMatchPrompt = `Profil karier user:
+- Target posisi: ${careerProfile.target_posisi}
+- Posisi saat ini: ${careerProfile.posisi_saat_ini || 'belum diketahui'}
+- Industri diminati: ${careerProfile.industri || 'belum ditentukan'}
+- Hambatan utama: ${careerProfile.hambatan || 'tidak ada catatan'}
+- Skill gap: ${(careerProfile.skill_gaps || []).join(', ') || 'belum teridentifikasi'}
+- Career readiness: ${careerProfile.career_readiness || 0}%
+- Genome scores: ${genomeSummary}
+- Kekuatan utama (top strength): ${genomeData.top_strength || 'belum terdeteksi'}
+
+Berdasarkan profil di atas, buat 5 rekomendasi jenis peran/lowongan yang PALING relevan untuk pasar kerja Indonesia saat ini. Ini bukan lowongan riil dari job board — ini rekomendasi tipe peran & tipe perusahaan yang cocok dengan profil user, jadi field "company" HARUS berupa deskripsi tipe perusahaan (contoh: "Startup Fintech Seri A", "Perusahaan Multinasional FMCG", "Digital Agency Menengah"), BUKAN nama perusahaan riil spesifik.
+
+Output HANYA JSON array valid (tanpa markdown, tanpa teks lain), format:
+[
+  {
+    "role": "nama posisi spesifik",
+    "company": "tipe/kategori perusahaan (bukan nama riil)",
+    "salary": "range gaji realistis format Rp, contoh: Rp15-20jt/bulan",
+    "match": angka_0_sampai_100,
+    "reason": "1-2 kalimat kenapa ini cocok, kaitkan dengan genome/skill/target user"
+  }
+]
+Urutkan dari match tertinggi. Gaji harus realistis untuk pasar Indonesia sesuai level & posisi.`
+
+      const raw = await generateText({
+        system: 'Kamu adalah Diah Anna, career matching engine Verneks. Output HANYA JSON array valid, tanpa backtick markdown, tanpa penjelasan tambahan.',
+        prompt: jobMatchPrompt,
+        maxTokens: 900,
+        tier: 'fast',
+      })
+
+      const clean = raw.trim().replace(/^```json\s*/i, '').replace(/^```\s*/i, '').replace(/\s*```$/, '').trim()
+      let jobs
+      try {
+        jobs = JSON.parse(clean)
+      } catch (e) {
+        console.error('[job-match] JSON parse failed:', raw.slice(0, 300))
+        return res.status(500).json({ error: 'Gagal memproses rekomendasi, coba lagi sebentar.' })
+      }
+
+      if (!Array.isArray(jobs)) {
+        return res.status(500).json({ error: 'Format rekomendasi tidak valid.' })
+      }
+
+      return res.status(200).json({ success: true, jobs })
+    } catch (e) {
+      console.error('[job-match] error:', e.message)
+      return res.status(500).json({ error: 'Gagal memuat rekomendasi lowongan.' })
+    }
   }
 
   return res.status(400).json({ error: `Unknown action: ${action}` })
