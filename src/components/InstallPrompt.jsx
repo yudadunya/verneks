@@ -1,97 +1,140 @@
-import { useState, useEffect } from 'react'
+import { useEffect, useState } from 'react'
 
-export default function InstallPrompt() {
-  const [prompt, setPrompt] = useState(null)
-  const [show, setShow]     = useState(false)
-  const [dismissed, setDismissed] = useState(
-    () => localStorage.getItem('pwa_dismissed') === '1'
+const DISMISS_KEY = 'lc_install_prompt_dismissed_at'
+const DISMISS_COOLDOWN_DAYS = 7
+
+function isStandaloneMode() {
+  return (
+    window.navigator.standalone === true || // iOS Safari
+    window.matchMedia?.('(display-mode: standalone)').matches // Android/desktop PWA
   )
+}
+
+function isIOS() {
+  return /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream
+}
+
+function wasDismissedRecently() {
+  const ts = localStorage.getItem(DISMISS_KEY)
+  if (!ts) return false
+  const days = (Date.now() - Number(ts)) / 86400000
+  return days < DISMISS_COOLDOWN_DAYS
+}
+
+/**
+ * Banner untuk mendorong user install PWA ("Add to Home Screen").
+ *
+ * KENAPA INI PENTING (bukan sekadar nice-to-have):
+ * - Di iOS Safari, tab browser biasa kena batas localStorage 7 hari tanpa
+ *   interaksi (kebijakan ITP Apple) — bikin user ke-logout sendiri.
+ *   Setelah "Add to Home Screen", storage-nya terpisah dan TIDAK kena
+ *   batas itu.
+ * - Push notification di iOS HANYA BISA jalan kalau app sudah di-install
+ *   ke Home Screen (iOS 16.4+). Dari tab Safari biasa, notifikasi tidak
+ *   akan pernah muncul sama sekali di iOS.
+ *
+ * Di Android, browser sudah menyediakan event `beforeinstallprompt` yang
+ * kita manfaatkan untuk tombol install native (lebih smooth daripada
+ * instruksi manual).
+ */
+export default function InstallPrompt({ user }) {
+  const [showIOSBanner, setShowIOSBanner] = useState(false)
+  const [androidPromptEvent, setAndroidPromptEvent] = useState(null)
+  const [showAndroidBanner, setShowAndroidBanner] = useState(false)
 
   useEffect(() => {
-    if (dismissed) return
+    if (!user) return // cuma tampil untuk user yang sudah login
+    if (isStandaloneMode()) return // sudah di-install, tidak perlu nampilin apa-apa
+    if (wasDismissedRecently()) return
 
+    if (isIOS()) {
+      setShowIOSBanner(true)
+      return
+    }
+
+    // Android/Chrome: tunggu event beforeinstallprompt sebelum nampilin banner
     const handler = (e) => {
       e.preventDefault()
-      setPrompt(e)
-      setShow(true)
+      setAndroidPromptEvent(e)
+      setShowAndroidBanner(true)
     }
     window.addEventListener('beforeinstallprompt', handler)
-
-    // iOS — tidak ada beforeinstallprompt, deteksi manual
-    const isIos = /iphone|ipad|ipod/i.test(navigator.userAgent)
-    const isStandalone = window.matchMedia('(display-mode: standalone)').matches
-    if (isIos && !isStandalone) setShow(true)
-
     return () => window.removeEventListener('beforeinstallprompt', handler)
-  }, [dismissed])
+  }, [user])
 
-  const handleInstall = async () => {
-    if (prompt) {
-      prompt.prompt()
-      const { outcome } = await prompt.userChoice
-      if (outcome === 'accepted') setShow(false)
-    }
+  const dismiss = () => {
+    localStorage.setItem(DISMISS_KEY, String(Date.now()))
+    setShowIOSBanner(false)
+    setShowAndroidBanner(false)
   }
 
-  const handleDismiss = () => {
-    localStorage.setItem('pwa_dismissed', '1')
-    setDismissed(true)
-    setShow(false)
+  const handleAndroidInstall = async () => {
+    if (!androidPromptEvent) return
+    androidPromptEvent.prompt()
+    await androidPromptEvent.userChoice
+    setAndroidPromptEvent(null)
+    setShowAndroidBanner(false)
   }
 
-  const isIos = /iphone|ipad|ipod/i.test(navigator.userAgent)
-
-  if (!show || dismissed) return null
+  if (!showIOSBanner && !showAndroidBanner) return null
 
   return (
     <div style={{
-      position: 'fixed', bottom: 0, left: '50%', transform: 'translateX(-50%)',
-      width: '100%', maxWidth: 480, zIndex: 9999,
-      background: '#fff',
-      borderTop: '1px solid #e0e0e0',
-      borderRadius: '16px 16px 0 0',
-      padding: '16px',
-      boxShadow: '0 -4px 20px rgba(0,0,0,0.12)',
-      animation: 'slideUp 0.3s ease',
+      position: 'fixed', bottom: 78, left: '50%', transform: 'translateX(-50%)',
+      width: 'calc(100% - 24px)', maxWidth: 460,
+      background: '#0d1710', border: '1px solid rgba(37,211,102,0.25)',
+      borderRadius: 16, padding: '14px 16px', zIndex: 900,
+      boxShadow: '0 8px 24px rgba(0,0,0,0.4)',
+      fontFamily: "'Plus Jakarta Sans', sans-serif",
+      display: 'flex', alignItems: 'center', gap: 12,
     }}>
-      <style>{`
-        @keyframes slideUp {
-          from { transform: translateX(-50%) translateY(100%); }
-          to   { transform: translateX(-50%) translateY(0); }
-        }
-      `}</style>
+      <div style={{ fontSize: '1.6rem', flexShrink: 0 }}>📲</div>
 
-      <div style={{ width: 36, height: 4, background: '#ddd', borderRadius: 2, margin: '0 auto 14px' }} />
-
-      <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 14 }}>
-        <img src="/verneks_icon_1.png" alt="Verneks" style={{ width: 52, height: 52, borderRadius: 12, flexShrink: 0, objectFit: 'contain' }} />
-        <div>
-          <div style={{ fontWeight: 700, fontSize: '0.95rem', color: '#111' }}>Install Verneks</div>
-          <div style={{ fontSize: '0.78rem', color: '#667781', marginTop: 2 }}>
-            Akses lebih cepat langsung dari layar utama HP kamu 📲
-          </div>
-        </div>
+      <div style={{ flex: 1, minWidth: 0 }}>
+        {showIOSBanner ? (
+          <>
+            <div style={{ color: '#fff', fontWeight: 700, fontSize: '0.82rem', marginBottom: 2 }}>
+              Install Verneks biar tetap login
+            </div>
+            <div style={{ color: 'rgba(255,255,255,0.55)', fontSize: '0.73rem', lineHeight: 1.5 }}>
+              Tap ikon <strong>Share</strong> (kotak dengan panah ke atas) di Safari, lalu pilih <strong>"Add to Home Screen"</strong> — biar tidak logout sendiri & notifikasi Diah Anna bisa masuk.
+            </div>
+          </>
+        ) : (
+          <>
+            <div style={{ color: '#fff', fontWeight: 700, fontSize: '0.82rem', marginBottom: 2 }}>
+              Install Verneks ke HP kamu
+            </div>
+            <div style={{ color: 'rgba(255,255,255,0.55)', fontSize: '0.73rem', lineHeight: 1.5 }}>
+              Biar tetap login & notifikasi Diah Anna lebih lancar.
+            </div>
+          </>
+        )}
       </div>
 
-      {isIos && !prompt ? (
-        <div style={{ background: '#f0fdf4', border: '1px solid #a5d6a7', borderRadius: 8, padding: '10px 14px', fontSize: '0.82rem', color: '#2e7d32', marginBottom: 12 }}>
-          Tap <strong>Share</strong> lalu pilih <strong>"Add to Home Screen"</strong>
-        </div>
-      ) : (
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 6, flexShrink: 0 }}>
+        {showAndroidBanner && (
+          <button
+            onClick={handleAndroidInstall}
+            style={{
+              background: 'linear-gradient(135deg,#25D366,#128C7E)', color: '#fff',
+              border: 'none', borderRadius: 8, padding: '7px 14px',
+              fontWeight: 700, fontSize: '0.75rem', cursor: 'pointer', whiteSpace: 'nowrap',
+            }}
+          >
+            Install
+          </button>
+        )}
         <button
-          onClick={handleInstall}
-          style={{ width: '100%', padding: '13px', background: '#25D366', color: '#fff', fontWeight: 700, fontSize: '0.95rem', border: 'none', borderRadius: 8, cursor: 'pointer', marginBottom: 10 }}
+          onClick={dismiss}
+          style={{
+            background: 'none', border: 'none', color: 'rgba(255,255,255,0.35)',
+            fontSize: '0.72rem', cursor: 'pointer', padding: '4px 0',
+          }}
         >
-          📲 Install Sekarang
+          Nanti aja
         </button>
-      )}
-
-      <button
-        onClick={handleDismiss}
-        style={{ width: '100%', padding: '10px', background: 'transparent', color: '#667781', fontWeight: 500, fontSize: '0.85rem', border: 'none', cursor: 'pointer' }}
-      >
-        Nanti saja
-      </button>
+      </div>
     </div>
   )
 }

@@ -27,6 +27,7 @@ const LibraryList  = lazy(() => import('./pages/Library/index'))
 const GuideDetail  = lazy(() => import('./pages/Library/GuideDetail'))
 
 import UpgradeModal from './components/UpgradeModal'
+import InstallPrompt from './components/InstallPrompt'
 
 function loadMessages(userId) {
   if (!userId) return []
@@ -163,6 +164,21 @@ async function syncDiscoveryData(u, setChatMessages) {
   }
 }
 
+// Minta browser melindungi storage situs ini dari auto-clear saat low
+// storage/idle (terutama efektif di Chrome; Safari mengabaikan API ini,
+// tapi tidak berbahaya untuk tetap dipanggil). Ini bagian dari usaha
+// memaksimalkan durasi sesi tetap login tanpa logout otomatis.
+async function requestPersistentStorage() {
+  try {
+    if (navigator.storage?.persist) {
+      const already = await navigator.storage.persisted?.()
+      if (!already) await navigator.storage.persist()
+    }
+  } catch (e) {
+    console.warn('[App] requestPersistentStorage error:', e)
+  }
+}
+
 export default function App() {
   const [user, setUser]             = useState(null)
   const [loading, setLoading]       = useState(true)
@@ -183,7 +199,21 @@ export default function App() {
   }, [])
 
   useEffect(() => {
+    // PENTING: dulu ini jalan di SETIAP app dibuka (unregister SW + clear
+    // cache tiap mount) — bukan cuma sekali. Efeknya service worker terus
+    // dihancurkan & didaftar ulang, yang bikin browser (terutama Chrome di
+    // Android) menganggap situs "tidak stabil" sebagai PWA, dan secara
+    // tidak langsung meningkatkan risiko storage (termasuk sesi login di
+    // localStorage) dibersihkan lebih agresif oleh browser.
+    //
+    // Sekarang: cuma jalan SEKALI per versi (pakai flag di localStorage),
+    // bukan di setiap mount. Kalau butuh force-clear lagi di masa depan
+    // (misal abis update besar), tinggal naikkan angka SW_CLEAR_VERSION.
+    const SW_CLEAR_VERSION = 'v1'
     const clearSWAndCache = async () => {
+      const alreadyCleared = localStorage.getItem('lc_sw_cleared_version')
+      if (alreadyCleared === SW_CLEAR_VERSION) return
+
       try {
         if ('serviceWorker' in navigator) {
           const regs = await navigator.serviceWorker.getRegistrations()
@@ -193,6 +223,7 @@ export default function App() {
           const keys = await caches.keys()
           await Promise.all(keys.map(k => caches.delete(k)))
         }
+        localStorage.setItem('lc_sw_cleared_version', SW_CLEAR_VERSION)
       } catch (e) { console.warn('[App] clearSW error:', e) }
     }
     clearSWAndCache()
@@ -240,7 +271,10 @@ export default function App() {
           clearTimeout(timeoutId)
           const u = session?.user ?? null
           setUser(u)
-          if (u) setChatMessages(loadMessages(u.id))
+          if (u) {
+            setChatMessages(loadMessages(u.id))
+            requestPersistentStorage()
+          }
           setLoading(false)
         })
         .catch(() => {
@@ -267,6 +301,7 @@ export default function App() {
 
       if (u) {
         setChatMessages(loadMessages(u.id))
+        requestPersistentStorage()
         if (_event === 'SIGNED_IN') {
           setTimeout(() => {
             syncDiscoveryData(u, setChatMessages)
@@ -363,6 +398,7 @@ export default function App() {
         onClose={() => { setShowUpgrade(false); setUpgradeData(null) }}
       />
     )}
+    <InstallPrompt user={user} />
     </>
   )
 }
