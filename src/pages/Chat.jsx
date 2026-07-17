@@ -272,6 +272,17 @@ export default function Chat({ user, chatMessages = [], setChatMessages, subscri
     setMessages(prev => [...prev, { id: Date.now() + Math.random(), role: 'user', text }])
   }, [])
 
+  // Sama seperti pushBot, tapi juga ikut disimpan ke coachHistory + Supabase —
+  // dipakai untuk pesan "custom" (bukan balasan langsung dari /api/career-coach)
+  // supaya tidak hilang saat reload, seperti balasan normal lainnya.
+  const pushBotAndPersist = useCallback((text) => {
+    pushBot(text)
+    const entry = { id: Date.now() + Math.random(), role: 'assistant', content: text, text }
+    const nextHistory = [...coachHistoryRef.current, entry]
+    setCoachHistory(nextHistory)
+    saveHistoryToSupabase(nextHistory, false)
+  }, [pushBot, setCoachHistory, saveHistoryToSupabase])
+
   // 1. Dashboard Mission Synchronization
   useEffect(() => {
     if (location.state?.triggerMission && user?.id) {
@@ -417,55 +428,56 @@ export default function Chat({ user, chatMessages = [], setChatMessages, subscri
       : { messages: newHistory, userId: user?.id }
 
     apiFetch('/api/career-coach', requestBody)
-      .then(data => {
-        const replyId = Date.now() + 1
-        pushBot(data.reply)
-        const fullHistory = [...newHistory, { id: replyId, role: 'assistant', content: data.reply, text: data.reply }]
-        setCoachHistory(fullHistory)
-        // Save langsung dengan fullHistory yang sudah pasti lengkap
-        saveHistoryToSupabase(fullHistory, false)
-        if (plan !== 'premium' && data.persuasiAktif) {
-          setWaitingForPositive(true)
-        }
-        const userMsgCount = fullHistory.filter(m => m.role === 'user').length
-        if (!incomeMode && userMsgCount % 5 === 0) {
-          apiFetch('/api/extract-profile', { userId: user?.id, messages: fullHistory }).catch(() => {})
-        }
+    .then(data => {
+      const replyId = Date.now() + 1
+      pushBot(data.reply)
+      const fullHistory = [...newHistory, { id: replyId, role: 'assistant', content: data.reply, text: data.reply }]
+      setCoachHistory(fullHistory)
+      // Save langsung dengan fullHistory yang sudah pasti lengkap
+      saveHistoryToSupabase(fullHistory, false)
+      if (plan !== 'premium' && data.persuasiAktif) {
+        setWaitingForPositive(true)
+      }
+      const userMsgCount = fullHistory.filter(m => m.role === 'user').length
+      if (!incomeMode && userMsgCount % 5 === 0) {
+        apiFetch('/api/extract-profile', { userId: user?.id, messages: fullHistory }).catch(() => {})
+      }
 
-        // Income Mode: strategi dihitung otomatis di backend begitu data
-        // cukup dari percakapan — tampilkan langsung sebagai bubble berikutnya,
-        // tanpa tombol atau form tambahan.
-        if (incomeMode && data.strategy) {
-          setTimeout(() => {
-            pushBot(formatIncomeStrategy(data.strategy))
-            setIncomeMode(false)
-          }, 400)
-        } else if (incomeMode && data.strategyLimitReached) {
-          setTimeout(() => {
-            pushBot('Data kamu sudah lengkap, tapi kuota Income Strategy gratis kamu sudah dipakai 🙏 Upgrade ke Premium untuk generate strategi kapan saja.')
-            setIncomeMode(false)
-            window.dispatchEvent(new CustomEvent('show-upgrade', { detail: {} }))
-          }, 400)
-        }
-      })
-      .catch((err) => {
-        if (err.limitReached) {
-          pushBot('Chat hari ini sudah habis 🙏 Upgrade ke Premium untuk lanjut ngobrol tanpa batas.')
-          setTimeout(() => window.dispatchEvent(new CustomEvent('show-upgrade', { detail: {} })), 1200)
-        } else {
-          pushBot('Terjadi kepadatan jalur komunikasi. Sampaikan ulang poin terakhirmu.')
-        }
-      })
-      .finally(() => setLoading(false))
+      // Income Mode: strategi dihitung otomatis di backend begitu data
+      // cukup dari percakapan — tampilkan langsung sebagai bubble berikutnya,
+      // tanpa tombol atau form tambahan. Dipersist juga supaya tidak hilang
+      // setelah reload, sama seperti pesan chat biasa.
+      if (incomeMode && data.strategy) {
+        setTimeout(() => {
+          pushBotAndPersist(formatIncomeStrategy(data.strategy))
+          setIncomeMode(false)
+        }, 400)
+      } else if (incomeMode && data.strategyLimitReached) {
+        setTimeout(() => {
+          pushBotAndPersist('Data kamu sudah lengkap, tapi kuota Income Strategy gratis kamu sudah dipakai 🙏 Upgrade ke Premium untuk generate strategi kapan saja.')
+          setIncomeMode(false)
+          window.dispatchEvent(new CustomEvent('show-upgrade', { detail: {} }))
+        }, 400)
+      }
+    })
+    .catch((err) => {
+      if (err.limitReached) {
+        pushBot('Chat hari ini sudah habis 🙏 Upgrade ke Premium untuk lanjut ngobrol tanpa batas.')
+        setTimeout(() => window.dispatchEvent(new CustomEvent('show-upgrade', { detail: {} })), 1200)
+      } else {
+        pushBot('Terjadi kepadatan jalur komunikasi. Sampaikan ulang poin terakhirmu.')
+      }
+    })
+    .finally(() => setLoading(false))
   }
 
   const toggleIncomeMode = () => {
     const next = !incomeMode
     setIncomeMode(next)
     if (next) {
-      pushBot('💰 **Income Mode aktif.** Aku sudah lihat profil & target karier kamu — sekarang cerita aja, target income bulanan kamu berapa dan dalam berapa bulan?')
+      pushBotAndPersist('💰 **Income Mode aktif.** Aku sudah lihat profil & target karier kamu — sekarang cerita aja, target income bulanan kamu berapa dan dalam berapa bulan?')
     } else {
-      pushBot('Oke, kita balik ke obrolan karier biasa ya 😊')
+      pushBotAndPersist('Oke, kita balik ke obrolan karier biasa ya 😊')
     }
   }
 
