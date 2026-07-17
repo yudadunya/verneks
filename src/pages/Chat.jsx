@@ -89,6 +89,116 @@ const DEFAULT_SUBSCRIPTION = {
 // Single source of truth sekarang adalah api/career-coach.js (action: 'init-chat'),
 // supaya prioritas next-focus tidak pernah drift antara client dan server.
 
+function RedeemCodeModal({ userId, onClose }) {
+  const [redeemCode, setRedeemCode]       = useState('')
+  const [redeemLoading, setRedeemLoading] = useState(false)
+  const [redeemMsg, setRedeemMsg]         = useState(null) // { type: 'ok'|'err', text }
+  const [redeemDone, setRedeemDone]       = useState(false)
+
+  const submit = async () => {
+    if (!userId || redeemCode.length < 12) return
+    setRedeemLoading(true); setRedeemMsg(null)
+    try {
+      const res  = await fetch('/api/utils?action=redeem', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ code: redeemCode, userId }),
+      })
+      const data = await res.json()
+      if (data.success) {
+        setRedeemDone(true)
+        setRedeemMsg({ type: 'ok', text: '🎉 Premium aktif 30 hari! Halaman akan refresh otomatis...' })
+        setTimeout(() => window.location.reload(), 1500)
+      } else {
+        setRedeemMsg({ type: 'err', text: data.error || 'Kode tidak valid' })
+      }
+    } catch {
+      setRedeemMsg({ type: 'err', text: 'Koneksi bermasalah, coba lagi.' })
+    }
+    setRedeemLoading(false)
+  }
+
+  return (
+    <>
+      <div onClick={onClose} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.72)', zIndex: 1000, backdropFilter: 'blur(3px)' }} />
+      <div style={{
+        position: 'fixed', bottom: 0, left: '50%', transform: 'translateX(-50%)',
+        width: '100%', maxWidth: 480,
+        background: '#0d1710',
+        border: '1px solid rgba(37,211,102,0.18)',
+        borderRadius: '22px 22px 0 0',
+        zIndex: 1001,
+        fontFamily: "'Plus Jakarta Sans', sans-serif",
+      }}>
+        <div style={{ display: 'flex', justifyContent: 'center', paddingTop: 12, paddingBottom: 4 }}>
+          <div style={{ width: 40, height: 4, borderRadius: 99, background: 'rgba(255,255,255,0.15)' }} />
+        </div>
+
+        <button onClick={onClose} style={{
+          position: 'absolute', top: 14, right: 16,
+          background: 'rgba(255,255,255,0.07)', border: 'none', color: 'rgba(255,255,255,0.45)',
+          width: 30, height: 30, borderRadius: '50%', cursor: 'pointer', fontSize: '0.85rem',
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+        }}>✕</button>
+
+        <div style={{ padding: '20px 20px 32px' }}>
+          {!redeemDone ? (
+            <>
+              <div style={{ color: 'rgba(255,255,255,0.6)', fontSize: '0.85rem', marginBottom: 10, fontWeight: 600 }}>
+                Masukkan kode redeem (12 karakter)
+              </div>
+              <div style={{ display: 'flex', gap: 8 }}>
+                <input
+                  autoFocus
+                  value={redeemCode}
+                  onChange={e => { setRedeemCode(e.target.value.toUpperCase()); setRedeemMsg(null) }}
+                  onKeyDown={e => { if (e.key === 'Enter') submit() }}
+                  placeholder="XXXX-XXXX-XXXX"
+                  maxLength={12}
+                  style={{
+                    flex: 1, padding: '12px 14px', borderRadius: 10,
+                    border: '1px solid rgba(255,255,255,0.12)',
+                    background: 'rgba(255,255,255,0.05)', color: '#fff',
+                    fontSize: '1rem', fontFamily: 'monospace', letterSpacing: 2,
+                    outline: 'none',
+                  }}
+                />
+                <button
+                  disabled={redeemCode.length < 12 || redeemLoading}
+                  onClick={submit}
+                  style={{
+                    padding: '12px 18px', borderRadius: 10,
+                    background: redeemCode.length < 12 ? 'rgba(37,211,102,0.2)' : 'linear-gradient(135deg,#25D366,#128C7E)',
+                    color: '#fff', fontWeight: 700, fontSize: '0.85rem',
+                    border: 'none', cursor: redeemCode.length < 12 ? 'not-allowed' : 'pointer',
+                    whiteSpace: 'nowrap',
+                  }}
+                >
+                  {redeemLoading ? '⏳' : 'Aktifkan'}
+                </button>
+              </div>
+              {redeemMsg && (
+                <div style={{ marginTop: 10, fontSize: '0.8rem', color: redeemMsg.type === 'ok' ? '#25D366' : '#EF5350', fontWeight: 600 }}>
+                  {redeemMsg.text}
+                </div>
+              )}
+            </>
+          ) : (
+            <div style={{ padding: '4px', textAlign: 'center' }}>
+              <div style={{ fontSize: '1.6rem', marginBottom: 6 }}>🎉</div>
+              <div style={{ color: '#25D366', fontWeight: 700, fontSize: '0.95rem' }}>Premium berhasil diaktifkan!</div>
+              <div style={{ color: 'rgba(255,255,255,0.45)', fontSize: '0.78rem', marginTop: 4 }}>Berlaku 30 hari. Refresh halaman untuk mulai.</div>
+              <button onClick={() => window.location.reload()} style={{ marginTop: 12, padding: '10px 22px', borderRadius: 9, background: '#25D366', color: '#fff', fontWeight: 700, fontSize: '0.85rem', border: 'none', cursor: 'pointer' }}>
+                Refresh Sekarang
+              </button>
+            </div>
+          )}
+        </div>
+      </div>
+    </>
+  )
+}
+
 export default function Chat({ user, chatMessages = [], setChatMessages, subscription = DEFAULT_SUBSCRIPTION }) {
   const navigate = useNavigate()
   const location = useLocation()
@@ -116,6 +226,7 @@ export default function Chat({ user, chatMessages = [], setChatMessages, subscri
   const [mode, setMode]                 = useState('coach')
   const [cvText, setCvText]             = useState('')
   const [interview, setInterview]       = useState({ position: '', level: '', messages: [], qNum: 0 })
+  const [showRedeemModal, setShowRedeemModal] = useState(false)
   
   const coachKey         = user?.id ? `lc_coach_${user.id}` : null
   const greetingFiredRef = useRef(false)
@@ -468,6 +579,7 @@ export default function Chat({ user, chatMessages = [], setChatMessages, subscri
     <>
     <div ref={containerRef} style={{ position: 'fixed', top: 0, left: '50%', transform: 'translateX(-50%)', width: '100%', maxWidth: 480, height: 'calc(100vh - 65px)', display: 'flex', flexDirection: 'column', background: 'var(--wa-chat-bg)', overflow: 'hidden' }}>
       {showOnboarding && <Onboarding onDone={handleOnboardingDone} user={user} />}
+      {showRedeemModal && <RedeemCodeModal userId={user?.id} onClose={() => setShowRedeemModal(false)} />}
 
       <div style={{ background: 'var(--wa-header)', padding: '10px 16px', display: 'flex', alignItems: 'center', gap: '12px', flexShrink: 0, zIndex: 10 }}>
         <img src="/diah-anna.png" alt="Diah Anna" style={{ width: 42, height: 42, borderRadius: '50%', objectFit: 'cover', flexShrink: 0, border: '2px solid rgba(37,211,102,0.4)' }}/>
@@ -500,7 +612,7 @@ export default function Chat({ user, chatMessages = [], setChatMessages, subscri
 
         {plan !== 'premium' && (
           <button
-            onClick={() => window.dispatchEvent(new CustomEvent('show-upgrade', { detail: {} }))}
+            onClick={() => setShowRedeemModal(true)}
             title="Sudah punya kode redeem premium? Klik untuk aktivasi"
             style={{
               flexShrink: 0,
