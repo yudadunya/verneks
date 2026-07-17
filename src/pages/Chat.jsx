@@ -116,7 +116,6 @@ export default function Chat({ user, chatMessages = [], setChatMessages, subscri
   const [mode, setMode]                 = useState('coach')
   const [cvText, setCvText]             = useState('')
   const [interview, setInterview]       = useState({ position: '', level: '', messages: [], qNum: 0 })
-  const [incomeMode, setIncomeMode]     = useState(false)
   
   const coachKey         = user?.id ? `lc_coach_${user.id}` : null
   const greetingFiredRef = useRef(false)
@@ -423,11 +422,7 @@ export default function Chat({ user, chatMessages = [], setChatMessages, subscri
       }, 800)
     }
 
-    const requestBody = incomeMode
-      ? { action: 'income-chat', messages: newHistory, userId: user?.id }
-      : { messages: newHistory, userId: user?.id }
-
-    apiFetch('/api/career-coach', requestBody)
+    apiFetch('/api/career-coach', { messages: newHistory, userId: user?.id })
     .then(data => {
       const replyId = Date.now() + 1
       pushBot(data.reply)
@@ -439,23 +434,21 @@ export default function Chat({ user, chatMessages = [], setChatMessages, subscri
         setWaitingForPositive(true)
       }
       const userMsgCount = fullHistory.filter(m => m.role === 'user').length
-      if (!incomeMode && userMsgCount % 5 === 0) {
+      if (userMsgCount % 5 === 0) {
         apiFetch('/api/extract-profile', { userId: user?.id, messages: fullHistory }).catch(() => {})
       }
 
-      // Income Mode: strategi dihitung otomatis di backend begitu data
-      // cukup dari percakapan — tampilkan langsung sebagai bubble berikutnya,
-      // tanpa tombol atau form tambahan. Dipersist juga supaya tidak hilang
-      // setelah reload, sama seperti pesan chat biasa.
-      if (incomeMode && data.strategy) {
+      // Income Engine: Diah Anna otomatis mendeteksi topik income dari
+      // percakapan (tanpa mode/tombol terpisah) dan menghitung strategi di
+      // backend begitu data cukup. Kalau hasilnya ada, tampilkan sebagai
+      // bubble berikutnya, dipersist juga supaya tidak hilang saat reload.
+      if (data.strategy) {
         setTimeout(() => {
           pushBotAndPersist(formatIncomeStrategy(data.strategy))
-          setIncomeMode(false)
         }, 400)
-      } else if (incomeMode && data.strategyLimitReached) {
+      } else if (data.strategyLimitReached) {
         setTimeout(() => {
-          pushBotAndPersist('Data kamu sudah lengkap, tapi kuota Income Strategy gratis kamu sudah dipakai 🙏 Upgrade ke Premium untuk generate strategi kapan saja.')
-          setIncomeMode(false)
+          pushBotAndPersist('Data income kamu sudah lengkap, tapi kuota Income Strategy gratis kamu sudah dipakai 🙏 Upgrade ke Premium untuk generate strategi kapan saja.')
           window.dispatchEvent(new CustomEvent('show-upgrade', { detail: {} }))
         }, 400)
       }
@@ -469,16 +462,6 @@ export default function Chat({ user, chatMessages = [], setChatMessages, subscri
       }
     })
     .finally(() => setLoading(false))
-  }
-
-  const toggleIncomeMode = () => {
-    const next = !incomeMode
-    setIncomeMode(next)
-    if (next) {
-      pushBotAndPersist('💰 **Income Mode aktif.** Aku sudah lihat profil & target karier kamu — sekarang cerita aja, target income bulanan kamu berapa dan dalam berapa bulan?')
-    } else {
-      pushBotAndPersist('Oke, kita balik ke obrolan karier biasa ya 😊')
-    }
   }
 
   return (
@@ -514,25 +497,6 @@ export default function Chat({ user, chatMessages = [], setChatMessages, subscri
             ⭐ {daysRemaining === 0 ? 'Hari ini terakhir' : `${daysRemaining} hari lagi`}
           </div>
         )}
-
-        <button
-          onClick={toggleIncomeMode}
-          title="Income Engine — rencanakan kenaikan income"
-          style={{
-            flexShrink: 0,
-            display: 'flex', alignItems: 'center', gap: 4,
-            padding: '5px 10px',
-            borderRadius: 999,
-            fontSize: '0.68rem', fontWeight: 700,
-            color: '#fff',
-            background: incomeMode ? 'rgba(255,215,0,0.28)' : 'rgba(255,255,255,0.12)',
-            border: `1px solid ${incomeMode ? 'rgba(255,215,0,0.7)' : 'rgba(255,255,255,0.25)'}`,
-            whiteSpace: 'nowrap',
-            cursor: 'pointer',
-          }}
-        >
-          💰 {incomeMode ? 'Income Mode' : 'Income'}
-        </button>
       </div>
 
       {showRenewalReminder && (

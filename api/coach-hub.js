@@ -546,6 +546,26 @@ ${stuckWarning}
 ${gpsContext}`
 }
 
+// ── BRAIN TAMBAHAN — INCOME ENGINE (built-in, tanpa mode terpisah) ──────────
+// Diah Anna selalu punya kemampuan ini di setiap percakapan biasa — bukan
+// fitur yang perlu diaktifkan user. Dia yang menilai kapan tepat membahasnya,
+// dan mengumpulkan data dari alur obrolan natural (bukan form).
+const INCOME_ENGINE_BRAIN = (careerProfile) => {
+  const hasIncomeGoal = careerProfile?.target_monthly_income && careerProfile?.current_monthly_income
+
+  const existingGoalNote = hasIncomeGoal ? `
+User SUDAH punya target income yang tersimpan: income sekarang Rp ${careerProfile.current_monthly_income}/bulan, target Rp ${careerProfile.target_monthly_income}/bulan dalam ${careerProfile.income_timeline_months || '-'} bulan.
+Kamu boleh follow-up progress ini kapan saja secara natural (mis. "gimana progress freelance-nya minggu ini?"), TAPI JANGAN paksa tiap giliran — hanya kalau konteksnya pas.` : `
+User BELUM punya target income tersimpan. Kalau muncul celah natural dalam obrolan (user cerita ingin promosi, kurang puas dengan gaji sekarang, mikirin resign, atau menyinggung soal keuangan), kamu boleh PROAKTIF menanyakan, contoh: "Btw, kalau boleh tau, target income kamu ke depan berapa sih? Aku bisa bantu hitungin strategi realistisnya nanti." Jangan dipaksakan kalau topiknya memang tidak nyambung.`
+
+  return `# BRAIN 5 — INCOME ENGINE (kemampuan built-in, bukan mode terpisah)
+Kamu bisa menghitung strategi kenaikan income yang KONKRET (kombinasi jalur negosiasi gaji / freelance / side income / produk, plus proyeksi bulanan) — ini bagian natural dari kamu sebagai coach, bukan fitur yang perlu "diaktifkan".
+${existingGoalNote}
+
+Kalau dalam obrolan user menyebutkan angka target income, income sekarang, DAN timeline (berapa bulan) — cukup respon natural (mis. "Oke, aku hitungin ya berdasarkan itu...") dan JANGAN minta form, konfirmasi tambahan, atau data yang sudah kamu tahu dari profil (target posisi, kekuatan/skill gap dari Genome). Sistem akan otomatis menghitung dan menampilkan breakdown-nya di respons berikutnya — kamu cukup fokus pada percakapannya.
+Kalau baru sebagian data yang disebut (misal cuma target, belum ada timeline atau income sekarang), gali satu per satu secara natural, JANGAN sekaligus semua.`
+}
+
 const PREDICTION_BRAIN = (careerReadiness, depthScore, lastUpdated, gpsSteps, plan) => {
   const daysSinceUpdate = lastUpdated
     ? Math.floor((Date.now() - new Date(lastUpdated)) / 86400000)
@@ -633,25 +653,8 @@ const CV_FORMAT_PROMPTS = {
 // Implementasi dari spesifikasi "Income Engine" (Phase 6). Kalkulasi
 // proyeksi & strategi income sengaja dibuat DETERMINISTIK (JS murni, bukan
 // AI) supaya angka yang ditampilkan ke user konsisten dan bisa di-audit —
-// AI (generateChat) hanya dipakai untuk percakapan/eksplorasi ('income-chat'),
-// bukan untuk itung-itungan rupiah.
-
-const INCOME_SYSTEM = `Kamu adalah Diah Anna, dalam mode "Income Engine" — bukan cuma ngobrol soal karier, tapi bantu user merencanakan kenaikan income secara konkret dan realistis.
-
-PENTING: Kamu SUDAH PUNYA profil karier user dari analisis Genome sebelumnya (target posisi, kekuatan, skill gap, career readiness — lihat konteks di bawah). JANGAN tanya ulang hal yang sudah kamu tahu dari situ. Fokus gali HANYA data spesifik income yang belum kamu punya:
-1. Target income bulanan yang diinginkan (angka rupiah)
-2. Timeline (berapa bulan)
-3. Income saat ini total (kalau belum ada di profil)
-4. Risk tolerance — siap switch kerja/build produk, atau harus tetap aman di job sekarang
-5. Waktu luang per minggu untuk side income/freelance (jam)
-
-ATURAN:
-- Maksimal 3 kalimat + 1 pertanyaan per giliran
-- Manfaatkan konteks genome yang sudah ada — contoh: "Karena target kamu ke posisi itu dan kekuatan utamamu di bidang tersebut, ini bisa jadi salah satu jalur income kamu nanti."
-- Bahasa Indonesia santai, hangat, seperti kakak yang paham finansial & karier
-- Begitu 3 data inti (target, timeline, income sekarang) sudah kamu dapat dari jawaban user, JANGAN minta konfirmasi form apapun — cukup bilang "Oke, aku hitungin strategimu ya..." dan sistem akan otomatis menghitung serta menampilkan hasilnya di chat ini
-- JANGAN pernah kasih janji angka pasti dalam obrolan biasa — angka final hanya dari hasil kalkulasi Income Engine
-- JANGAN sebut diri sebagai AI/chatbot/sistem`
+// AI (generateChat) hanya dipakai untuk percakapan biasa (lewat CORE_PERSONA +
+// INCOME_ENGINE_BRAIN di systemContent action 'chat'), bukan untuk itung-itungan rupiah.
 
 // Path template dasar — persentase "potential" terhadap gap (target - current income)
 // dan tingkat keberhasilan berdasarkan spesifikasi Income Engine.
@@ -1235,86 +1238,6 @@ ${learnedPatterns.map((p, i) => `${i + 1}. ${p.pattern_category}: ${p.pattern_de
   }
 
   // ════════════════════════════════════════════
-  // ACTION: INCOME ENGINE — DISCOVERY CHAT (genome-aware, auto-compute)
-  // ════════════════════════════════════════════
-  if (action === 'income-chat') {
-    const { messages: incomeMessages } = req.body
-    if (!incomeMessages?.length) return res.status(400).json({ error: 'Pesan tidak boleh kosong.' })
-
-    const usage = await checkAndLogUsage(userId, plan, 'chat')
-    if (!usage.allowed) return res.status(403).json({ error: 'Kuota chat hari ini sudah habis.', limitReached: true })
-
-    try {
-      const apiMessages = incomeMessages.map(m => ({
-        role: m.role === 'bot' || m.role === 'assistant' ? 'assistant' : 'user',
-        content: m.text || m.content || '',
-      })).filter(m => m.content)
-
-      // Konteks dari profil Genome yang sudah dianalisis — supaya Diah Anna
-      // tidak nanya ulang hal yang sudah diketahui sistem.
-      const genomeContext = `\n\nKonteks profil user (dari Genome & Career Profile, JANGAN ditanya ulang):
-- Target posisi: ${careerProfile?.target_posisi || 'belum diketahui'}
-- Kekuatan utama: ${genomeData?.top_strength || topGenomeDimensions}
-- Skill gap: ${skillGapsArr.length ? skillGapsArr.join(', ') : 'belum teridentifikasi'}
-- Career readiness: ${careerProfile?.career_readiness || 0}%
-- Income sekarang (kalau sudah pernah diisi): ${careerProfile?.current_monthly_income ? `Rp ${careerProfile.current_monthly_income}` : 'belum diketahui'}
-- Income target (kalau sudah pernah diisi): ${careerProfile?.target_monthly_income ? `Rp ${careerProfile.target_monthly_income}` : 'belum diketahui'}`
-
-      const reply = await generateChat({
-        system: INCOME_SYSTEM + genomeContext,
-        messages: apiMessages,
-        maxTokens: 250,
-        tier: 'fast',
-        plan,
-      })
-
-      const userCount = incomeMessages.filter(m => m.role === 'user').length
-
-      // Baru coba extract & auto-compute setelah percakapan cukup (hemat token,
-      // tidak extract di setiap giliran).
-      let strategy = null
-      let strategyLimitReached = false
-      if (userCount >= 3) {
-        const extracted = await extractIncomeDataFromChat(apiMessages, careerProfile)
-        const currentIncome = extracted.current_monthly_income || careerProfile?.current_monthly_income
-        const targetIncome  = extracted.target_monthly_income  || careerProfile?.target_monthly_income
-
-        if (extracted.ready && currentIncome && targetIncome) {
-          const strategyUsage = await checkAndLogUsage(userId, plan, 'income-strategy')
-          if (!strategyUsage.allowed) {
-            strategyLimitReached = true
-          } else {
-            // Genome-informed defaults — tidak perlu tanya ulang skill user,
-            // dipakai dari hasil analisis Genome yang sudah ada.
-            const hasRelevantSkills = (careerProfile?.career_readiness || 0) >= 40 || skillGapsArr.length <= 2
-            const yearsInRole = careerProfile?.posisi_saat_ini ? 2 : 1
-
-            const inputs = {
-              current_monthly_income: currentIncome,
-              target_monthly_income: targetIncome,
-              timeline_months: extracted.timeline_months || 6,
-              risk_tolerance: extracted.risk_tolerance || 'medium',
-              time_available_hours_per_week: extracted.time_available_hours_per_week || 10,
-              years_in_current_role: yearsInRole,
-              has_relevant_skills: hasRelevantSkills,
-            }
-            strategy = buildIncomeStrategy(inputs)
-            await saveIncomeStrategy(userId, inputs, strategy)
-          }
-        }
-      }
-
-      return res.status(200).json({ reply, strategy, strategyLimitReached })
-    } catch (error) {
-      console.error('[income-chat] error:', error.message)
-      return res.status(200).json({
-        reply: 'Eh, sori koneksiku lagi keganggu nih. Boleh diulang kalimat terakhirmu? 😊',
-        strategy: null,
-      })
-    }
-  }
-
-  // ════════════════════════════════════════════
   // ACTION: CHAT (DEFAULT PROCESSOR)
   // ════════════════════════════════════════════
   const { messages: rawMessages } = req.body
@@ -1396,6 +1319,8 @@ ${STRATEGY_BRAIN(
   careerProfile?.last_updated
 )}
 
+${INCOME_ENGINE_BRAIN(careerProfile)}
+
 ${PREDICTION_BRAIN(
   careerProfile?.career_readiness || growthState?.progress_percent || 0,
   depthScore,
@@ -1461,7 +1386,50 @@ ${learnedPatterns.length > 0 ? `\n\n[RSI ACTIVE] Kamu sudah belajar dari ${learn
       )
     }
 
-    return res.status(200).json({ reply, persuasiAktif })
+    // ═══════════════════════════════════════════════════════════════════════════
+    // INCOME ENGINE — deteksi otomatis dari kata kunci, TANPA mode/tombol terpisah.
+    // Hanya jalan kalau topik income memang muncul di pesan user terkini, supaya
+    // tidak nge-boost cost AI di percakapan yang tidak relevan.
+    // ═══════════════════════════════════════════════════════════════════════════
+    let strategy = null
+    let strategyLimitReached = false
+    const incomeKeywordRegex = /gaji|income|penghasilan|pendapatan|pemasukan|freelance|side\s*income|sampingan|naik\s*gaji|resign|switch\s*kerja|\bcuan\b|\bjuta\b.{0,10}bulan|target.{0,15}(uang|penghasilan|pendapatan)/i
+    const recentUserText = messages.filter(m => m.role === 'user').slice(-3).map(m => m.content || '').join(' ')
+
+    if (incomeKeywordRegex.test(recentUserText)) {
+      try {
+        const extracted = await extractIncomeDataFromChat(messages, careerProfile)
+        const currentIncome = extracted.current_monthly_income || careerProfile?.current_monthly_income
+        const targetIncome  = extracted.target_monthly_income  || careerProfile?.target_monthly_income
+
+        if (extracted.ready && currentIncome && targetIncome) {
+          const strategyUsage = await checkAndLogUsage(userId, plan, 'income-strategy')
+          if (!strategyUsage.allowed) {
+            strategyLimitReached = true
+          } else {
+            // Genome-informed defaults — tidak perlu tanya ulang skill user.
+            const hasRelevantSkills = (careerProfile?.career_readiness || 0) >= 40 || structuralMemory.skill_gaps.length <= 2
+            const yearsInRole = careerProfile?.posisi_saat_ini ? 2 : 1
+
+            const inputs = {
+              current_monthly_income: currentIncome,
+              target_monthly_income: targetIncome,
+              timeline_months: extracted.timeline_months || 6,
+              risk_tolerance: extracted.risk_tolerance || 'medium',
+              time_available_hours_per_week: extracted.time_available_hours_per_week || 10,
+              years_in_current_role: yearsInRole,
+              has_relevant_skills: hasRelevantSkills,
+            }
+            strategy = buildIncomeStrategy(inputs)
+            await saveIncomeStrategy(userId, inputs, strategy)
+          }
+        }
+      } catch (e) {
+        console.error('[income-auto] error:', e.message)
+      }
+    }
+
+    return res.status(200).json({ reply, persuasiAktif, strategy, strategyLimitReached })
   } catch (error) {
     console.error('[career-coach] chat error:', error)
     return res.status(500).json({ error: 'Diah Anna lagi bersiap, tunggu sebentar ya!' })
