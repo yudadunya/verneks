@@ -102,6 +102,16 @@ function createSlug(title) {
     .substring(0, 50)
 }
 
+// Charset tanpa karakter ambigu (0/O, 1/I) supaya kode gampang dibaca/diketik manual.
+function generateRedeemCode() {
+  const charset = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'
+  let code = ''
+  for (let i = 0; i < 12; i++) {
+    code += charset[Math.floor(Math.random() * charset.length)]
+  }
+  return code
+}
+
 // ════════════════════════════════════════════════════════════════════════════
 // MAIN HANDLER
 // ════════════════════════════════════════════════════════════════════════════
@@ -610,6 +620,49 @@ Output HANYA JSON valid (tanpa markdown, tanpa teks lain):
       console.error('[refresh-profile] error:', e.message)
       return res.status(500).json({ error: 'Gagal refresh profil.' })
     }
+  }
+
+  // ── ADMIN (dipakai AdminPanel.jsx di /adm-lc) ────────────────────────────
+  // Password diverifikasi di server setiap request (bukan disimpan di client
+  // selain sebagai state sementara untuk dikirim ulang) — sesuai catatan
+  // keamanan yang sudah ada di komentar AdminPanel.jsx.
+  if (action === 'admin') {
+    if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' })
+
+    const { password, action: subAction, count } = req.body
+    if (!password) return res.status(400).json({ error: 'Password wajib diisi.' })
+    if (!process.env.ADMIN_PASSWORD || password !== process.env.ADMIN_PASSWORD) {
+      return res.status(401).json({ error: 'Password salah.' })
+    }
+
+    if (subAction === 'list') {
+      const { data, error } = await supabase
+        .from('redeem_codes')
+        .select('code, used_by, created_at')
+        .order('created_at', { ascending: false })
+        .limit(200)
+      if (error) return res.status(500).json({ error: error.message })
+      return res.status(200).json({ codes: data || [] })
+    }
+
+    if (subAction === 'generate') {
+      const n = Math.min(Math.max(Number(count) || 1, 1), 20) // cap wajar per generate
+      const now = new Date().toISOString()
+      const newRows = Array.from({ length: n }, () => ({ code: generateRedeemCode(), created_at: now }))
+
+      const { error: insErr } = await supabase.from('redeem_codes').insert(newRows)
+      if (insErr) return res.status(500).json({ error: insErr.message })
+
+      const { data, error } = await supabase
+        .from('redeem_codes')
+        .select('code, used_by, created_at')
+        .order('created_at', { ascending: false })
+        .limit(200)
+      if (error) return res.status(500).json({ error: error.message })
+      return res.status(200).json({ codes: data || [] })
+    }
+
+    return res.status(400).json({ error: `Unknown admin sub-action: ${subAction}` })
   }
 
   return res.status(400).json({ error: `Unknown action: ${action}` })
