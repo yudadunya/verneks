@@ -1,11 +1,13 @@
 import { useEffect, useState } from 'react'
 
 const SEEN_MODAL_KEY = 'lc_install_modal_seen'
+const CONFIRMED_KEY  = 'lc_pwa_installed_confirmed'
 
 function isStandaloneMode() {
   return (
     window.navigator.standalone === true || // iOS Safari
-    window.matchMedia?.('(display-mode: standalone)').matches // Android/desktop PWA
+    window.matchMedia?.('(display-mode: standalone)').matches || // Android/desktop PWA
+    localStorage.getItem(CONFIRMED_KEY) === '1' // user konfirmasi manual (fallback iOS)
   )
 }
 
@@ -42,13 +44,28 @@ export default function InstallPrompt({ user }) {
     }
   }, [user, installed])
 
-  // Kalau ternyata sudah standalone pas mount tapi state awal miss (edge case
-  // display-mode berubah setelah install), re-check sesekali.
+  // Kalau ternyata sudah standalone tapi state awal miss (edge case
+  // display-mode berubah setelah install), re-check di beberapa event —
+  // matchMedia change (paling akurat untuk Android/desktop), plus fallback
+  // visibilitychange & focus untuk iOS yang tidak selalu fire event itu.
   useEffect(() => {
     const check = () => { if (isStandaloneMode()) setInstalled(true) }
+    const mq = window.matchMedia?.('(display-mode: standalone)')
+    mq?.addEventListener?.('change', check)
     window.addEventListener('visibilitychange', check)
-    return () => window.removeEventListener('visibilitychange', check)
+    window.addEventListener('focus', check)
+    return () => {
+      mq?.removeEventListener?.('change', check)
+      window.removeEventListener('visibilitychange', check)
+      window.removeEventListener('focus', check)
+    }
   }, [])
+
+  const confirmInstalledManually = () => {
+    localStorage.setItem(CONFIRMED_KEY, '1')
+    localStorage.setItem(SEEN_MODAL_KEY, '1')
+    setInstalled(true)
+  }
 
   const closeModal = () => {
     localStorage.setItem(SEEN_MODAL_KEY, '1')
@@ -71,20 +88,43 @@ export default function InstallPrompt({ user }) {
       {/* Badge kecil permanen — selalu ada selama belum install, klik untuk
           buka lagi instruksi lengkapnya */}
       {!showModal && (
-        <button
-          onClick={() => setShowModal(true)}
-          style={{
-            position: 'fixed', bottom: 78, right: 14, zIndex: 850,
-            display: 'flex', alignItems: 'center', gap: 6,
-            background: 'linear-gradient(135deg,#25D366,#128C7E)',
-            color: '#fff', border: 'none', borderRadius: 999,
-            padding: '9px 14px', fontSize: '0.75rem', fontWeight: 700,
-            boxShadow: '0 4px 14px rgba(37,211,102,0.4)', cursor: 'pointer',
-            fontFamily: "'Plus Jakarta Sans', sans-serif",
-          }}
-        >
-          📲 Install App
-        </button>
+        <div style={{ position: 'fixed', bottom: 78, right: 14, zIndex: 850, display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 6 }}>
+          <button
+            onClick={() => {
+              // Android/Chrome: ada dialog install asli browser — langsung
+              // trigger itu, tidak perlu lewat modal instruksi kita dulu.
+              if (androidEvent) {
+                handleAndroidInstall()
+              } else {
+                // iOS (atau browser tanpa dukungan beforeinstallprompt):
+                // Safari tidak mengizinkan situs web membuka sheet "Add to
+                // Home Screen" secara programatik — jadi cuma bisa tampilkan
+                // instruksi manual di modal.
+                setShowModal(true)
+              }
+            }}
+            style={{
+              display: 'flex', alignItems: 'center', gap: 6,
+              background: 'linear-gradient(135deg,#25D366,#128C7E)',
+              color: '#fff', border: 'none', borderRadius: 999,
+              padding: '9px 14px', fontSize: '0.75rem', fontWeight: 700,
+              boxShadow: '0 4px 14px rgba(37,211,102,0.4)', cursor: 'pointer',
+              fontFamily: "'Plus Jakarta Sans', sans-serif",
+            }}
+          >
+            📲 Install App
+          </button>
+          <button
+            onClick={confirmInstalledManually}
+            style={{
+              background: 'rgba(0,0,0,0.5)', border: 'none', color: 'rgba(255,255,255,0.6)',
+              fontSize: '0.68rem', cursor: 'pointer', padding: '4px 8px', borderRadius: 6,
+              fontFamily: "'Plus Jakarta Sans', sans-serif",
+            }}
+          >
+            Sudah install? Sembunyikan
+          </button>
+        </div>
       )}
 
       {showModal && (
@@ -106,13 +146,21 @@ export default function InstallPrompt({ user }) {
             </div>
 
             {isIOS() ? (
-              <div style={{ background: 'rgba(255,255,255,0.05)', borderRadius: 12, padding: '14px 16px', marginBottom: 18 }}>
-                <div style={{ color: '#fff', fontSize: '0.8rem', lineHeight: 1.8 }}>
-                  <div><strong>1.</strong> Tap ikon <strong>Share</strong> (kotak dengan panah ke atas) di bar bawah Safari</div>
-                  <div><strong>2.</strong> Scroll & pilih <strong>"Add to Home Screen"</strong></div>
-                  <div><strong>3.</strong> Tap <strong>"Add"</strong> di pojok kanan atas</div>
+              <>
+                <div style={{ background: 'rgba(255,255,255,0.05)', borderRadius: 12, padding: '14px 16px', marginBottom: 12 }}>
+                  <div style={{ color: '#fff', fontSize: '0.8rem', lineHeight: 1.8 }}>
+                    <div><strong>1.</strong> Tap ikon <strong>Share</strong> (kotak dengan panah ke atas) di bar bawah Safari</div>
+                    <div><strong>2.</strong> Scroll & pilih <strong>"Add to Home Screen"</strong></div>
+                    <div><strong>3.</strong> Tap <strong>"Add"</strong> di pojok kanan atas</div>
+                  </div>
                 </div>
-              </div>
+                <button
+                  onClick={confirmInstalledManually}
+                  style={{ width: '100%', padding: '12px', borderRadius: 10, border: '1px solid rgba(37,211,102,0.4)', background: 'rgba(37,211,102,0.1)', color: '#25D366', fontWeight: 700, fontSize: '0.85rem', cursor: 'pointer', marginBottom: 10 }}
+                >
+                  ✓ Sudah saya install
+                </button>
+              </>
             ) : androidEvent ? (
               <button
                 onClick={handleAndroidInstall}
