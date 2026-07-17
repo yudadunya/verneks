@@ -198,33 +198,61 @@ export default function App() {
     clearSWAndCache()
 
     let timeoutFired = false
+    let retriedOnce  = false
 
-    const timeoutId = setTimeout(() => {
-      timeoutFired = true
-      console.warn('[App] getSession timeout setelah 5 detik')
-      const sbKeys = Object.keys(localStorage).filter(k => k.startsWith('sb-'))
-      if (sbKeys.length === 0) {
-        window.location.replace('/')
-      } else {
-        setLoading(false)
-      }
-    }, 5000)
+    // PENTING: timeout ini dulu 5 detik — terlalu agresif untuk koneksi
+    // lambat/cold start. Kalau getSession() belum selesai dalam waktu ini
+    // TAPI ada token sesi tersimpan di localStorage (berarti user memang
+    // pernah login & sesinya masih ada), kita JANGAN langsung anggap
+    // logged-out — itu yang bikin user "auto ke-logout" padahal sesinya
+    // masih valid, cuma checking-nya yang lambat. Kasih 1x retry dengan
+    // window lebih panjang dulu sebelum benar-benar menyerah.
+    const attemptGetSession = (isRetry = false) => {
+      const timeoutId = setTimeout(() => {
+        timeoutFired = true
+        console.warn(`[App] getSession timeout (${isRetry ? 'retry' : 'initial'})`)
+        const sbKeys = Object.keys(localStorage).filter(k => k.startsWith('sb-'))
 
-    supabase.auth.getSession()
-      .then(({ data: { session } }) => {
-        clearTimeout(timeoutId)
-        const u = session?.user ?? null
-        setUser(u)
-        if (u) setChatMessages(loadMessages(u.id))
-        setLoading(false)
-      })
-      .catch(() => {
-        clearTimeout(timeoutId)
-        if (!timeoutFired) {
-          setUser(null)
+        if (sbKeys.length === 0) {
+          // Memang tidak ada sesi tersimpan — aman untuk anggap logged-out.
+          window.location.replace('/')
+          return
+        }
+
+        if (!isRetry) {
+          // Ada sesi tersimpan tapi network lambat — coba sekali lagi
+          // dengan window lebih panjang, jangan langsung nendang user.
+          timeoutFired = false
+          retriedOnce = true
+          attemptGetSession(true)
+        } else {
+          // Sudah dicoba 2x (total ~20 detik) dan tetap gagal — baru
+          // berhenti nunggu. Tetap TIDAK memaksa redirect atau set
+          // user=null secara eksplisit; biarkan onAuthStateChange yang
+          // jalan di background yang akhirnya update user begitu resolve.
           setLoading(false)
         }
-      })
+      }, isRetry ? 15000 : 8000)
+
+      supabase.auth.getSession()
+        .then(({ data: { session } }) => {
+          if (timeoutFired && isRetry) return // retry ini sudah terlalu telat, biarkan onAuthStateChange yang urus
+          clearTimeout(timeoutId)
+          const u = session?.user ?? null
+          setUser(u)
+          if (u) setChatMessages(loadMessages(u.id))
+          setLoading(false)
+        })
+        .catch(() => {
+          clearTimeout(timeoutId)
+          if (!timeoutFired) {
+            setUser(null)
+            setLoading(false)
+          }
+        })
+    }
+
+    attemptGetSession(false)
 
     // ── onAuthStateChange — callback TIDAK async ──────────────────────────
     // Semua kerja Supabase di-defer keluar callback via setTimeout(0) agar
