@@ -497,6 +497,27 @@ export default function Chat({ user, chatMessages = [], setChatMessages, subscri
             ⭐ {daysRemaining === 0 ? 'Hari ini terakhir' : `${daysRemaining} hari lagi`}
           </div>
         )}
+
+        {plan !== 'premium' && (
+          <button
+            onClick={() => window.dispatchEvent(new CustomEvent('show-upgrade', { detail: {} }))}
+            title="Sudah punya kode redeem premium? Klik untuk aktivasi"
+            style={{
+              flexShrink: 0,
+              display: 'flex', alignItems: 'center', gap: 4,
+              padding: '5px 10px',
+              borderRadius: 999,
+              fontSize: '0.68rem', fontWeight: 700,
+              color: '#fff',
+              background: 'rgba(255,255,255,0.12)',
+              border: '1px solid rgba(255,255,255,0.25)',
+              whiteSpace: 'nowrap',
+              cursor: 'pointer',
+            }}
+          >
+            🎟️ Sudah punya kode redeem?
+          </button>
+        )}
       </div>
 
       {showRenewalReminder && (
