@@ -297,6 +297,14 @@ export default function App() {
         return
       }
       const u = session?.user ?? null
+
+      // Diagnostik: kalau user tiba-tiba jadi null padahal event-nya BUKAN
+      // SIGNED_OUT (misal gara-gara refresh token ditolak/direvoke server),
+      // ini akan kelihatan di log — bukan cuma race condition UI biasa.
+      if (!u) {
+        console.warn(`[App] Session hilang. Event: ${_event}`, session)
+      }
+
       setUser(u)
 
       if (u) {
