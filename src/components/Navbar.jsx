@@ -8,6 +8,9 @@ export default function Navbar({ user }) {
   const [menuOpen, setMenuOpen] = useState(false)
 
   const handleSignOut = async () => {
+    // Tandai ini logout SENGAJA (diklik user) — App.jsx pakai sinyal ini
+    // untuk membedakan logout manual vs sesi hilang tak terduga.
+    window.dispatchEvent(new CustomEvent('verneks:manual-logout'))
     await signOut()
     navigate('/')
   }

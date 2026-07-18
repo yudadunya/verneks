@@ -1,5 +1,5 @@
 import { BrowserRouter, Routes, Route } from 'react-router-dom'
-import { useState, useEffect, lazy, Suspense } from 'react'
+import { useState, useEffect, useRef, lazy, Suspense } from 'react'
 import { supabase } from './lib/supabase'
 import { useSubscription } from './hooks/useSubscription'
 import { requestNotificationPermission, listenForMessages, registerServiceWorker } from './lib/firebase'
@@ -188,6 +188,16 @@ export default function App() {
 
   const subscription = useSubscription(user?.id)
 
+  // Penanda logout SENGAJA (tombol diklik) — dipakai onAuthStateChange
+  // untuk membedakan logout manual vs sesi hilang tak terduga (network,
+  // refresh token revoke, dll). Ref karena tidak perlu trigger re-render.
+  const manualLogoutRef = useRef(false)
+  useEffect(() => {
+    const onManualLogout = () => { manualLogoutRef.current = true }
+    window.addEventListener('verneks:manual-logout', onManualLogout)
+    return () => window.removeEventListener('verneks:manual-logout', onManualLogout)
+  }, [])
+
   // Global upgrade modal trigger
   useEffect(() => {
     const handler = (e) => {
@@ -298,40 +308,61 @@ export default function App() {
       }
       const u = session?.user ?? null
 
-      // Diagnostik: kalau user tiba-tiba jadi null padahal event-nya BUKAN
-      // SIGNED_OUT (misal gara-gara refresh token ditolak/direvoke server),
-      // ini akan kelihatan di log — bukan cuma race condition UI biasa.
       if (!u) {
-        console.warn(`[App] Session hilang. Event: ${_event}`, session)
+        console.warn(`[App] Session hilang. Event: ${_event}, manual logout: ${manualLogoutRef.current}`, session)
+
+        if (manualLogoutRef.current) {
+          // Logout SENGAJA (tombol diklik) — proses seperti biasa.
+          manualLogoutRef.current = false
+          setUser(null)
+          setChatMessages([])
+          Object.keys(sessionStorage)
+            .filter(k => k.startsWith('lc_greeted_'))
+            .forEach(k => sessionStorage.removeItem(k))
+          return
+        }
+
+        // BUKAN logout manual — sesuai permintaan: jangan paksa logout user.
+        // Coba re-check sesi sekali lagi (siapa tau cuma gangguan sesaat),
+        // tapi APAPUN hasilnya, jangan clear `user` di sini. Supabase JS
+        // tidak boleh dipanggil sinkron di dalam callback ini (bisa
+        // deadlock), makanya di-defer via setTimeout(0).
+        setTimeout(async () => {
+          try {
+            const { data: { session: recheck } } = await supabase.auth.getSession()
+            if (recheck?.user) {
+              console.log('[App] Sesi pulih setelah re-check, tetap login.')
+              setUser(recheck.user)
+            } else {
+              console.warn('[App] Sesi tetap tidak ada setelah re-check — TIDAK memaksa logout (sesuai konfigurasi). Fitur yang butuh Supabase client langsung mungkin gagal diam-diam sampai user login ulang manual.')
+            }
+          } catch (e) {
+            console.warn('[App] Error saat re-check sesi:', e)
+          }
+        }, 0)
+        return
       }
 
       setUser(u)
 
-      if (u) {
-        setChatMessages(loadMessages(u.id))
-        requestPersistentStorage()
-        if (_event === 'SIGNED_IN') {
-          setTimeout(() => {
-            syncDiscoveryData(u, setChatMessages)
-            
-            // Setup Firebase push notifications
-            try {
-              registerServiceWorker()
-              requestNotificationPermission(u.id)
-              listenForMessages((msg) => {
-                console.log('Push notification received:', msg)
-                // Bisa trigger toast notification di sini kalau perlu
-              })
-            } catch (firebaseErr) {
-              console.warn('[Firebase setup]', firebaseErr)
-            }
-          }, 0)
-        }
-      } else {
-        setChatMessages([])
-        Object.keys(sessionStorage)
-          .filter(k => k.startsWith('lc_greeted_'))
-          .forEach(k => sessionStorage.removeItem(k))
+      setChatMessages(loadMessages(u.id))
+      requestPersistentStorage()
+      if (_event === 'SIGNED_IN') {
+        setTimeout(() => {
+          syncDiscoveryData(u, setChatMessages)
+          
+          // Setup Firebase push notifications
+          try {
+            registerServiceWorker()
+            requestNotificationPermission(u.id)
+            listenForMessages((msg) => {
+              console.log('Push notification received:', msg)
+              // Bisa trigger toast notification di sini kalau perlu
+            })
+          } catch (firebaseErr) {
+            console.warn('[Firebase setup]', firebaseErr)
+          }
+        }, 0)
       }
     })
     return () => authListenerSub.unsubscribe()

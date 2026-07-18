@@ -97,6 +97,9 @@ export default function Profile({ user, loading = false, subscription = DEFAULT_
 
   const handleLogout = async () => {
     setLogoutLoading(true)
+    // Tandai ini logout SENGAJA (diklik user) — App.jsx pakai sinyal ini
+    // untuk membedakan logout manual vs sesi hilang tak terduga.
+    window.dispatchEvent(new CustomEvent('verneks:manual-logout'))
     // Bersihkan semua localStorage milik user ini
     if (user?.id) {
       localStorage.removeItem(`lc_chat_${user.id}`)
