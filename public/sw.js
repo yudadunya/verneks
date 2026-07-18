@@ -1,8 +1,10 @@
 // public/sw.js
-// ⚠️  FILE INI AKAN DITIMPA OTOMATIS oleh vite-plugin-pwa saat `npm run build`
-// Ini hanya fallback untuk development / sebelum plugin terpasang.
+// PENTING: vite-plugin-pwa TIDAK terpasang di project ini (vite.config.js
+// tidak punya plugin itu) — jadi file ini BUKAN fallback sementara, ini
+// yang benar-benar jalan di production. Komentar lama yang bilang "akan
+// ditimpa vite-plugin-pwa" sudah tidak akurat, dihapus.
 
-const CACHE = 'lamarcerdas-v3'
+const CACHE = 'lamarcerdas-v4' // dinaikkan dari v3 supaya cache lama di browser user ke-invalidate
 
 const STATIC_ASSETS = [
   '/',
@@ -33,10 +35,18 @@ self.addEventListener('activate', e => {
 self.addEventListener('fetch', e => {
   const url = new URL(e.request.url)
 
-  // API — selalu network
+  // KRITIS: JANGAN pernah intercept request ke domain lain (Supabase auth,
+  // Firebase, CDN, dll). Sebelumnya SW ini cuma skip '/api/' milik sendiri,
+  // tapi tetap mencoba cache-first / offline-fallback untuk SEMUA request
+  // cross-origin lain — termasuk panggilan auth/refresh-token Supabase.
+  // Itu bisa bikin sesi login gagal aneh karena kena logic cache/offline SW
+  // yang tidak seharusnya menyentuh request auth sama sekali.
+  if (url.origin !== self.location.origin) return
+
+  // API sendiri — selalu network
   if (url.pathname.startsWith('/api/')) return
 
-  // Navigasi SPA — fallback ke index.html kalau offline
+  // Navigasi SPA — network dulu, fallback ke index.html kalau offline
   if (e.request.mode === 'navigate') {
     e.respondWith(
       fetch(e.request).catch(() => caches.match('/index.html'))
@@ -44,7 +54,7 @@ self.addEventListener('fetch', e => {
     return
   }
 
-  // Aset statis — cache first
+  // Aset statis situs sendiri — cache first
   e.respondWith(
     caches.match(e.request).then(cached => {
       if (cached) return cached

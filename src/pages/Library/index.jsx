@@ -7,13 +7,8 @@
 
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { createClient } from '@supabase/supabase-js'
+import { supabase } from '../../lib/supabase'
 import '../../styles/Library.css'
-
-const supabase = createClient(
-  import.meta.env.VITE_SUPABASE_URL,
-  import.meta.env.VITE_SUPABASE_ANON_KEY
-)
 
 export default function LibraryList() {
   const [guides, setGuides] = useState([])

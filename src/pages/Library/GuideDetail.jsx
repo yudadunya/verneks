@@ -7,14 +7,9 @@
 
 import { useEffect, useState } from 'react'
 import { useParams, Link, useNavigate } from 'react-router-dom'
-import { createClient } from '@supabase/supabase-js'
+import { supabase } from '../../lib/supabase'
 import ReactMarkdown from 'react-markdown'
 import '../../styles/Library.css'
-
-const supabase = createClient(
-  import.meta.env.VITE_SUPABASE_URL,
-  import.meta.env.VITE_SUPABASE_ANON_KEY
-)
 
 export default function GuideDetail() {
   const { slug } = useParams()
