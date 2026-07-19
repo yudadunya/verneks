@@ -330,7 +330,32 @@ export default function App() {
       const u = session?.user ?? null
 
       if (!u) {
-        console.warn(`[App] Session hilang. Event: ${_event}, manual logout: ${manualLogoutRef.current}`, session)
+        // Diagnostik tambahan: bedakan 2 skenario yang gejalanya sama-sama
+        // "sesi hilang" tapi akar masalahnya beda jauh —
+        //   (a) key sb-* SUDAH TIDAK ADA di localStorage → storage-nya yang
+        //       kehapus (browser/ITP iOS/PWA clear data), atau
+        //   (b) key sb-* MASIH ADA tapi tetap dianggap tidak valid → berarti
+        //       server Supabase yang menolak/mencabut sesi itu (kemungkinan
+        //       besar setting "Time-box user sessions" / "Inactivity
+        //       timeout" di dashboard Supabase, atau refresh token collision
+        //       dari banyak tab/device).
+        // Kedua skenario butuh fix yang beda total, jadi ini dicatat dulu
+        // supaya lain kali kejadian, tinggal baca console-nya.
+        const sbKeys = Object.keys(localStorage).filter(k => k.startsWith('sb-'))
+        let storedSessionInfo = 'tidak ada key sb-* sama sekali (storage kosong)'
+        if (sbKeys.length > 0) {
+          try {
+            const raw = JSON.parse(localStorage.getItem(sbKeys[0]))
+            const expiresAt = raw?.expires_at
+            const nowSec = Math.floor(Date.now() / 1000)
+            storedSessionInfo = expiresAt
+              ? `key sb-* MASIH ADA, expires_at=${expiresAt} (${expiresAt < nowSec ? 'sudah expired ' + (nowSec - expiresAt) + 's lalu' : 'belum expired'})`
+              : 'key sb-* ada tapi tidak berisi expires_at yang valid'
+          } catch (e) {
+            storedSessionInfo = 'key sb-* ada tapi gagal di-parse: ' + e.message
+          }
+        }
+        console.warn(`[App] Session hilang. Event: ${_event}, manual logout: ${manualLogoutRef.current}. Storage check: ${storedSessionInfo}`, session)
 
         if (manualLogoutRef.current) {
           // Logout SENGAJA (tombol diklik) — proses seperti biasa.
@@ -355,7 +380,8 @@ export default function App() {
               console.log('[App] Sesi pulih setelah re-check, tetap login.')
               setUser(recheck.user)
             } else {
-              console.warn('[App] Sesi tetap tidak ada setelah re-check — TIDAK memaksa logout (sesuai konfigurasi). Fitur yang butuh Supabase client langsung mungkin gagal diam-diam sampai user login ulang manual.')
+              const sbKeysAfter = Object.keys(localStorage).filter(k => k.startsWith('sb-'))
+              console.warn(`[App] Sesi tetap tidak ada setelah re-check — TIDAK memaksa logout (sesuai konfigurasi). Fitur yang butuh Supabase client langsung mungkin gagal diam-diam sampai user login ulang manual. (key sb-* saat re-check: ${sbKeysAfter.length > 0 ? 'masih ada tapi ditolak/invalid' : 'tidak ada'})`)
             }
           } catch (e) {
             console.warn('[App] Error saat re-check sesi:', e)
