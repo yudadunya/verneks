@@ -48,7 +48,8 @@ KEMBALIKAN JSON VALID BERIKUT (tanpa backtick markdown, tanpa teks pengantar/pen
     "hambatan_utama": "hambatan NYATA dalam 1 kalimat — bukan surface level, tapi root cause",
     "motivasi": "motivasi terdalam yang tersirat dari percakapan — apa yang sebenarnya mereka kejar",
     "kekuatan_tersembunyi": "1 kekuatan yang mungkin belum mereka sadari sepenuhnya berdasarkan percakapan",
-    "gaya_kerja": "gaya kerja yang terdeteksi dari percakapan"
+    "gaya_kerja": "gaya kerja yang terdeteksi dari percakapan",
+    "urgensi_finansial": "true jika dari percakapan ada tanda user baru di-PHK / menganggur / butuh penghasilan cepat / cemas soal biaya hidup, false jika tidak ada tanda seperti itu"
   },
   "genome_scores": {
     "analytical": 0,
@@ -100,7 +101,8 @@ ATURAN ANALISIS WAJIB:
 3. career_readiness (0-100): Kesiapan TOTAL (skill + mindset + clarity + resources). Baru mulai: 15-35%, Ada pengalaman: 35-60%, Hampir siap: 60-85%. Realistis, bukan optimistis.
 4. career_stage: Career Explorer / Career Builder / Career Professional / Career Expert / Career Leader
 5. wow_insight: Harus membuat user berpikir 'bagaimana dia bisa tahu ini?' Berdasarkan pola laten yang muncul dari percakapan.
-6. mentor_message: Tulis seperti Diah Anna yang genuinely care, gaya bahasa santai/hangat layaknya pesan WhatsApp dari senior.`
+6. mentor_message: Tulis seperti Diah Anna yang genuinely care, gaya bahasa santai/hangat layaknya pesan WhatsApp dari senior.
+7. Kalau "urgensi_finansial" true (ada tanda PHK/menganggur/butuh uang cepat di percakapan): "breakthrough_key" dan "gps_steps" langkah kedua (step pertama setelah Career Assessment) WAJIB berupa opsi PENGHASILAN CEPAT yang realistis dilakukan dalam hitungan minggu — misalnya memonetisasi skill yang sudah ada lewat kerja lepas/jasa, bukan reskilling besar atau rencana jangka panjang. Solusi jangka panjang tetap boleh muncul di langkah-langkah berikutnya, tapi langkah pertama harus yang paling cepat menghasilkan.`
 
   try {
     const raw = await generateText({
