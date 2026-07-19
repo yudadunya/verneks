@@ -209,6 +209,27 @@ export default function App() {
   }, [])
 
   useEffect(() => {
+    // ── BERSIHKAN TOKEN AUTH BASI DI URL ──────────────────────────────────
+    // Supabase (detectSessionInUrl: true) baca token dari URL (hash/query)
+    // untuk flow reset-password/OAuth/magic-link SAAT client dibuat — ini
+    // terjadi lebih awal dari effect ini, jadi kita tidak bisa "mendahului"
+    // proses itu. Tapi kita bisa langsung bersihkan URL SETELAHNYA supaya:
+    //  1. Tidak terus dipakai ulang kalau ada reload di sesi yang sama
+    //  2. Kalau user install PWA ("Add to Home Screen") SETELAH ini, ikon
+    //     yang tersimpan menangkap URL bersih — bukan URL dengan token basi
+    //     yang akan terus gagal & bentrok dengan sesi valid di localStorage
+    //     setiap kali ikon itu dibuka (ini yang kemungkinan besar jadi
+    //     penyebab "install PWA tapi masih logout sendiri").
+    const hasAuthParamsInUrl =
+      window.location.hash.includes('access_token') ||
+      window.location.hash.includes('error') ||
+      new URLSearchParams(window.location.search).has('code')
+
+    if (hasAuthParamsInUrl) {
+      console.warn('[App] URL mengandung token auth — dibersihkan setelah diproses Supabase.')
+      window.history.replaceState(null, '', window.location.pathname)
+    }
+
     // PENTING: dulu ini jalan di SETIAP app dibuka (unregister SW + clear
     // cache tiap mount) — bukan cuma sekali. Efeknya service worker terus
     // dihancurkan & didaftar ulang, yang bikin browser (terutama Chrome di
