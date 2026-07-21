@@ -78,7 +78,7 @@ export default async function handler(req, res) {
     const results = []
     for (const user of users) {
       try {
-        const [eventsRes, capsulesRes] = await Promise.all([
+        const [eventsRes, capsulesRes, sessionsRes] = await Promise.all([
           supabase.from('career_events')
             .select('event_type, event_payload').eq('user_id', user.user_id)
             .gte('created_at', sevenDaysAgo.toISOString()),
@@ -86,10 +86,14 @@ export default async function handler(req, res) {
             .select('capsule_text').eq('user_id', user.user_id)
             .gte('capsule_date', sevenDaysAgo.toISOString().slice(0,10))
             .order('capsule_date', { ascending: false }),
+          supabase.from('user_session_notes')
+            .select('id', { count: 'exact', head: true }).eq('user_id', user.user_id)
+            .gte('session_date', sevenDaysAgo.toISOString().slice(0,10)),
         ])
 
         const events   = eventsRes.data || []
         const capsules = capsulesRes.data || []
+        const sessionsCount = sessionsRes.count || 0
         if (events.length === 0 && capsules.length === 0) continue
 
         const milestonesDone = events.filter(e => e.event_type === 'milestone_completed')
@@ -102,8 +106,16 @@ export default async function handler(req, res) {
           maxTokens: 150, tier: 'fast',
         })
 
+        // FIX: milestones_done & sessions_count sudah lama dihitung di atas
+        // (dipakai buat prompt AI) tapi tidak pernah ditulis ke kolomnya
+        // sendiri — jadi selalu diam di default 0 walau datanya sudah ada.
+        // readiness_delta SENGAJA belum diisi (tetap default 0): tidak ada
+        // histori career_readiness minggu lalu yang tersimpan di mana pun
+        // buat dibandingkan — perlu snapshot tracking terpisah kalau mau
+        // angka ini akurat, bukan sekadar dikira-kira.
         await supabase.from('user_weekly_reviews').upsert({
           user_id: user.user_id, week_start: weekStart, review_text: summary.trim(),
+          milestones_done: milestonesDone.length, sessions_count: sessionsCount,
         }, { onConflict: 'user_id,week_start' })
 
         // Kirim email + push notification setelah review di-generate
