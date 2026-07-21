@@ -185,6 +185,13 @@ export default function App() {
   const [chatMessages, setChatMessages] = useState([])
   const [showUpgrade, setShowUpgrade] = useState(false)
   const [upgradeData, setUpgradeData] = useState(null)
+  // Toast untuk push notification yang masuk SAAT app sedang dibuka
+  // (foreground). Firebase tidak menampilkan popup OS otomatis untuk kasus
+  // ini (beda dari saat app tertutup/background — itu sudah otomatis lewat
+  // service worker) — jadi butuh UI manual di sini, kalau tidak, notifikasi
+  // foreground (termasuk "milestone selesai" yang baru ditambahkan) tidak
+  // akan pernah kelihatan sama sekali oleh user.
+  const [pushToast, setPushToast] = useState(null)
 
   const subscription = useSubscription(user?.id)
 
@@ -404,7 +411,8 @@ export default function App() {
             requestNotificationPermission(u.id)
             listenForMessages((msg) => {
               console.log('Push notification received:', msg)
-              // Bisa trigger toast notification di sini kalau perlu
+              setPushToast(msg)
+              setTimeout(() => setPushToast(null), 6000)
             })
           } catch (firebaseErr) {
             console.warn('[Firebase setup]', firebaseErr)
@@ -485,6 +493,41 @@ export default function App() {
       />
     )}
     <InstallPrompt user={user} />
+    {pushToast && (
+      <div
+        onClick={() => {
+          const action = pushToast.data?.action
+          if (action === 'open-chat') window.location.href = '/chat'
+          else if (action === 'open-journey') window.location.href = '/journey'
+          setPushToast(null)
+        }}
+        style={{
+          position: 'fixed',
+          top: '16px',
+          right: '16px',
+          left: '16px',
+          maxWidth: '380px',
+          marginLeft: 'auto',
+          background: '#ffffff',
+          border: '1px solid var(--border)',
+          borderLeft: '4px solid var(--green)',
+          borderRadius: '10px',
+          boxShadow: '0 8px 24px rgba(0,0,0,0.15)',
+          padding: '14px 16px',
+          zIndex: 9999,
+          cursor: 'pointer',
+          fontFamily: 'var(--font-display)',
+          animation: 'verneks-toast-in 0.25s ease-out',
+        }}
+      >
+        <div style={{ fontWeight: 700, fontSize: '0.9rem', color: 'var(--dark)', marginBottom: '2px' }}>
+          {pushToast.title || 'Diah Anna'}
+        </div>
+        <div style={{ fontSize: '0.85rem', color: 'var(--gray)', lineHeight: 1.4 }}>
+          {pushToast.body}
+        </div>
+      </div>
+    )}
     </>
   )
 }
