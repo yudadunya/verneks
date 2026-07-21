@@ -182,8 +182,57 @@ export default async function handler(req, res) {
           // Cari langkah GPS pertama yang belum dicentang — bikin reminder-nya
           // konkret ("langkah X belum selesai") bukan cuma ajakan generik.
           const pendingStep = (profile.gps_steps || []).find(s => !s.done && s.title && s.title !== '—')
+
+          // Ambil topik obrolan terakhir (memory capsule paling baru) supaya
+          // reminder-nya terasa Diah Anna beneran inget percakapan sebelumnya,
+          // bukan notifikasi generik "yuk chat lagi". Kalau tidak ada capsule
+          // (user baru/belum pernah chat), personalLine tetap null — fallback
+          // ke template generik yang sudah ada di notifications.js.
+          // Ambil misi aktif (tugas konkret yang Diah Anna kasih di akhir sesi
+          // terakhir) — ini prioritas utama buat personalisasi reminder, karena
+          // ini komitmen SPESIFIK, bukan cuma topik ngobrol random. Fallback ke
+          // capsule kalau tidak ada misi aktif (misal user belum pernah dikasih
+          // misi, atau obrolan terakhir memang reflektif tanpa aksi konkret).
+          let personalLine = null
+          try {
+            const { data: activeMission } = await supabase
+              .from('dashboard_missions')
+              .select('daily_mission')
+              .eq('user_id', profile.user_id)
+              .eq('status', 'active')
+              .order('created_at', { ascending: false })
+              .limit(1)
+              .maybeSingle()
+
+            let contextText = activeMission?.daily_mission
+              ? `Misi yang Diah Anna kasih ke user: "${activeMission.daily_mission}"`
+              : null
+
+            if (!contextText) {
+              const { data: lastCapsule } = await supabase
+                .from('memory_capsule_log')
+                .select('capsule_text')
+                .eq('user_id', profile.user_id)
+                .order('capsule_date', { ascending: false })
+                .limit(1)
+                .maybeSingle()
+              if (lastCapsule?.capsule_text) contextText = `Topik obrolan terakhir user: "${lastCapsule.capsule_text}"`
+            }
+
+            if (contextText) {
+              personalLine = await generateText({
+                system: 'Kamu Diah Anna, AI career coach. Tulis SATU kalimat pendek (maks 20 kata) gaya chat WhatsApp buat notifikasi reminder — hangat, personal, jangan kaku/formal. Jangan pakai salam pembuka, langsung ke isi.',
+                prompt: `${contextText}${pendingStep ? `\nLangkah roadmap yang masih tertunda: "${pendingStep.title}"` : ''}\n\nTulis 1 kalimat reminder yang merujuk itu, ajak lanjut ngobrol/cerita progressnya.`,
+                maxTokens: 60, tier: 'fast',
+              })
+              personalLine = personalLine?.trim().replace(/^"|"$/g, '') || null
+            }
+          } catch (aiErr) {
+            console.error(`[send-chat-reminders personalLine failed for ${profile.user_id}]`, aiErr)
+          }
+
           if (authUser?.email || fcmToken) {
-            const notifyResult = await notifyChatReminder(authUser?.email, fcmToken, profile.nama || 'User', pendingStep?.title)
+            const notifyResult = await notifyChatReminder(authUser?.email, fcmToken, profile.nama || 'User', pendingStep?.title, personalLine)
             const ok = notifyResult.email?.success || notifyResult.push?.success
             if (ok) {
               results.push({ userId: profile.user_id, status: 'sent', detail: notifyResult })

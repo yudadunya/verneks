@@ -1003,13 +1003,40 @@ async function handleCareerCoach(req, res) {
     if (!userId || !sessionMsgs?.length) return res.status(200).json({ skipped: true })
     if (sessionMsgs.filter(m => m.role === 'user').length < 2) return res.status(200).json({ skipped: true })
     try {
+      const conversationText = sessionMsgs.map(m => `${m.role === 'user' ? 'User' : 'Diah Anna'}: ${m.content || m.text || ''}`).join('\n').slice(0, 3000)
+
       const summary = await generateText({
         system: `Meringkas esensi obrolan coaching Diah Anna ke dalam 1-2 kalimat deskriptif aksi. Tanpa preamble.`,
-        prompt: sessionMsgs.map(m => `${m.role === 'user' ? 'User' : 'Diah Anna'}: ${m.content || m.text || ''}`).join('\n').slice(0, 3000),
+        prompt: conversationText,
         maxTokens: 120,
         tier: 'fast',
       })
       await supabase.from('user_session_notes').insert({ user_id: userId, summary: summary.trim() })
+
+      // Ini yang bikin "misi harian" Diah Anna beneran hidup — sebelumnya
+      // tabel dashboard_missions cuma DIBACA (dipakai bikin sapaan "gimana
+      // progres X yang kita sepakati kemarin") tapi TIDAK PERNAH DITULIS,
+      // jadi selalu kosong. Sekarang tiap sesi selesai, AI coba cari 1 aksi
+      // kecil konkret dari obrolan — kalau ada, itu jadi misi aktif
+      // berikutnya; kalau obrolannya reflektif/emosional tanpa aksi natural,
+      // AI balas "NONE" dan tidak ada misi baru dipaksakan.
+      try {
+        const missionText = await generateText({
+          system: `Kamu Diah Anna, AI career coach. Dari obrolan ini, cek apakah ada SATU aksi kecil konkret yang bisa user kerjakan sebelum ngobrol lagi (contoh: kirim pesan ke kontak tertentu, update 1 bagian CV, riset 1 hal, coba 1 langkah dari roadmap). Kalau ada, balas HANYA dengan kalimat aksinya (maks 15 kata, tanpa embel-embel/tanda kutip). Kalau obrolannya reflektif/emosional dan tidak ada aksi konkret yang natural, balas PERSIS: NONE`,
+          prompt: conversationText,
+          maxTokens: 40,
+          tier: 'fast',
+        })
+        const cleaned = missionText?.trim().replace(/^"|"$/g, '')
+        if (cleaned && cleaned.toUpperCase() !== 'NONE') {
+          // Selesaikan misi aktif sebelumnya (kalau ada) sebelum pasang yang baru
+          await supabase.from('dashboard_missions').update({ status: 'completed' }).eq('user_id', userId).eq('status', 'active')
+          await supabase.from('dashboard_missions').insert({ user_id: userId, daily_mission: cleaned, status: 'active' })
+        }
+      } catch (missionErr) {
+        console.error('[save-session-note mission generation failed]', missionErr)
+      }
+
       return res.status(200).json({ success: true })
     } catch (error) {
       return res.status(200).json({ skipped: true })
