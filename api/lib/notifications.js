@@ -59,10 +59,13 @@ const supabase = createClient(
 /**
  * Send chat reminder email (2 hari tidak chat)
  */
-export async function sendChatReminderEmail(userEmail, userName) {
+export async function sendChatReminderEmail(userEmail, userName, pendingStepTitle) {
   if (!userEmail) return { error: 'Email not found' }
 
   const firstName = userName?.split(' ')[0] || 'Teman'
+  const stepLine = pendingStepTitle
+    ? `Langkah selanjutnya yang masih menunggu di roadmap kamu: <strong>${pendingStepTitle}</strong>.`
+    : 'Kesuksesan karier dibangun dari konsistensi kecil setiap hari. Jangan biarkan ritmemu hilang — satu percakapan hari ini bisa mengubah arah perjalananmu.'
 
   const htmlContent = `
     <!DOCTYPE html>
@@ -91,7 +94,7 @@ export async function sendChatReminderEmail(userEmail, userName) {
           
           <div class="message">
             <p><strong>Momentum itu penting, ${firstName}.</strong></p>
-            <p>Kesuksesan karier dibangun dari konsistensi kecil setiap hari. Jangan biarkan ritmemu hilang — satu percakapan hari ini bisa mengubah arah perjalananmu.</p>
+            <p>${stepLine}</p>
           </div>
 
           <p>Target kariermu masih di depan. Aku di sini siap membantu kamu melangkah lebih dekat.</p>
@@ -238,13 +241,101 @@ export async function sendPushNotification(fcmToken, title, body, data = {}) {
 /**
  * Send chat reminder push
  */
-export async function sendChatReminderPush(fcmToken, userName) {
+export async function sendChatReminderPush(fcmToken, userName, pendingStepTitle) {
   const firstName = userName?.split(' ')[0] || 'Teman'
   return sendPushNotification(
     fcmToken,
     '💬 Halo ' + firstName,
-    'Kita sudah 2 hari tidak ngobrol. Mari lanjutkan perjalanan karier kamu!',
+    pendingStepTitle
+      ? `Langkah "${pendingStepTitle}" masih menunggu kamu. Yuk lanjutkan!`
+      : 'Kita sudah 2 hari tidak ngobrol. Mari lanjutkan perjalanan karier kamu!',
     { type: 'chat-reminder', action: 'open-chat' }
+  )
+}
+
+/**
+ * Send onboarding nudge email — user sudah selesai Discovery (Career DNA
+ * jadi) tapi belum mulai chat coaching pertama dalam ~24 jam.
+ */
+export async function sendOnboardingNudgeEmail(userEmail, userName) {
+  if (!userEmail) return { error: 'Email not found' }
+  const firstName = userName?.split(' ')[0] || 'Teman'
+
+  const htmlContent = `
+    <!DOCTYPE html>
+    <html>
+    <head>
+      <meta charset="UTF-8">
+      <style>
+        body { font-family: 'Arial', sans-serif; background-color: #f5f5f5; margin: 0; padding: 20px; }
+        .container { max-width: 600px; margin: 0 auto; background-color: #ffffff; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
+        .header { background: linear-gradient(135deg, #25D366, #128C7E); color: #fff; padding: 30px 20px; text-align: center; }
+        .header h1 { margin: 0; font-size: 22px; }
+        .content { padding: 30px 20px; line-height: 1.6; color: #333; }
+        .cta { text-align: center; margin: 30px 0; }
+        .cta-button { background-color: #25D366; color: #fff; padding: 12px 30px; text-decoration: none; border-radius: 5px; display: inline-block; font-weight: bold; }
+        .footer { background-color: #f5f5f5; padding: 20px; text-align: center; font-size: 12px; color: #999; border-top: 1px solid #eee; }
+      </style>
+    </head>
+    <body>
+      <div class="container">
+        <div class="header"><h1>🧬 Career DNA kamu udah siap, ${firstName}!</h1></div>
+        <div class="content">
+          <p>Kemarin kamu sudah cerita ke Diah Anna dan Career DNA kamu sudah jadi — tapi kelihatannya belum sempat lanjut ngobrol lagi.</p>
+          <p>Roadmap dan langkah-langkah konkret buat kariermu udah nunggu di sana. Yuk lanjutkan sekarang, mumpung momentumnya masih ada.</p>
+          <div class="cta">
+            <a href="https://verneks.my.id/chat" class="cta-button">💬 Lanjut Ngobrol dengan Diah Anna</a>
+          </div>
+        </div>
+        <div class="footer">
+          <p>Email ini dikirim dari Diah Anna, AI Career Mentor Verneks</p>
+        </div>
+      </div>
+    </body>
+    </html>
+  `
+
+  try {
+    await emailTransporter.sendMail({
+      from: `"Diah Anna - Verneks" <${process.env.GMAIL_USER}>`,
+      to: userEmail,
+      subject: `${firstName}, Career DNA kamu udah siap 🧬`,
+      html: htmlContent,
+    })
+    return { success: true }
+  } catch (error) {
+    console.error('[sendOnboardingNudgeEmail]', error)
+    return { error: error.message }
+  }
+}
+
+export async function sendOnboardingNudgePush(fcmToken, userName) {
+  const firstName = userName?.split(' ')[0] || 'Teman'
+  return sendPushNotification(
+    fcmToken,
+    '🧬 Career DNA kamu udah siap!',
+    `${firstName}, yuk lanjut ngobrol sama Diah Anna buat mulai langkah pertama roadmap kamu.`,
+    { type: 'onboarding-nudge', action: 'open-chat' }
+  )
+}
+
+export async function notifyOnboardingNudge(userEmail, fcmToken, userName) {
+  const results = {}
+  if (userEmail) results.email = await sendOnboardingNudgeEmail(userEmail, userName)
+  if (fcmToken) results.push = await sendOnboardingNudgePush(fcmToken, userName)
+  return results
+}
+
+/**
+ * Send instant push saat user checklist 1 langkah GPS roadmap selesai
+ */
+export async function sendMilestoneCompletePush(fcmToken, userName, stepTitle) {
+  const firstName = userName?.split(' ')[0] || 'Teman'
+  return sendPushNotification(
+    fcmToken,
+    `🎉 Mantap, ${firstName}!`,
+    stepTitle ? `Langkah "${stepTitle}" udah kamu selesaikan. Yuk lanjut ke langkah berikutnya!` : 'Satu langkah lagi selesai. Yuk lanjut ke langkah berikutnya!',
+    { type: 'milestone-complete', action: 'open-journey' }
   )
 }
 
@@ -309,17 +400,17 @@ export async function sendPushToMultiple(fcmTokens, title, body, data = {}) {
 /**
  * Send chat reminder via both email & push
  */
-export async function notifyChatReminder(userEmail, fcmToken, userName) {
+export async function notifyChatReminder(userEmail, fcmToken, userName, pendingStepTitle) {
   const results = {}
 
   // Send email
   if (userEmail) {
-    results.email = await sendChatReminderEmail(userEmail, userName)
+    results.email = await sendChatReminderEmail(userEmail, userName, pendingStepTitle)
   }
 
   // Send push
   if (fcmToken) {
-    results.push = await sendChatReminderPush(fcmToken, userName)
+    results.push = await sendChatReminderPush(fcmToken, userName, pendingStepTitle)
   }
 
   return results

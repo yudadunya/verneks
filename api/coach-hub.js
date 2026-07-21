@@ -16,6 +16,7 @@
 import { generateText, generateChat } from './lib/ai.js'
 import { createClient } from '@supabase/supabase-js'
 import { createHash } from 'crypto'
+import { getUserFcmToken, sendMilestoneCompletePush } from './lib/notifications.js'
 
 // Satu client Supabase dipakai bersama oleh semua handler (service role,
 // fallback ke anon key kalau service role tidak ada — sama seperti
@@ -1019,13 +1020,23 @@ async function handleCareerCoach(req, res) {
     const { userId, stepIndex, done } = req.body
     if (!userId || stepIndex == null) return res.status(400).json({ error: 'Data tidak lengkap.' })
     try {
-      const { data: profile } = await supabase.from('user_career_profiles').select('gps_steps').eq('user_id', userId).maybeSingle()
+      const { data: profile } = await supabase.from('user_career_profiles').select('gps_steps, nama').eq('user_id', userId).maybeSingle()
       const steps = profile?.gps_steps || []
       if (!steps[stepIndex]) return res.status(400).json({ error: 'Step tidak ditemukan.' })
       steps[stepIndex] = { ...steps[stepIndex], done }
       await supabase.from('user_career_profiles').update({ gps_steps: steps, last_updated: new Date().toISOString() }).eq('user_id', userId)
       if (done) {
         await supabase.from('career_events').insert({ user_id: userId, event_type: 'milestone_completed', event_payload: { title: steps[stepIndex].title, step_index: stepIndex } })
+        // Push instan — dikirim langsung saat itu juga, bukan nunggu cron,
+        // supaya momentum positif user langsung direspons Diah Anna. Dibungkus
+        // try/catch sendiri: kalau push gagal (token tidak ada/Firebase down),
+        // toggle milestone-nya tetap harus sukses buat user.
+        try {
+          const fcmToken = await getUserFcmToken(userId)
+          if (fcmToken) await sendMilestoneCompletePush(fcmToken, profile?.nama || 'Teman', steps[stepIndex].title)
+        } catch (pushErr) {
+          console.error('[toggle-milestone push failed]', pushErr)
+        }
       }
       return res.status(200).json({ success: true, steps })
     } catch (error) {

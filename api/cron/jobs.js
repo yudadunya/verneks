@@ -7,7 +7,11 @@
  */
 import { generateText } from '../lib/ai.js'
 import { createClient } from '@supabase/supabase-js'
-import { sendChatReminderEmail, sendWeeklyReviewEmail } from '../lib/email.js'
+// FIX: sebelumnya import dari '../lib/email.js' yang TIDAK ADA di project ini
+// — bikin seluruh file ini gagal di-load (jadi SEMUA cron job di sini mati,
+// bukan cuma notifikasi). Fungsi email sebenarnya ada di notifications.js,
+// digabung dengan push (FCM) lewat notifyChatReminder/notifyWeeklyReview.
+import { notifyChatReminder, notifyWeeklyReview, notifyOnboardingNudge, getUserFcmToken } from '../lib/notifications.js'
 
 const supabase = createClient(
   process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL,
@@ -99,17 +103,18 @@ export default async function handler(req, res) {
         })
 
         await supabase.from('user_weekly_reviews').upsert({
-          user_id: user.user_id, week_start: weekStart, summary: summary.trim(),
+          user_id: user.user_id, week_start: weekStart, review_text: summary.trim(),
         }, { onConflict: 'user_id,week_start' })
 
-        // Send email ke user setelah review di-generate
+        // Kirim email + push notification setelah review di-generate
         try {
           const authUser = authUsers?.find(u => u.id === user.user_id)
-          if (authUser?.email) {
-            await sendWeeklyReviewEmail(authUser.email, user.nama || 'User', summary.trim())
+          const fcmToken = await getUserFcmToken(user.user_id)
+          if (authUser?.email || fcmToken) {
+            await notifyWeeklyReview(authUser?.email, fcmToken, user.nama || 'User', summary.trim())
           }
-        } catch (emailErr) {
-          console.error(`[weekly-review email failed for ${user.user_id}]`, emailErr)
+        } catch (notifErr) {
+          console.error(`[weekly-review notify failed for ${user.user_id}]`, notifErr)
         }
 
         // Update running_insight kalau belum diupdate minggu ini
@@ -149,7 +154,7 @@ export default async function handler(req, res) {
     // Ambil semua users yang tidak chat 2 hari terakhir
     const { data: users, error: usersErr } = await supabase
       .from('user_career_profiles')
-      .select('user_id, nama')
+      .select('user_id, nama, gps_steps')
       .not('user_id', 'is', null)
       .limit(100)
 
@@ -170,15 +175,20 @@ export default async function handler(req, res) {
           .limit(1)
           .maybeSingle()
 
-        // Kalau tidak ada chat atau chat > 2 hari, kirim email
+        // Kalau tidak ada chat atau chat > 2 hari, kirim email + push
         if (!lastChat || new Date(lastChat.created_at) < new Date(twoDaysAgo)) {
           const authUser = authUsers.find(u => u.id === profile.user_id)
-          if (authUser?.email) {
-            const emailResult = await sendChatReminderEmail(authUser.email, profile.nama || 'User')
-            if (emailResult.success) {
-              results.push({ userId: profile.user_id, status: 'sent' })
+          const fcmToken = await getUserFcmToken(profile.user_id)
+          // Cari langkah GPS pertama yang belum dicentang — bikin reminder-nya
+          // konkret ("langkah X belum selesai") bukan cuma ajakan generik.
+          const pendingStep = (profile.gps_steps || []).find(s => !s.done && s.title && s.title !== '—')
+          if (authUser?.email || fcmToken) {
+            const notifyResult = await notifyChatReminder(authUser?.email, fcmToken, profile.nama || 'User', pendingStep?.title)
+            const ok = notifyResult.email?.success || notifyResult.push?.success
+            if (ok) {
+              results.push({ userId: profile.user_id, status: 'sent', detail: notifyResult })
             } else {
-              results.push({ userId: profile.user_id, status: 'failed', error: emailResult.error })
+              results.push({ userId: profile.user_id, status: 'failed', detail: notifyResult })
             }
           }
         }
@@ -192,6 +202,55 @@ export default async function handler(req, res) {
       success: true,
       processed: results.length,
       sent,
+    })
+  }
+
+  // ── ONBOARDING NUDGE (Discovery selesai, belum chat pertama) ─────────────
+  if (job === 'onboarding-nudge') {
+    const h24 = new Date(Date.now() - 24 * 3600 * 1000)
+    const h48 = new Date(Date.now() - 48 * 3600 * 1000)
+
+    // User yang profil-nya (= selesai Discovery) dibuat/diupdate 24-48 jam
+    // lalu. Window 24 jam (bukan cutoff sesaat) supaya cron harian ini pasti
+    // "menangkap" tiap user tepat sekali, walau jadwal cron sedikit meleset.
+    const { data: users, error: usersErr } = await supabase
+      .from('user_career_profiles')
+      .select('user_id, nama, last_updated')
+      .not('career_readiness', 'is', null)
+      .gte('last_updated', h48.toISOString())
+      .lte('last_updated', h24.toISOString())
+      .limit(100)
+
+    if (usersErr) return res.status(500).json({ error: usersErr.message })
+    if (!users?.length) return res.status(200).json({ success: true, sent: 0 })
+
+    const results = []
+    const { data: { users: authUsers } } = await supabase.auth.admin.listUsers()
+
+    for (const profile of users) {
+      try {
+        // Skip kalau sudah pernah chat coaching sungguhan (>=1 session note)
+        const { data: existingNote } = await supabase
+          .from('user_session_notes')
+          .select('id').eq('user_id', profile.user_id).limit(1).maybeSingle()
+        if (existingNote) continue
+
+        const authUser = authUsers.find(u => u.id === profile.user_id)
+        const fcmToken = await getUserFcmToken(profile.user_id)
+        if (authUser?.email || fcmToken) {
+          const notifyResult = await notifyOnboardingNudge(authUser?.email, fcmToken, profile.nama || 'User')
+          const ok = notifyResult.email?.success || notifyResult.push?.success
+          results.push({ userId: profile.user_id, status: ok ? 'sent' : 'failed', detail: notifyResult })
+        }
+      } catch (e) {
+        results.push({ userId: profile.user_id, status: 'failed', error: e.message })
+      }
+    }
+
+    return res.status(200).json({
+      success: true,
+      processed: results.length,
+      sent: results.filter(r => r.status === 'sent').length,
     })
   }
 
