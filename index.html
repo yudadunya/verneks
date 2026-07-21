@@ -52,28 +52,31 @@
   <body>
     <div id="root"></div>
     <script>
-      (function() {
-        if ('serviceWorker' in navigator) {
-          navigator.serviceWorker.getRegistrations().then(function(regs) {
-            regs.forEach(function(r) { r.unregister(); });
-          });
-        }
-        if ('caches' in window) {
-          caches.keys().then(function(keys) {
-            keys.forEach(function(k) { caches.delete(k); });
-          });
-        }
-        var now = Date.now()
-        var sbKeys = Object.keys(localStorage).filter(function(k) { return k.startsWith('sb-'); })
-        sbKeys.forEach(function(k) {
-          try {
-            var val = JSON.parse(localStorage.getItem(k))
-            var expiresAt = val && val.expires_at ? val.expires_at * 1000 : null
-            if (expiresAt && expiresAt < now) { localStorage.removeItem(k) }
-          } catch(e) { localStorage.removeItem(k) }
-        })
-        localStorage.setItem('vk_last_active', now.toString())
-      })();
+      // ── Dulu ada script di sini yang (1) unregister service worker +
+      // hapus semua cache di SETIAP load, dan (2) hapus key sesi Supabase
+      // (`sb-*`) dari localStorage kalau `expires_at`-nya (expiry ACCESS
+      // TOKEN, defaultnya cuma 1 jam) sudah lewat waktu sekarang.
+      //
+      // Itu penyebab bug "logout sendiri" yang selama ini dikira soal
+      // browser/device: expires_at itu memang WAJAR lewat kalau user tidak
+      // buka app >1 jam (siapa pun, device apa pun) — Supabase client
+      // (GoTrueJS) sudah didesain untuk otomatis refresh access token pakai
+      // refresh_token begitu halaman dibuka lagi, SELAMA sesi refresh_token
+      // itu sendiri tidak dihapus. Script ini menghapus seluruh key
+      // (termasuk refresh_token-nya) SEBELUM React/Supabase client sempat
+      // jalan sama sekali — jadi refresh-nya tidak pernah kejadian, dan user
+      // kelihatan "logout otomatis" padahal sesinya sebenarnya masih valid.
+      //
+      // Bagian unregister SW + clear cache juga sudah ada versi yang benar
+      // (sekali per versi app, pakai flag `lc_sw_cleared_version`) di
+      // `src/App.jsx` — jadi tidak perlu diulang di sini secara mentah.
+      //
+      // Kalau ke depannya butuh cara untuk "paksa logout semua sesi lama"
+      // (misal abis migrasi besar), lakukan itu lewat Supabase (revoke
+      // refresh token di server / `supabase.auth.admin.signOut`), BUKAN
+      // dengan menghapus localStorage secara membabi buta di sini — karena
+      // client tidak bisa membedakan "access token expired tapi refresh
+      // token masih sah" dari "sesi beneran sudah mati".
     </script>
     <script type="module" src="/src/main.jsx"></script>
   </body>
