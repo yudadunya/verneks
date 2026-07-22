@@ -2,18 +2,18 @@
 // Service Worker untuk handle Firebase push notifications
 // File ini harus di /public folder
 //
-// PENTING: versi di importScripts ini HARUS disamakan dengan versi package
-// "firebase" di package.json (npm) yang dipakai src/lib/firebase.js — ini
-// rekomendasi resmi dari dokumentasi Firebase sendiri. Sebelumnya di sini
-// masih v9.23.0 sementara npm package-nya sudah v12.16.0 (beda 3 versi
-// major) — kemungkinan besar itu penyebab getToken() di app utama gagal
-// terus dengan "AbortError: Registration failed - could not retrieve the
-// public key", karena proses subscribe butuh koordinasi antara SDK utama
-// dan service worker ini. Kalau nanti package "firebase" di package.json
-// di-upgrade, versi di 2 baris importScripts ini juga WAJIB ikut diupdate.
+// CATATAN VERSI: sengaja TIDAK pakai versi persis sama dengan npm package
+// (12.16.0) — versi serilis itu kadang belum lengkap ter-mirror di CDN
+// gstatic (ada laporan resmi ke tim Firebase soal bundle messaging-compat
+// yang 404 untuk versi yang baru rilis). Dipakai 10.13.2 karena ini versi
+// yang dipakai berulang di CONTOH RESMI dokumentasi Firebase sendiri untuk
+// firebase-messaging-sw.js — dipastikan selalu tersedia di CDN. Compat layer
+// untuk operasi dasar FCM (initializeApp, messaging(), onBackgroundMessage)
+// stabil lintas versi 10.x-12.x, jadi aman dipasangkan dengan app utama yang
+// pakai npm package firebase v12.16.0.
 
-importScripts('https://www.gstatic.com/firebasejs/12.16.0/firebase-app-compat.js')
-importScripts('https://www.gstatic.com/firebasejs/12.16.0/firebase-messaging-compat.js')
+importScripts('https://www.gstatic.com/firebasejs/10.13.2/firebase-app-compat.js')
+importScripts('https://www.gstatic.com/firebasejs/10.13.2/firebase-messaging-compat.js')
 
 const firebaseConfig = {
   apiKey: 'AIzaSyAVP1_bVJN5bmZFGpKo3dXth-b7aj1CX94',
