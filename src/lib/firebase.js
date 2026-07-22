@@ -22,42 +22,70 @@ export const messaging = getMessaging(app)
  * Request permission & get FCM token dari user browser
  * Simpan token ke Supabase untuk kirim push nanti
  */
+/**
+ * Ambil FCM token dari browser (asumsi izin SUDAH granted) dan simpan ke
+ * Supabase. Tidak memanggil Notification.requestPermission() sama sekali —
+ * jadi aman dipanggil otomatis tanpa gesture user, karena getToken() TIDAK
+ * memunculkan prompt apa pun kalau izinnya sudah granted (prompt cuma
+ * muncul saat status masih 'default', dan itu satu-satunya bagian yang
+ * butuh gesture asli).
+ */
+async function fetchAndSaveFcmToken(userId) {
+  const token = await getToken(messaging, { vapidKey: VAPID_KEY })
+  if (!token) {
+    console.warn('Gagal mendapat FCM token')
+    return null
+  }
+  console.log('FCM Token:', token)
+  if (userId) {
+    await fetch('/api/utils?action=save-fcm-token', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ userId, token })
+    })
+  }
+  return token
+}
+
+/**
+ * Dipanggil dari TOMBOL (gesture user asli) — ini yang boleh memicu prompt
+ * izin browser kalau statusnya masih 'default'.
+ */
 export async function requestNotificationPermission(userId) {
   try {
-    // Cek browser support
     if (!('serviceWorker' in navigator)) {
       console.warn('Service Worker tidak didukung')
       return null
     }
 
-    // Request permission
     const permission = await Notification.requestPermission()
     if (permission !== 'granted') {
       console.log('User denied notification permission')
       return null
     }
 
-    // Get FCM token
-    const token = await getToken(messaging, { vapidKey: VAPID_KEY })
-    if (!token) {
-      console.warn('Gagal mendapat FCM token')
-      return null
-    }
-
-    console.log('FCM Token:', token)
-
-    // Simpan token ke Supabase
-    if (userId) {
-      await fetch('/api/utils?action=save-fcm-token', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ userId, token })
-      })
-    }
-
-    return token
+    return await fetchAndSaveFcmToken(userId)
   } catch (error) {
     console.error('Error requesting notification permission:', error)
+    return null
+  }
+}
+
+/**
+ * Dipanggil OTOMATIS tiap login (aman, tanpa gesture) — HANYA jalan kalau
+ * izin browser sudah 'granted' dari sebelumnya (user lama). Tujuannya:
+ * refresh/pastikan token FCM tersimpan terbaru di Supabase tiap login,
+ * tanpa perlu user klik tombol lagi kalau memang sudah pernah izinkan.
+ * Kalau status masih 'default' atau 'denied', ini sengaja tidak melakukan
+ * apa-apa — biar tetap konsisten, permintaan izin baru cuma lewat tombol.
+ */
+export async function refreshFcmTokenIfGranted(userId) {
+  try {
+    if (typeof Notification === 'undefined' || Notification.permission !== 'granted') return null
+    if (!('serviceWorker' in navigator)) return null
+    return await fetchAndSaveFcmToken(userId)
+  } catch (error) {
+    console.error('Error refreshing FCM token:', error)
     return null
   }
 }

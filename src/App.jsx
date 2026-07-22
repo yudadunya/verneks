@@ -2,7 +2,7 @@ import { BrowserRouter, Routes, Route } from 'react-router-dom'
 import { useState, useEffect, useRef, lazy, Suspense } from 'react'
 import { supabase } from './lib/supabase'
 import { useSubscription } from './hooks/useSubscription'
-import { listenForMessages, registerServiceWorker } from './lib/firebase'
+import { listenForMessages, registerServiceWorker, refreshFcmTokenIfGranted } from './lib/firebase'
 
 // Lazy load semua halaman ok
 const Home         = lazy(() => import('./pages/Home'))
@@ -414,6 +414,7 @@ export default function App() {
           // melihat prompt-nya).
           try {
             registerServiceWorker()
+            refreshFcmTokenIfGranted(u.id)
             listenForMessages((msg) => {
               console.log('Push notification received:', msg)
               setPushToast(msg)
