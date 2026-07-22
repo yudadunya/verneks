@@ -2,7 +2,7 @@ import { BrowserRouter, Routes, Route } from 'react-router-dom'
 import { useState, useEffect, useRef, lazy, Suspense } from 'react'
 import { supabase } from './lib/supabase'
 import { useSubscription } from './hooks/useSubscription'
-import { requestNotificationPermission, listenForMessages, registerServiceWorker } from './lib/firebase'
+import { listenForMessages, registerServiceWorker } from './lib/firebase'
 
 // Lazy load semua halaman ok
 const Home         = lazy(() => import('./pages/Home'))
@@ -405,10 +405,15 @@ export default function App() {
         setTimeout(() => {
           syncDiscoveryData(u, setChatMessages)
           
-          // Setup Firebase push notifications
+          // Setup Firebase push notifications. Permintaan izin notifikasi
+          // SENGAJA tidak lagi otomatis di sini — dipindah ke tombol di
+          // halaman Profile, supaya benar-benar dipicu gesture user asli
+          // (browser modern sering menganggap permintaan otomatis sebagai
+          // gangguan dan menampilkannya sebagai UI senyap atau langsung
+          // dianggap ditolak, jadi user baru bisa jadi tidak pernah benar-benar
+          // melihat prompt-nya).
           try {
             registerServiceWorker()
-            requestNotificationPermission(u.id)
             listenForMessages((msg) => {
               console.log('Push notification received:', msg)
               setPushToast(msg)

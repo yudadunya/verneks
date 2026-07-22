@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import * as React from 'react'
 import { useNavigate } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
+import { requestNotificationPermission } from '../lib/firebase'
 // Subscription/plan sekarang datang dari prop (di-lift ke App.jsx) — lihat komentar di App.jsx.
 import BottomNav from '../components/BottomNav'
 
@@ -80,6 +81,13 @@ export default function Profile({ user, loading = false, subscription = DEFAULT_
   const [dataLoading, setDataLoading] = useState(true)
   const [logoutLoading, setLogoutLoading] = useState(false)
   const [visible, setVisible]       = useState(false)
+  // Status izin notifikasi browser — dicek dari Notification.permission
+  // langsung (bukan dari server), karena ini murni state browser lokal.
+  // 'unsupported' kalau browser tidak dukung Notification API sama sekali.
+  const [notifStatus, setNotifStatus] = useState(
+    typeof Notification !== 'undefined' ? Notification.permission : 'unsupported'
+  )
+  const [notifLoading, setNotifLoading] = useState(false)
 
   useEffect(() => {
     if (loading) return
@@ -94,6 +102,25 @@ export default function Profile({ user, loading = false, subscription = DEFAULT_
       setTimeout(() => setVisible(true), 80)
     })
   }, [user?.id])
+
+  // Dipicu HANYA dari klik tombol — sengaja tidak otomatis saat halaman
+  // dibuka. Browser modern (Chrome makin ke sini makin ketat) idealnya cuma
+  // menampilkan prompt izin notifikasi kalau dipicu gesture user asli;
+  // dipanggil otomatis sering berakhir jadi UI "senyap" (ikon kecil di
+  // address bar yang gampang tidak kesadar) atau langsung ke-anggap ditolak.
+  const handleEnableNotifications = async () => {
+    if (!user?.id) return
+    setNotifLoading(true)
+    try {
+      const token = await requestNotificationPermission(user.id)
+      setNotifStatus(typeof Notification !== 'undefined' ? Notification.permission : 'unsupported')
+      if (!token) {
+        console.warn('[Profile] Gagal aktifkan notifikasi — cek console untuk detail error dari firebase.js')
+      }
+    } finally {
+      setNotifLoading(false)
+    }
+  }
 
   const handleLogout = async () => {
     setLogoutLoading(true)
@@ -302,6 +329,31 @@ export default function Profile({ user, loading = false, subscription = DEFAULT_
             last
           />
         </div>
+
+        {/* ── Notifikasi ── */}
+        {notifStatus !== 'unsupported' && (
+          <button
+            onClick={notifStatus === 'default' ? handleEnableNotifications : undefined}
+            disabled={notifLoading || notifStatus !== 'default'}
+            style={{
+              width: '100%', padding: '14px', marginBottom: 12,
+              background: 'transparent',
+              border: `1px solid ${notifStatus === 'granted' ? 'rgba(37,211,102,0.3)' : 'rgba(255,255,255,0.15)'}`,
+              color: notifStatus === 'granted' ? 'rgba(37,211,102,0.9)' : 'rgba(255,255,255,0.7)',
+              borderRadius: 14, fontWeight: 600, fontSize: '0.9rem',
+              cursor: notifStatus === 'default' && !notifLoading ? 'pointer' : 'default',
+              fontFamily: 'inherit',
+              opacity: notifLoading ? 0.5 : 1,
+              transition: 'opacity 0.2s ease',
+              ...fade(0.24),
+            }}
+          >
+            {notifLoading && '⏳ Mengaktifkan...'}
+            {!notifLoading && notifStatus === 'granted' && '🔔 Notifikasi Aktif'}
+            {!notifLoading && notifStatus === 'denied' && '🔕 Notifikasi Diblokir (ubah di setting browser)'}
+            {!notifLoading && notifStatus === 'default' && '🔔 Aktifkan Notifikasi dari Diah Anna'}
+          </button>
+        )}
 
         {/* ── Logout ── */}
         <button
