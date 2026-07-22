@@ -413,8 +413,10 @@ export default function App() {
           // dianggap ditolak, jadi user baru bisa jadi tidak pernah benar-benar
           // melihat prompt-nya).
           try {
-            registerServiceWorker()
-            refreshFcmTokenIfGranted(u.id)
+            ;(async () => {
+              await registerServiceWorker()
+              await refreshFcmTokenIfGranted(u.id)
+            })()
             listenForMessages((msg) => {
               console.log('Push notification received:', msg)
               setPushToast(msg)

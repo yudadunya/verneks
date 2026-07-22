@@ -31,7 +31,15 @@ export const messaging = getMessaging(app)
  * butuh gesture asli).
  */
 async function fetchAndSaveFcmToken(userId) {
-  const token = await getToken(messaging, { vapidKey: VAPID_KEY })
+  // FIX: sebelumnya getToken() dipanggil tanpa serviceWorkerRegistration —
+  // itu bikin Firebase SDK mencoba REGISTRASI SENDIRI service worker secara
+  // implisit (kelihatan dari scope anehnya: firebase-cloud-messaging-
+  // push-scope, bukan scope biasa "/"), alih-alih pakai worker yang sudah
+  // kita daftarkan manual & sudah pasti aktif lewat registerServiceWorker().
+  // Sekarang eksplisit nunggu registrasi kita SENDIRI yang sudah siap, lalu
+  // itu yang dioper ke getToken() — Firebase tidak perlu coba daftar ulang.
+  const registration = await navigator.serviceWorker.ready
+  const token = await getToken(messaging, { vapidKey: VAPID_KEY, serviceWorkerRegistration: registration })
   if (!token) {
     console.warn('Gagal mendapat FCM token')
     return null
