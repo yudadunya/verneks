@@ -65,3 +65,78 @@ self.addEventListener('notificationclick', (event) => {
     })
   )
 })
+
+// ═══════════════════════════════════════════════════════════════════════
+// ── CACHING / FETCH HANDLER ───────────────────────────────────────────────
+// Digabung ke sini dari public/sw.js (yang sebelumnya tidak pernah
+// benar-benar didaftarkan browser — dead code). Chrome mensyaratkan service
+// worker dengan fetch handler supaya situs dianggap "installable" sebagai
+// PWA (ikon install muncul) — sebelumnya SW yang aktif (file ini) tidak
+// punya fetch handler sama sekali, jadi ikon install tidak pernah muncul.
+// Digabung jadi SATU file (bukan didaftarkan terpisah) supaya tidak ada 2
+// service worker rebutan scope yang sama.
+const CACHE = 'lamarcerdas-v4'
+
+const STATIC_ASSETS = [
+  '/',
+  '/index.html',
+  '/manifest.json',
+  '/icons/icon-192x192.png',
+  '/icons/icon-512x512.png',
+]
+
+self.addEventListener('install', e => {
+  e.waitUntil(
+    caches.open(CACHE)
+      .then(c => c.addAll(STATIC_ASSETS))
+      .then(() => self.skipWaiting())
+  )
+})
+
+self.addEventListener('activate', e => {
+  e.waitUntil(
+    caches.keys()
+      .then(keys => Promise.all(
+        keys.filter(k => k !== CACHE).map(k => caches.delete(k))
+      ))
+      .then(() => self.clients.claim())
+  )
+})
+
+self.addEventListener('fetch', e => {
+  const url = new URL(e.request.url)
+
+  // KRITIS: JANGAN pernah intercept request ke domain lain (Supabase auth,
+  // Firebase, CDN, dll) — cuma tangani request ke origin sendiri. Kalau
+  // tidak, ini bisa bikin sesi login gagal aneh karena kena logic
+  // cache/offline SW yang tidak seharusnya menyentuh request auth.
+  if (url.origin !== self.location.origin) return
+
+  // API sendiri — selalu network
+  if (url.pathname.startsWith('/api/')) return
+
+  // Navigasi SPA — network dulu, fallback ke index.html kalau offline
+  if (e.request.mode === 'navigate') {
+    e.respondWith(
+      fetch(e.request).catch(() => caches.match('/index.html'))
+    )
+    return
+  }
+
+  // Aset statis situs sendiri — cache first
+  e.respondWith(
+    caches.match(e.request).then(cached => {
+      if (cached) return cached
+      return fetch(e.request).then(res => {
+        if (!res || res.status !== 200 || res.type === 'opaque') return res
+        const clone = res.clone()
+        caches.open(CACHE).then(c => c.put(e.request, clone))
+        return res
+      }).catch(() => new Response('', { status: 408, statusText: 'Offline' }))
+    })
+  )
+})
+
+self.addEventListener('message', e => {
+  if (e.data?.type === 'SKIP_WAITING') self.skipWaiting()
+})
