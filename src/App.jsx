@@ -401,30 +401,39 @@ export default function App() {
 
       setChatMessages(loadMessages(u.id))
       requestPersistentStorage()
+
+      // FIX: registerServiceWorker() + refreshFcmTokenIfGranted() dulu cuma
+      // jalan di dalam blok `_event === 'SIGNED_IN'` (login baru). Tapi
+      // main.jsx (sebelum diperbaiki) unregister SEMUA service worker di
+      // SETIAP app load — jadi begitu user reload app dengan sesi yang
+      // sudah ada (event-nya 'INITIAL_SESSION'/'TOKEN_REFRESHED', BUKAN
+      // 'SIGNED_IN'), SW push yang tadi ke-unregister TIDAK PERNAH
+      // ke-register ulang. Efeknya: push notification + install-eligibility
+      // mati diam-diam setelah reload pertama pasca-login, sampai user
+      // logout lalu login lagi. Dipindah ke luar blok SIGNED_IN supaya
+      // jalan di SETIAP sesi (termasuk reload) — aman dipanggil berulang:
+      // registerServiceWorker() idempotent (browser cukup pakai registrasi
+      // yang sudah ada kalau URL sama), dan refreshFcmTokenIfGranted() sudah
+      // sendiri mengecek Notification.permission === 'granted' sebelum
+      // melakukan apapun, jadi tidak memicu prompt izin untuk user yang
+      // belum pernah kasih izin.
+      try {
+        ;(async () => {
+          await registerServiceWorker()
+          await refreshFcmTokenIfGranted(u.id)
+        })()
+        listenForMessages((msg) => {
+          console.log('Push notification received:', msg)
+          setPushToast(msg)
+          setTimeout(() => setPushToast(null), 6000)
+        })
+      } catch (firebaseErr) {
+        console.warn('[Firebase setup]', firebaseErr)
+      }
+
       if (_event === 'SIGNED_IN') {
         setTimeout(() => {
           syncDiscoveryData(u, setChatMessages)
-          
-          // Setup Firebase push notifications. Permintaan izin notifikasi
-          // SENGAJA tidak lagi otomatis di sini — dipindah ke tombol di
-          // halaman Profile, supaya benar-benar dipicu gesture user asli
-          // (browser modern sering menganggap permintaan otomatis sebagai
-          // gangguan dan menampilkannya sebagai UI senyap atau langsung
-          // dianggap ditolak, jadi user baru bisa jadi tidak pernah benar-benar
-          // melihat prompt-nya).
-          try {
-            ;(async () => {
-              await registerServiceWorker()
-              await refreshFcmTokenIfGranted(u.id)
-            })()
-            listenForMessages((msg) => {
-              console.log('Push notification received:', msg)
-              setPushToast(msg)
-              setTimeout(() => setPushToast(null), 6000)
-            })
-          } catch (firebaseErr) {
-            console.warn('[Firebase setup]', firebaseErr)
-          }
         }, 0)
       }
     })
