@@ -1,5 +1,7 @@
 // src/lib/firebase.js
-// Firebase client-side setup untuk push notifications
+// Firebase client-side setup untuk push notifications — ditulis ulang dari
+// nol (bukan tambal-sulam), tetap pakai nama fungsi yang sama supaya tidak
+// perlu ubah App.jsx / Profile.jsx lagi.
 import { initializeApp } from 'firebase/app'
 import { getMessaging, getToken, onMessage } from 'firebase/messaging'
 
@@ -13,127 +15,105 @@ const firebaseConfig = {
   measurementId: 'G-1HWTF155KZ'
 }
 
-const VAPID_KEY = 'BJYOyg5HLHhnsFm2UvhNxuytAspvB4PQJHzvvnQGg74mz1oDDteI0qirJPuXJ6KJYCR4A72rTxQUFA7LZKIzPfQ'
+// TODO: GANTI dengan Web Push certificate BARU dari Firebase Console
+// (Project Settings > Cloud Messaging > Web Push certificates > generate
+// key pair baru). Ini satu-satunya variabel yang belum pernah benar-benar
+// diganti dari semua percobaan sebelumnya.
+const VAPID_KEY = 'BM1tJxYCQLK1zgHpabUjHY-JvyBHPOYlQzaQ7N_Gvfs7TzL60Pd48shzDwYQj_vnbMrOmgWapS3CgMJfXAARYZ0'
 
 const app = initializeApp(firebaseConfig)
 export const messaging = getMessaging(app)
 
+let swRegistration = null
+
 /**
- * Request permission & get FCM token dari user browser
- * Simpan token ke Supabase untuk kirim push nanti
+ * Daftarkan service worker (public/firebase-messaging-sw.js). Dipanggil
+ * sekali di awal, hasilnya disimpan supaya getToken() bisa pakai registrasi
+ * yang sama persis — bukan biarkan Firebase mendaftarkan sendiri secara
+ * implisit.
  */
-/**
- * Ambil FCM token dari browser (asumsi izin SUDAH granted) dan simpan ke
- * Supabase. Tidak memanggil Notification.requestPermission() sama sekali —
- * jadi aman dipanggil otomatis tanpa gesture user, karena getToken() TIDAK
- * memunculkan prompt apa pun kalau izinnya sudah granted (prompt cuma
- * muncul saat status masih 'default', dan itu satu-satunya bagian yang
- * butuh gesture asli).
- */
-async function fetchAndSaveFcmToken(userId) {
-  // FIX: sebelumnya getToken() dipanggil tanpa serviceWorkerRegistration —
-  // itu bikin Firebase SDK mencoba REGISTRASI SENDIRI service worker secara
-  // implisit (kelihatan dari scope anehnya: firebase-cloud-messaging-
-  // push-scope, bukan scope biasa "/"), alih-alih pakai worker yang sudah
-  // kita daftarkan manual & sudah pasti aktif lewat registerServiceWorker().
-  // Sekarang eksplisit nunggu registrasi kita SENDIRI yang sudah siap, lalu
-  // itu yang dioper ke getToken() — Firebase tidak perlu coba daftar ulang.
-  const registration = await navigator.serviceWorker.ready
-  const token = await getToken(messaging, { vapidKey: VAPID_KEY, serviceWorkerRegistration: registration })
-  if (!token) {
-    console.warn('Gagal mendapat FCM token')
+export async function registerServiceWorker() {
+  if (!('serviceWorker' in navigator)) {
+    console.warn('[firebase] Service Worker tidak didukung browser ini')
     return null
   }
-  console.log('FCM Token:', token)
+  try {
+    swRegistration = await navigator.serviceWorker.register('/firebase-messaging-sw.js')
+    await navigator.serviceWorker.ready
+    console.log('[firebase] Service Worker aktif untuk push notifications')
+    return swRegistration
+  } catch (err) {
+    console.error('[firebase] Gagal registrasi Service Worker:', err)
+    return null
+  }
+}
+
+async function fetchAndSaveFcmToken(userId) {
+  if (!swRegistration) {
+    swRegistration = await navigator.serviceWorker.ready
+  }
+  const token = await getToken(messaging, {
+    vapidKey: VAPID_KEY,
+    serviceWorkerRegistration: swRegistration,
+  })
+  if (!token) {
+    console.warn('[firebase] getToken() tidak mengembalikan token')
+    return null
+  }
+  console.log('[firebase] FCM Token:', token)
   if (userId) {
-    await fetch('/api/utils?action=save-fcm-token', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ userId, token })
-    })
+    try {
+      await fetch('/api/utils?action=save-fcm-token', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userId, token }),
+      })
+    } catch (err) {
+      console.error('[firebase] Gagal simpan token ke server:', err)
+    }
   }
   return token
 }
 
 /**
- * Dipanggil dari TOMBOL (gesture user asli) — ini yang boleh memicu prompt
- * izin browser kalau statusnya masih 'default'.
+ * Dipanggil dari TOMBOL (gesture user asli) — boleh memicu prompt izin
+ * browser kalau status masih 'default'.
  */
 export async function requestNotificationPermission(userId) {
   try {
-    if (!('serviceWorker' in navigator)) {
-      console.warn('Service Worker tidak didukung')
-      return null
-    }
-
+    if (!('serviceWorker' in navigator)) return null
     const permission = await Notification.requestPermission()
     if (permission !== 'granted') {
-      console.log('User denied notification permission')
+      console.log('[firebase] User menolak izin notifikasi')
       return null
     }
-
     return await fetchAndSaveFcmToken(userId)
-  } catch (error) {
-    console.error('Error requesting notification permission:', error)
+  } catch (err) {
+    console.error('[firebase] Error requestNotificationPermission:', err)
     return null
   }
 }
 
 /**
- * Dipanggil OTOMATIS tiap login (aman, tanpa gesture) — HANYA jalan kalau
- * izin browser sudah 'granted' dari sebelumnya (user lama). Tujuannya:
- * refresh/pastikan token FCM tersimpan terbaru di Supabase tiap login,
- * tanpa perlu user klik tombol lagi kalau memang sudah pernah izinkan.
- * Kalau status masih 'default' atau 'denied', ini sengaja tidak melakukan
- * apa-apa — biar tetap konsisten, permintaan izin baru cuma lewat tombol.
+ * Dipanggil OTOMATIS tiap login (tanpa gesture) — HANYA jalan kalau izin
+ * browser SUDAH 'granted' dari sebelumnya.
  */
 export async function refreshFcmTokenIfGranted(userId) {
   try {
     if (typeof Notification === 'undefined' || Notification.permission !== 'granted') return null
     if (!('serviceWorker' in navigator)) return null
     return await fetchAndSaveFcmToken(userId)
-  } catch (error) {
-    console.error('Error refreshing FCM token:', error)
+  } catch (err) {
+    console.error('[firebase] Error refreshFcmTokenIfGranted:', err)
     return null
   }
 }
 
 /**
- * Listen for incoming messages
- * Dipanggil saat app aktif
+ * Listener pesan saat app di foreground (tab sedang aktif/terbuka).
  */
 export function listenForMessages(onMessageCallback) {
   onMessage(messaging, (payload) => {
-    console.log('Message received:', payload)
-    
-    const { notification, data } = payload
-    
-    if (onMessageCallback) {
-      onMessageCallback({
-        title: notification?.title,
-        body: notification?.body,
-        data: data
-      })
-    }
-
-    // Tampilkan notification UI custom kalau perlu
-    if (notification) {
-      // Bisa show toast, modal, atau custom notification
-      console.log(`Notifikasi: ${notification.title} - ${notification.body}`)
-    }
+    if (onMessageCallback) onMessageCallback(payload)
   })
-}
-
-/**
- * Register service worker untuk handle push saat app tutup
- */
-export async function registerServiceWorker() {
-  if ('serviceWorker' in navigator) {
-    try {
-      await navigator.serviceWorker.register('/firebase-messaging-sw.js')
-      console.log('Service Worker registered for push notifications')
-    } catch (error) {
-      console.error('Service Worker registration failed:', error)
-    }
-  }
 }
