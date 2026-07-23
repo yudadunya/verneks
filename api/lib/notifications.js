@@ -210,6 +210,33 @@ export async function sendWeeklyReviewEmail(userEmail, userName, reviewText) {
 /**
  * Send push notification ke single device
  */
+// FIX: token FCM yang sudah invalid/uninstall-app/expired tidak pernah
+// ditandai non-aktif di database — jadi cron (weekly-review, chat-reminder,
+// dst) terus-menerus mencoba kirim ke token mati selamanya, gagal diam-diam
+// tiap kali tanpa efek selain nge-log error. Firebase Admin SDK selalu
+// kasih tahu lewat error.code kalau tokennya memang sudah tidak valid lagi
+// (bukan error sementara seperti quota/network) — begitu ketemu kode itu,
+// langsung nonaktifkan di `user_push_tokens` supaya getUserFcmToken()
+// (yang sudah filter `is_active: true`) otomatis berhenti memakainya.
+const STALE_TOKEN_ERROR_CODES = new Set([
+  'messaging/registration-token-not-registered',
+  'messaging/invalid-registration-token',
+])
+
+async function deactivateFcmToken(fcmToken) {
+  if (!fcmToken) return
+  try {
+    const { error } = await supabase
+      .from('user_push_tokens')
+      .update({ is_active: false, updated_at: new Date().toISOString() })
+      .eq('fcm_token', fcmToken)
+    if (error) throw error
+    console.log('[deactivateFcmToken] Token invalid dinonaktifkan:', fcmToken.slice(0, 12) + '...')
+  } catch (error) {
+    console.error('[deactivateFcmToken]', error)
+  }
+}
+
 export async function sendPushNotification(fcmToken, title, body, data = {}) {
   if (!fcmToken) return { error: 'FCM token missing' }
   if (!firebaseAdminReady) return { error: 'Firebase Admin belum siap (config/env belum lengkap)' }
@@ -234,6 +261,10 @@ export async function sendPushNotification(fcmToken, title, body, data = {}) {
     return { success: true, messageId: response }
   } catch (error) {
     console.error('[sendPushNotification]', error)
+    if (STALE_TOKEN_ERROR_CODES.has(error.code)) {
+      await deactivateFcmToken(fcmToken)
+      return { error: error.message, staleToken: true }
+    }
     return { error: error.message }
   }
 }
@@ -382,6 +413,20 @@ export async function sendPushToMultiple(fcmTokens, title, body, data = {}) {
     })
 
     console.log(`[sendPushToMultiple] Sent: ${response.successCount}, Failed: ${response.failureCount}`)
+
+    // Nonaktifkan token yang memang sudah tidak valid lagi (bukan gagal
+    // sementara karena network/quota) — supaya batch berikutnya tidak
+    // buang-buang panggilan API ke token yang sama.
+    if (response.failureCount > 0) {
+      await Promise.all(
+        response.responses.map((r, i) =>
+          !r.success && STALE_TOKEN_ERROR_CODES.has(r.error?.code)
+            ? deactivateFcmToken(fcmTokens[i])
+            : null
+        )
+      )
+    }
+
     return { 
       success: true, 
       successCount: response.successCount,
