@@ -129,6 +129,113 @@ async function callGeminiText({ system, prompt, maxTokens, model }) {
   return result.response.text()
 }
 
+// ── Structured output per provider ───────────────────────────────────────────
+// Beda dengan callX biasa: ini MEMAKSA hasil sesuai schema di level API,
+// bukan cuma minta baik-baik lewat prompt lalu parse teks manual.
+
+async function callClaudeStructured({ system, prompt, schema, maxTokens, model }) {
+  const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY })
+  const msg = await client.messages.create({
+    model: model || MODELS.claude.fast,
+    max_tokens: maxTokens,
+    system,
+    messages: [{ role: 'user', content: prompt }],
+    tools: [{ name: 'extract', description: 'Return the extracted structured data', input_schema: schema }],
+    tool_choice: { type: 'tool', name: 'extract' }, // model wajib panggil tool ini, tidak bisa cuma ngomong teks
+  })
+  const toolCall = msg.content.find(b => b.type === 'tool_use')
+  if (!toolCall) throw new Error('Claude tidak mengembalikan tool_use')
+  return toolCall.input
+}
+
+async function callOpenAICompatStructured({ system, prompt, maxTokens, model, baseUrl, apiKey }) {
+  const res = await fetch(`${baseUrl}/chat/completions`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${apiKey}`,
+    },
+    body: JSON.stringify({
+      model,
+      max_tokens: maxTokens,
+      messages: [
+        { role: 'system', content: system },
+        { role: 'user', content: prompt },
+      ],
+      response_format: { type: 'json_object' }, // Cerebras & DeepSeek: API menjamin valid JSON
+    }),
+  })
+  if (!res.ok) {
+    const err = await res.text()
+    throw new Error(`[${baseUrl}] ${res.status}: ${err.slice(0, 300)}`)
+  }
+  const data = await res.json()
+  const text = data.choices?.[0]?.message?.content
+  if (!text) throw new Error(`Empty response from ${baseUrl} (model: ${model})`)
+  return JSON.parse(text) // aman: response_format json_object menjamin ini valid JSON
+}
+
+function callCerebrasStructured({ system, prompt, maxTokens, model }) {
+  return callOpenAICompatStructured({
+    system, prompt, maxTokens,
+    model:   model || MODELS.cerebras.fast,
+    baseUrl: 'https://api.cerebras.ai/v1',
+    apiKey:  process.env.CEREBRAS_API_KEY,
+  })
+}
+
+function callDeepSeekStructured({ system, prompt, maxTokens, model }) {
+  return callOpenAICompatStructured({
+    system, prompt, maxTokens,
+    model:   model || MODELS.deepseek.fast,
+    baseUrl: 'https://api.deepseek.com/v1',
+    apiKey:  process.env.DEEPSEEK_API_KEY,
+  })
+}
+
+async function callGeminiStructured({ system, prompt, schema, maxTokens, model }) {
+  const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY)
+  const m = genAI.getGenerativeModel({
+    model: model || MODELS.gemini.fast,
+    systemInstruction: system,
+    generationConfig: {
+      maxOutputTokens: maxTokens,
+      responseMimeType: 'application/json',
+      responseSchema: schema, // Gemini: enforce shape, bukan cuma "valid JSON apa saja"
+    },
+  })
+  const result = await m.generateContent({ contents: [{ role: 'user', parts: [{ text: prompt }] }] })
+  return JSON.parse(result.response.text())
+}
+
+// Fallback chain sama persis dengan generateText/generateChat, cuma versi structured.
+// plan='free' → Cerebras → Gemini → Claude Haiku (jarang sampai sini)
+// plan='premium' → Claude → DeepSeek → Gemini
+export async function generateStructured({ system, prompt, schema, maxTokens = 300, tier = 'fast', plan = 'free' }) {
+  const chain = plan === 'premium'
+    ? [
+        () => callClaudeStructured({ system, prompt, schema, maxTokens, model: MODELS.claude[tier] }),
+        () => callDeepSeekStructured({ system, prompt, maxTokens, model: MODELS.deepseek[tier] }),
+        () => callGeminiStructured({ system, prompt, schema, maxTokens, model: MODELS.gemini[tier] }),
+      ]
+    : [
+        () => callCerebrasStructured({ system, prompt, maxTokens, model: MODELS.cerebras[tier] }),
+        () => callGeminiStructured({ system, prompt, schema, maxTokens, model: MODELS.gemini[tier] }),
+        () => callClaudeStructured({ system, prompt, schema, maxTokens, model: MODELS.claude.fast }),
+      ]
+
+  let lastErr
+  for (const attempt of chain) {
+    try {
+      return await attempt()
+    } catch (e) {
+      lastErr = e
+      console.warn('[ai:structured] provider gagal, lanjut fallback:', e.message)
+    }
+  }
+  throw new Error(`[ai:structured] Semua provider gagal: ${lastErr.message}`)
+}
+
 // ── Retry helper ─────────────────────────────────────────────────────────────
 async function withRetry(fn, maxRetries = 1) {
   let lastErr

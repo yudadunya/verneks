@@ -13,7 +13,7 @@
 // query `target` (lihat catatan vercel.json yang disertakan terpisah).
 // ═══════════════════════════════════════════════════════════════════════════
 
-import { generateText, generateChat } from './lib/ai.js'
+import { generateText, generateChat, generateStructured } from './lib/ai.js'
 import { createClient } from '@supabase/supabase-js'
 import { createHash } from 'crypto'
 import { getUserFcmToken, sendMilestoneCompletePush } from './lib/notifications.js'
@@ -158,32 +158,32 @@ function setCachedResponse(hash, response) {
 }
 
 // ── [RSI] ROBUST JSON PARSER ─────────────────────────────────────────────────
-function extractJsonFromResponse(text) {
-  if (!text) return null
-
-  // 1. Coba cari blok JSON di dalam ```json ... ```
-  const jsonBlockMatch = text.match(/```json\s*([\s\S]*?)\s*```/)
-  if (jsonBlockMatch) {
-    try { return JSON.parse(jsonBlockMatch[1]) } catch (e) {}
-  }
-
-  // 2. Coba parse langsung
-  try { return JSON.parse(text) } catch (e) {}
-
-  // 3. Strategi terakhir: ambil substring antara '{' pertama dan '}' terakhir
-  // Berguna kalau AI tambahkan teks penjelasan di luar JSON atau respons terpotong
-  const startIdx = text.indexOf('{')
-  const endIdx   = text.lastIndexOf('}')
-  if (startIdx !== -1 && endIdx !== -1 && endIdx > startIdx) {
-    try { return JSON.parse(text.substring(startIdx, endIdx + 1)) } catch (e2) {
-      console.error('[RSI] Gagal parse JSON potensial:', e2.message)
-    }
-  }
-
-  return null
+// ── [RSI] ENGINE: ANALISIS & PEMBELAJARAN POLA MANDIRI ───────────────────────
+const PATTERN_ANALYSIS_SCHEMA = {
+  type: 'object',
+  properties: {
+    new_patterns: {
+      type: 'array',
+      items: {
+        type: 'object',
+        properties: {
+          type: {
+            type: 'string',
+            enum: ['communication_style', 'emotional_trigger', 'work_habit', 'decision_pattern', 'motivation_driver', 'blocker'],
+          },
+          description: { type: 'string', description: 'Deskripsi singkat dan jelas tentang pola ini' },
+          confidence:  { type: 'number', description: '0-100' },
+          examples:    { type: 'array', items: { type: 'string' } },
+        },
+        required: ['type', 'description', 'confidence', 'examples'],
+      },
+    },
+    strategy_adjustment: { type: 'string', description: 'Saran bagaimana Diah Anna harus menyesuaikan gaya coaching-nya' },
+    should_update_memory: { type: 'boolean' },
+  },
+  required: ['new_patterns', 'strategy_adjustment', 'should_update_memory'],
 }
 
-// ── [RSI] ENGINE: ANALISIS & PEMBELAJARAN POLA MANDIRI ───────────────────────
 async function analyzeAndLearnPatterns(userId, messages, aiResponse, careerProfile, existingPatterns, rsiVersion, supabase) {
   try {
     // Ambil hanya pesan user untuk analisis
@@ -194,66 +194,29 @@ async function analyzeAndLearnPatterns(userId, messages, aiResponse, careerProfi
     // [OPTIMIZATION #7] Compress user messages untuk RSI analysis — hemat token
     const compressedUserMsgs = userMessages.slice(0, 2000) // Reduced from 3000
     
-    // Minta AI menganalisis pola dari percakapan ini
-    const patternAnalysis = await generateText({
-      system: `Kamu adalah sistem analisis pola perilaku untuk Diah Anna. Tugasmu: mengidentifikasi pola berulang, preferensi komunikasi, atau wawasan baru tentang user dari percakapan coaching karir.
-      
-Output HARUS dalam format JSON valid dengan struktur:
-{
-  "new_patterns": [
-    {
-      "type": "communication_style|emotional_trigger|work_habit|decision_pattern|motivation_driver|blocker",
-      "description": "Deskripsi singkat dan jelas tentang pola ini",
-      "confidence": 0-100,
-      "examples": ["contoh 1 dari percakapan", "contoh 2"]
-    }
-  ],
-  "strategy_adjustment": "Saran bagaimana Diah Anna harus menyesuaikan gaya coaching-nya berdasarkan pola ini",
-  "should_update_memory": true/false
-}`,
-      prompt: `Profil User: ${careerProfile?.nama || 'Unknown'}, Target: ${careerProfile?.target_posisi || 'Unknown'}\n\nRiwayat Percakapan:\n${compressedUserMsgs}\n\nRespons AI:\n${aiResponse.slice(0, 800)}\n\nAnalisis apakah ada pola baru yang bisa dipelajari atau pola lama yang perlu disesuaikan confidence-nya.`,
-      maxTokens: 1000,  // [OPTIMIZATION #8] Reduced from 1500 — RSI tidak butuh detail tinggi
-      tier: 'fast',   // Cerebras/DeepSeek — hemat, RSI tidak butuh model premium
-      plan: 'free'
-    })
-    
-    // Parse hasil analisis — pakai robust parser
-    // Parse hasil analisis — pakai robust parser + repair kalau terpotong
-    let analysis = extractJsonFromResponse(patternAnalysis)
-
-    // Kalau masih gagal (JSON terpotong) — coba repair: tutup array & object yang terbuka
-    if (!analysis || !Array.isArray(analysis.new_patterns)) {
-      try {
-        let repaired = patternAnalysis
-          .replace(/```json\s*/i, '').replace(/```\s*$/, '').trim()
-        // Hitung bracket yang belum ditutup
-        let opens = 0, arrOpens = 0, inStr = false, esc = false
-        for (const ch of repaired) {
-          if (esc) { esc = false; continue }
-          if (ch === '\\') { esc = true; continue }
-          if (ch === '"') inStr = !inStr
-          else if (!inStr && ch === '{') opens++
-          else if (!inStr && ch === '}') opens--
-          else if (!inStr && ch === '[') arrOpens++
-          else if (!inStr && ch === ']') arrOpens--
-        }
-        if (inStr) repaired += '"'
-        for (let i = 0; i < arrOpens; i++) repaired += ']'
-        for (let i = 0; i < opens; i++) repaired += '}'
-        analysis = JSON.parse(repaired)
-        console.log('[RSI] JSON repair berhasil')
-      } catch (e) {
-        console.error('[RSI] Invalid structure atau parse gagal. Raw:', patternAnalysis.slice(0, 300))
-        return
-      }
-    }
-
-    if (!analysis || !Array.isArray(analysis.new_patterns)) {
-      console.error('[RSI] Struktur tidak valid setelah repair')
+    // Minta AI menganalisis pola dari percakapan ini — schema dipaksa di level API,
+    // jadi tidak perlu lagi regex/bracket-repair untuk JSON yang terpotong.
+    let analysis
+    try {
+      analysis = await generateStructured({
+        system: 'Kamu adalah sistem analisis pola perilaku untuk Diah Anna. Tugasmu: mengidentifikasi pola berulang, preferensi komunikasi, atau wawasan baru tentang user dari percakapan coaching karir.',
+        prompt: `Profil User: ${careerProfile?.nama || 'Unknown'}, Target: ${careerProfile?.target_posisi || 'Unknown'}\n\nRiwayat Percakapan:\n${compressedUserMsgs}\n\nRespons AI:\n${aiResponse.slice(0, 800)}\n\nAnalisis apakah ada pola baru yang bisa dipelajari atau pola lama yang perlu disesuaikan confidence-nya.`,
+        schema: PATTERN_ANALYSIS_SCHEMA,
+        maxTokens: 1000,  // [OPTIMIZATION #8] Reduced from 1500 — RSI tidak butuh detail tinggi
+        tier: 'fast',   // Cerebras/DeepSeek — hemat, RSI tidak butuh model premium
+        plan: 'free'
+      })
+    } catch (e) {
+      console.error('[RSI] Semua provider gagal saat analisis pola:', e.message)
       return
     }
-    
-    if (!analysis.new_patterns || analysis.new_patterns.length === 0) return // Tidak ada pola baru
+
+    if (!analysis || !Array.isArray(analysis.new_patterns)) {
+      console.error('[RSI] Struktur tidak valid dari generateStructured')
+      return
+    }
+
+    if (analysis.new_patterns.length === 0) return // Tidak ada pola baru
     
     // Proses setiap pola yang ditemukan
     for (const pattern of analysis.new_patterns) {
@@ -841,35 +804,36 @@ async function saveIncomeStrategy(userId, inputs, strategy) {
 // Ekstraksi data income dari percakapan 'income-chat' — dipakai supaya Diah
 // Anna bisa otomatis hitung strategi TANPA form terpisah, begitu data yang
 // dibutuhkan sudah lengkap disebut secara natural dalam obrolan.
+const INCOME_EXTRACT_SCHEMA = {
+  type: 'object',
+  properties: {
+    current_monthly_income:        { type: ['number', 'null'], description: 'Penghasilan bulanan saat ini dalam Rupiah, hanya jika disebutkan eksplisit' },
+    target_monthly_income:         { type: ['number', 'null'], description: 'Target penghasilan bulanan dalam Rupiah, hanya jika disebutkan eksplisit' },
+    timeline_months:               { type: ['number', 'null'], description: 'Target jangka waktu dalam bulan' },
+    risk_tolerance:                { type: ['string', 'null'], enum: ['low', 'medium', 'high', null] },
+    time_available_hours_per_week: { type: ['number', 'null'] },
+    ready:                          { type: 'boolean', description: 'true hanya jika current_monthly_income, target_monthly_income, DAN timeline_months semua sudah terisi' },
+  },
+  required: ['current_monthly_income', 'target_monthly_income', 'timeline_months', 'risk_tolerance', 'time_available_hours_per_week', 'ready'],
+}
+
 async function extractIncomeDataFromChat(apiMessages, careerProfile) {
   const convoText = apiMessages.slice(-16).map(m => `${m.role === 'user' ? 'User' : 'Diah Anna'}: ${m.content.slice(0, 300)}`).join('\n')
   const knownIncome = careerProfile?.current_monthly_income || null
 
-  const prompt = `Percakapan income mode:\n${convoText}\n\nData yang sudah tersimpan sebelumnya (kalau ada): income sekarang = ${knownIncome || 'belum diketahui'}.
-
-Ekstrak data berikut dari percakapan HANYA jika disebutkan secara eksplisit oleh user (angka rupiah, bukan estimasi kamu):
-{
-  "current_monthly_income": angka_rupiah_atau_null,
-  "target_monthly_income": angka_rupiah_atau_null,
-  "timeline_months": angka_bulan_atau_null,
-  "risk_tolerance": "low|medium|high|null",
-  "time_available_hours_per_week": angka_jam_atau_null,
-  "ready": true_jika_current_DAN_target_DAN_timeline_sudah_ada_false_jika_belum
-}
-Output HANYA JSON valid, tanpa markdown, tanpa penjelasan.`
-
-  const raw = await generateText({
-    system: 'Kamu adalah mesin ekstraksi JSON. Output HANYA JSON valid.',
-    prompt,
-    maxTokens: 150,
-    tier: 'fast',
-    plan: 'free',
-  })
+  const prompt = `Percakapan income mode:\n${convoText}\n\nData yang sudah tersimpan sebelumnya (kalau ada): income sekarang = ${knownIncome || 'belum diketahui'}.\n\nEkstrak data HANYA jika disebutkan secara eksplisit oleh user (angka rupiah, bukan estimasi kamu). Set field ke null kalau belum disebutkan.`
 
   try {
-    const clean = raw.trim().replace(/^```json\s*/i, '').replace(/^```\s*/i, '').replace(/\s*```$/, '').trim()
-    return JSON.parse(clean)
-  } catch {
+    return await generateStructured({
+      system: 'Kamu adalah mesin ekstraksi data. Ekstrak HANYA angka yang disebutkan eksplisit oleh user, jangan estimasi atau menebak.',
+      prompt,
+      schema: INCOME_EXTRACT_SCHEMA,
+      maxTokens: 200,
+      tier: 'fast',
+      plan: 'free',
+    })
+  } catch (e) {
+    console.error('[income-extract] Semua provider gagal:', e.message)
     return { ready: false }
   }
 }
