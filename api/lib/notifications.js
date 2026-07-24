@@ -249,8 +249,7 @@ export async function sendPushNotification(fcmToken, title, body, data = {}) {
         fcmOptions: { link: 'https://verneks.my.id/dashboard' },
         notification: {
           title, body,
-          icon: 'https://verneks.my.id/icon-192x192.png',
-          badge: 'https://verneks.my.id/badge-72x72.png',
+          icon: 'https://verneks.my.id/icons/icon-192x192.png',
           click_action: 'https://verneks.my.id/dashboard'
         }
       }
@@ -272,22 +271,43 @@ export async function sendPushNotification(fcmToken, title, body, data = {}) {
 /**
  * Send chat reminder push
  */
-export async function sendChatReminderPush(fcmToken, userName, pendingStepTitle) {
+export async function sendChatReminderPush(fcmToken, userName, pendingStepTitle, personalLine = null) {
   const firstName = userName?.split(' ')[0] || 'Teman'
   return sendPushNotification(
     fcmToken,
     '💬 Halo ' + firstName,
-    pendingStepTitle
-      ? `Langkah "${pendingStepTitle}" masih menunggu kamu. Yuk lanjutkan!`
-      : 'Kita sudah 2 hari tidak ngobrol. Mari lanjutkan perjalanan karier kamu!',
+    personalLine
+      || (pendingStepTitle
+        ? `Langkah "${pendingStepTitle}" masih menunggu kamu. Yuk lanjutkan!`
+        : 'Kita sudah 2 hari tidak ngobrol. Mari lanjutkan perjalanan karier kamu!'),
     { type: 'chat-reminder', action: 'open-chat' }
   )
 }
 
 /**
- * Send onboarding nudge email — user sudah selesai Discovery (Career DNA
- * jadi) tapi belum mulai chat coaching pertama dalam ~24 jam.
+ * Push notifikasi ajakan pagi hari — BEDA nada dari sendChatReminderPush.
+ * Reminder biasa dipicu oleh inactivity (2 hari tidak chat) jadi wajar kalau
+ * nadanya sedikit "menagih". Ajakan pagi ini dikirim ke SEMUA user tiap hari
+ * (yang belum chat hari itu) terlepas dari seberapa aktif mereka — jadi HARUS
+ * terasa seperti sapaan teman, bukan tagihan harian. title & fallback body
+ * sengaja tidak pakai kata perintah ("harus", "wajib", "jangan lupa").
  */
+export async function sendMorningNudgePush(fcmToken, userName, personalLine = null) {
+  const firstName = userName?.split(' ')[0] || 'Teman'
+  return sendPushNotification(
+    fcmToken,
+    `Pagi, ${firstName} ☀️`,
+    personalLine || 'Ada waktu buat ngobrol bentar hari ini? Aku di sini kalau kamu mau cerita progress-mu.',
+    { type: 'morning-nudge', action: 'open-chat' }
+  )
+}
+
+export async function notifyMorningNudge(fcmToken, userName, personalLine) {
+  if (!fcmToken) return { push: { error: 'No FCM token' } }
+  return { push: await sendMorningNudgePush(fcmToken, userName, personalLine) }
+}
+
+
 export async function sendOnboardingNudgeEmail(userEmail, userName) {
   if (!userEmail) return { error: 'Email not found' }
   const firstName = userName?.split(' ')[0] || 'Teman'
@@ -400,8 +420,7 @@ export async function sendPushToMultiple(fcmTokens, title, body, data = {}) {
         fcmOptions: { link: 'https://verneks.my.id/dashboard' },
         notification: {
           title, body,
-          icon: 'https://verneks.my.id/icon-192x192.png',
-          badge: 'https://verneks.my.id/badge-72x72.png',
+          icon: 'https://verneks.my.id/icons/icon-192x192.png',
           click_action: 'https://verneks.my.id/dashboard'
         }
       }
@@ -444,8 +463,14 @@ export async function sendPushToMultiple(fcmTokens, title, body, data = {}) {
 
 /**
  * Send chat reminder via both email & push
+ * FIX: parameter `personalLine` sebelumnya tidak ada di signature ini, padahal
+ * caller (api/cron/jobs.js) sudah repot-repot generate kalimat personal via AI
+ * dan mengirimkannya sebagai argumen ke-5 — di JS, extra argument yang tidak
+ * ada di signature cuma dibuang diam-diam (bukan error), jadi personalLine
+ * itu SELALU hilang dan notifikasi yang terkirim selalu pakai template
+ * generik, bukan kalimat personal yang sudah capek-capek di-generate.
  */
-export async function notifyChatReminder(userEmail, fcmToken, userName, pendingStepTitle) {
+export async function notifyChatReminder(userEmail, fcmToken, userName, pendingStepTitle, personalLine = null) {
   const results = {}
 
   // Send email
@@ -455,7 +480,7 @@ export async function notifyChatReminder(userEmail, fcmToken, userName, pendingS
 
   // Send push
   if (fcmToken) {
-    results.push = await sendChatReminderPush(fcmToken, userName, pendingStepTitle)
+    results.push = await sendChatReminderPush(fcmToken, userName, pendingStepTitle, personalLine)
   }
 
   return results

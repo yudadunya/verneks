@@ -11,12 +11,51 @@ import { createClient } from '@supabase/supabase-js'
 // — bikin seluruh file ini gagal di-load (jadi SEMUA cron job di sini mati,
 // bukan cuma notifikasi). Fungsi email sebenarnya ada di notifications.js,
 // digabung dengan push (FCM) lewat notifyChatReminder/notifyWeeklyReview.
-import { notifyChatReminder, notifyWeeklyReview, notifyOnboardingNudge, getUserFcmToken } from '../lib/notifications.js'
+import { notifyChatReminder, notifyWeeklyReview, notifyOnboardingNudge, notifyMorningNudge, getUserFcmToken } from '../lib/notifications.js'
 
 const supabase = createClient(
   process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL,
   process.env.SUPABASE_SERVICE_ROLE_KEY
 )
+
+// ── Helper bersama: ambil "konteks personal" user (misi aktif atau topik
+// obrolan terakhir) buat bahan kalimat AI yang natural — dipakai baik oleh
+// send-chat-reminders (reminder inactivity) maupun morning-nudge (ajakan
+// pagi harian), supaya keduanya konsisten personal, bukan cuma salah satunya.
+async function getPersonalContext(userId, pendingStepTitle) {
+  try {
+    const { data: activeMission } = await supabase
+      .from('dashboard_missions')
+      .select('daily_mission')
+      .eq('user_id', userId)
+      .eq('status', 'active')
+      .order('created_at', { ascending: false })
+      .limit(1)
+      .maybeSingle()
+
+    let contextText = activeMission?.daily_mission
+      ? `Misi yang Diah Anna kasih ke user: "${activeMission.daily_mission}"`
+      : null
+
+    if (!contextText) {
+      const { data: lastCapsule } = await supabase
+        .from('memory_capsule_log')
+        .select('capsule_text')
+        .eq('user_id', userId)
+        .order('capsule_date', { ascending: false })
+        .limit(1)
+        .maybeSingle()
+      if (lastCapsule?.capsule_text) contextText = `Topik obrolan terakhir user: "${lastCapsule.capsule_text}"`
+    }
+
+    return contextText
+      ? `${contextText}${pendingStepTitle ? `\nLangkah roadmap yang masih tertunda: "${pendingStepTitle}"` : ''}`
+      : null
+  } catch (e) {
+    console.error(`[getPersonalContext failed for ${userId}]`, e.message)
+    return null
+  }
+}
 
 export default async function handler(req, res) {
   const authHeader  = req.headers['authorization']
@@ -195,52 +234,23 @@ export default async function handler(req, res) {
           // konkret ("langkah X belum selesai") bukan cuma ajakan generik.
           const pendingStep = (profile.gps_steps || []).find(s => !s.done && s.title && s.title !== '—')
 
-          // Ambil topik obrolan terakhir (memory capsule paling baru) supaya
-          // reminder-nya terasa Diah Anna beneran inget percakapan sebelumnya,
-          // bukan notifikasi generik "yuk chat lagi". Kalau tidak ada capsule
-          // (user baru/belum pernah chat), personalLine tetap null — fallback
-          // ke template generik yang sudah ada di notifications.js.
-          // Ambil misi aktif (tugas konkret yang Diah Anna kasih di akhir sesi
-          // terakhir) — ini prioritas utama buat personalisasi reminder, karena
-          // ini komitmen SPESIFIK, bukan cuma topik ngobrol random. Fallback ke
-          // capsule kalau tidak ada misi aktif (misal user belum pernah dikasih
-          // misi, atau obrolan terakhir memang reflektif tanpa aksi konkret).
+          // Ambil topik obrolan terakhir / misi aktif — biar reminder-nya terasa
+          // Diah Anna beneran inget percakapan sebelumnya, bukan notifikasi
+          // generik "yuk chat lagi". (Logic-nya sekarang di getPersonalContext,
+          // dipakai bareng dengan job morning-nudge di bawah.)
           let personalLine = null
-          try {
-            const { data: activeMission } = await supabase
-              .from('dashboard_missions')
-              .select('daily_mission')
-              .eq('user_id', profile.user_id)
-              .eq('status', 'active')
-              .order('created_at', { ascending: false })
-              .limit(1)
-              .maybeSingle()
-
-            let contextText = activeMission?.daily_mission
-              ? `Misi yang Diah Anna kasih ke user: "${activeMission.daily_mission}"`
-              : null
-
-            if (!contextText) {
-              const { data: lastCapsule } = await supabase
-                .from('memory_capsule_log')
-                .select('capsule_text')
-                .eq('user_id', profile.user_id)
-                .order('capsule_date', { ascending: false })
-                .limit(1)
-                .maybeSingle()
-              if (lastCapsule?.capsule_text) contextText = `Topik obrolan terakhir user: "${lastCapsule.capsule_text}"`
-            }
-
-            if (contextText) {
+          const contextText = await getPersonalContext(profile.user_id, pendingStep?.title)
+          if (contextText) {
+            try {
               personalLine = await generateText({
                 system: 'Kamu Diah Anna, AI career coach. Tulis SATU kalimat pendek (maks 20 kata) gaya chat WhatsApp buat notifikasi reminder — hangat, personal, jangan kaku/formal. Jangan pakai salam pembuka, langsung ke isi.',
-                prompt: `${contextText}${pendingStep ? `\nLangkah roadmap yang masih tertunda: "${pendingStep.title}"` : ''}\n\nTulis 1 kalimat reminder yang merujuk itu, ajak lanjut ngobrol/cerita progressnya.`,
+                prompt: `${contextText}\n\nTulis 1 kalimat reminder yang merujuk itu, ajak lanjut ngobrol/cerita progressnya.`,
                 maxTokens: 60, tier: 'fast',
               })
               personalLine = personalLine?.trim().replace(/^"|"$/g, '') || null
+            } catch (aiErr) {
+              console.error(`[send-chat-reminders personalLine failed for ${profile.user_id}]`, aiErr)
             }
-          } catch (aiErr) {
-            console.error(`[send-chat-reminders personalLine failed for ${profile.user_id}]`, aiErr)
           }
 
           if (authUser?.email || fcmToken) {
@@ -303,6 +313,79 @@ export default async function handler(req, res) {
           const ok = notifyResult.email?.success || notifyResult.push?.success
           results.push({ userId: profile.user_id, status: ok ? 'sent' : 'failed', detail: notifyResult })
         }
+      } catch (e) {
+        results.push({ userId: profile.user_id, status: 'failed', error: e.message })
+      }
+    }
+
+    return res.status(200).json({
+      success: true,
+      processed: results.length,
+      sent: results.filter(r => r.status === 'sent').length,
+    })
+  }
+
+  // ── MORNING NUDGE (ajakan pagi harian, nadanya BEDA dari inactivity reminder)
+  // Beda dari 'send-chat-reminders' (yang cuma nyala kalau sudah 2 hari absen),
+  // ini jalan tiap pagi ke semua user — TAPI di-skip kalau user itu sudah chat
+  // HARI INI, supaya tidak terasa spam ke user yang sebenarnya sudah aktif.
+  if (job === 'morning-nudge') {
+    const today = new Date().toISOString().slice(0, 10)
+
+    const { data: users, error: usersErr } = await supabase
+      .from('user_career_profiles')
+      .select('user_id, nama, gps_steps')
+      .not('career_readiness', 'is', null) // cuma user yang sudah selesai Discovery
+      .limit(100)
+
+    if (usersErr) return res.status(500).json({ error: usersErr.message })
+    if (!users?.length) return res.status(200).json({ success: true, sent: 0 })
+
+    const results = []
+
+    for (const profile of users) {
+      try {
+        // Skip kalau sudah ada sesi chat hari ini — jangan ganggu user yang
+        // memang sudah balik sendiri tanpa diingatkan.
+        const { data: chatToday } = await supabase
+          .from('user_session_notes')
+          .select('id')
+          .eq('user_id', profile.user_id)
+          .eq('session_date', today)
+          .limit(1)
+          .maybeSingle()
+        if (chatToday) continue
+
+        const fcmToken = await getUserFcmToken(profile.user_id)
+        if (!fcmToken) continue // morning-nudge cuma push, skip user tanpa token — jangan email tiap pagi, kepenuhan
+
+        const pendingStep = (profile.gps_steps || []).find(s => !s.done && s.title && s.title !== '—')
+        const contextText = await getPersonalContext(profile.user_id, pendingStep?.title)
+
+        let personalLine = null
+        try {
+          personalLine = await generateText({
+            system: `Kamu Diah Anna, AI career coach yang hangat dan suportif. Tulis SATU kalimat pendek (maks 18 kata) untuk notifikasi ajakan ngobrol pagi hari, gaya chat WhatsApp.
+
+ATURAN PENTING:
+- Nadanya ajakan santai dari teman, BUKAN reminder tugas atau tagihan.
+- JANGAN pakai kata "harus", "wajib", "jangan lupa", "yuk segera", atau kata perintah/menuntut lainnya.
+- JANGAN bikin user merasa bersalah karena belum chat.
+- Boleh singgung progress/topik terakhir kalau relevan, tapi framing-nya rasa ingin tahu/dukungan, bukan menagih kelanjutan.
+- Satu emoji opsional, tidak wajib.`,
+            prompt: contextText
+              ? `${contextText}\n\nTulis 1 kalimat ajakan pagi yang hangat, boleh merujuk konteks di atas kalau natural.`
+              : `User belum ada konteks obrolan spesifik. Tulis 1 kalimat ajakan pagi yang hangat dan umum, seperti menyapa teman di pagi hari.`,
+            maxTokens: 50, tier: 'fast',
+          })
+          personalLine = personalLine?.trim().replace(/^"|"$/g, '') || null
+        } catch (aiErr) {
+          console.error(`[morning-nudge personalLine failed for ${profile.user_id}]`, aiErr)
+        }
+
+        const notifyResult = await notifyMorningNudge(fcmToken, profile.nama || 'Teman', personalLine)
+        const ok = notifyResult.push?.success
+        results.push({ userId: profile.user_id, status: ok ? 'sent' : 'failed', detail: notifyResult })
       } catch (e) {
         results.push({ userId: profile.user_id, status: 'failed', error: e.message })
       }
