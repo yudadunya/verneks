@@ -36,8 +36,8 @@ messaging.onBackgroundMessage((payload) => {
   const notificationTitle = notification?.title || 'Diah Anna'
   const notificationOptions = {
     body: notification?.body || 'Ada pesan untukmu',
-    icon: 'https://verneks.my.id/icon-192x192.png',
-    badge: 'https://verneks.my.id/badge-72x72.png',
+    icon: 'https://verneks.my.id/icons/icon-192x192.png', // FIX: sebelumnya path ke /icon-192x192.png (root) — 404, file aslinya di /icons/
+    // FIX: badge dihapus — 'badge-72x72.png' tidak pernah ada di project ini sama sekali (cek public/icons/, isinya cuma icon-*.png), jadi selalu 404
     tag: data?.type || 'default',
     data: data || {},
     click_action: 'https://verneks.my.id/dashboard'
