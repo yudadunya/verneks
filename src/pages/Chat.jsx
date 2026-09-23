@@ -79,11 +79,6 @@ async function apiFetch(url, body) {
   return data
 }
 
-const CV_FORMATS = [
-  { id: 'fmt_ats',       label: '✅ ATS Friendly'    },
-  { id: 'fmt_jobstreet', label: '🔍 JobStreet'        },
-  { id: 'fmt_linkedin',  label: '💼 LinkedIn Profile' },
-]
 
 const DEFAULT_SUBSCRIPTION = {
   plan: 'free',

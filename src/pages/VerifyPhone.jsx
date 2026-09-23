@@ -65,7 +65,7 @@ export default function VerifyPhone({ user }) {
 
             <div style={styles.perks}>
               <div style={styles.perk}>🔒 Keamanan akun</div>
-              <div style={styles.perk}>💡 Tips karir dari Diah Anna langsung ke WA</div>
+              <div style={styles.perk}>💜 Diah Anna siap dengerin, kapan kamu butuh</div>
               <div style={styles.perk}>🔔 Notifikasi fitur & promo terbaru</div>
             </div>
 

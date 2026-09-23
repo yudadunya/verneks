@@ -16,7 +16,7 @@ export function organizationSchema(opts = {}) {
     name: 'Verneks',
     url: opts.url || SITE_URL,
     logo: opts.image || `${SITE_URL}/icons/icon-512x512.png`,
-    description: 'AI career companion pertama di Indonesia — temukan DNA Karir, roadmap personal, dan coaching 24/7.',
+    description: 'Teman curhat AI pertama di Indonesia — cerita apa saja ke Diah Anna, didengarkan tanpa menghakimi, kapan saja.',
     founder: { '@type': 'Person', name: 'YudVi Nexa Labs' },
   }
 }
@@ -61,7 +61,7 @@ export function softwareApplicationSchema() {
     applicationCategory: 'BusinessApplication',
     operatingSystem: 'Web, iOS, Android',
     url: SITE_URL,
-    description: 'AI career coaching platform dengan Career DNA Analysis, GPS Karir personal, dan mentor AI 24/7.',
+    description: 'Platform curhat AI dengan Diah Anna — teman ngobrol yang hangat, membantu kamu menata pikiran dan emosi, 24/7.',
     offers: { '@type': 'Offer', price: '0', priceCurrency: 'IDR', description: 'Gratis untuk memulai' },
   }
 }

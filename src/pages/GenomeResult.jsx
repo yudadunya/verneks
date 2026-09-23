@@ -128,7 +128,7 @@ export default function GenomeResult() {
           )}
           {growth.career_stage && (
             <div style={{ marginTop:10, color:'rgba(255,255,255,0.28)', fontSize:'0.72rem' }}>
-              Stage: <span style={{ color:'#34B7F1' }}>{growth.career_stage}</span>
+              Fase: <span style={{ color:'#34B7F1' }}>{growth.career_stage}</span>
               {growth.current_focus && <> · {growth.current_focus}</>}
             </div>
           )}
