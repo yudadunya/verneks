@@ -58,11 +58,11 @@ export default function GenomeResult() {
   const sortedGenome = [...GENOME_MAP].sort((a,b) => (gs[b.key]||0) - (gs[a.key]||0))
   const top          = sortedGenome[0]
   const topTwo       = sortedGenome.slice(0, 2)
-  const readiness    = result.career_readiness || 0
+  const readiness    = result.career_readiness || 0  // career_readiness = wellbeing score (nama DB lama)
   const p            = result.profile_preview || {}
   const growth       = result.growth_state || {}
   const gapSkills    = result.gap_skills || []
-  const gpsSteps     = result.gps_steps || []
+  const selfCareSteps = result.gps_steps || []  // gps_steps = langkah self-care (nama DB lama)
   const lockedCount  = gpsSteps.filter((_,i) => i >= 3).length
 
   const fade = (delay=0) => ({
@@ -90,7 +90,7 @@ export default function GenomeResult() {
           <div style={{ color:'#fff', fontWeight:800, fontSize:'1.7rem', marginBottom:6 }}>{top.label}</div>
           {p.target_posisi && (
             <div style={{ display:'inline-block', background:'rgba(37,211,102,0.1)', border:'1px solid rgba(37,211,102,0.2)', borderRadius:99, padding:'4px 14px', color:'#25D366', fontSize:'0.8rem', fontWeight:600 }}>
-              🎯 Fokus: {p.target_posisi}
+              💜 Fokus: {p.target_posisi}
             </div>
           )}
         </div>
@@ -128,7 +128,7 @@ export default function GenomeResult() {
           )}
           {growth.career_stage && (
             <div style={{ marginTop:10, color:'rgba(255,255,255,0.28)', fontSize:'0.72rem' }}>
-              Fase: <span style={{ color:'#34B7F1' }}>{growth.career_stage}</span>
+              Tahap: <span style={{ color:'#C4B5FD' }}>{growth.career_stage}</span>
               {growth.current_focus && <> · {growth.current_focus}</>}
             </div>
           )}

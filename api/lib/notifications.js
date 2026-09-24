@@ -208,7 +208,7 @@ export async function sendWeeklyReviewEmail(userEmail, userName, reviewText) {
           <p style="color: #666; font-size: 14px; margin-top: 20px;">Buka Verneks untuk melihat progress detail, milestones yang sudah dicapai, dan roadmap selengkapnya.</p>
         </div>
         <div class="footer">
-          <p>Email ini adalah review mingguan personal dari Diah Anna, AI Career Mentor Verneks</p>
+          <p>Email ini dikirim oleh Diah Anna — teman curhat AI kamu di Verneks</p>
           <p>© 2024 Verneks. Semua hak dilindungi.</p>
         </div>
       </div>

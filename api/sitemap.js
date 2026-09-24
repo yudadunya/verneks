@@ -21,13 +21,13 @@ const supabase = createClient(
 const SITE = 'https://verneks.my.id'
 
 const LIBRARY_SLUGS = [
-  'career-pivot-framework', 'skill-gap-analysis', 'salary-benchmarks-indonesia',
-  'job-search-strategies', 'linkedin-optimization', 'career-assessment',
-  'finding-target-role', 'networking-career-change', 'cover-letter-resume',
+  'cara-atasi-overthinking', 'teknik-grounding-anxiety', 'self-care-rutin-harian',
+  'kenali-pola-emosi-diri', 'cara-cerita-perasaan', 'mengelola-stress-kerja',
+  'hubungan-toxic-cara-keluar', 'tidur-berkualitas-tips', 'journaling-untuk-pemula',
   'interview-preparation', 'negotiation-tactics', 'freelance-vs-corporate',
-  'career-goals', 'mentorship-guide', 'using-ai-career-planning',
-  'ai-skills-needed', 'future-proof-career', 'career-trends-2024',
-  'remote-work-career', 'career-pivot-stories',
+  'batasi-screen-time', 'digital-detox-cara-mulai', 'meditasi-untuk-pemula',
+  'cara-minta-tolong', 'self-compassion-latihan', 'kelola-emosi-saat-marah',
+  'curhat-sehat-ke-siapa', 'pulih-dari-burnout',
 ]
 
 function urlEntry(loc, { priority = '0.7', changefreq = 'weekly', lastmod = null } = {}) {
@@ -46,7 +46,7 @@ export default async function handler(req, res) {
   entries.push(urlEntry(`${SITE}/chat`, { priority: '0.9', changefreq: 'weekly' }))
   entries.push(urlEntry(`${SITE}/blog`, { priority: '0.85', changefreq: 'daily' })) // daily karena artikel baru tiap hari
 
-  // Career Library (20 guides statis)
+  // Self-Care & Mental Health Library (20 guides statis)
   for (const slug of LIBRARY_SLUGS) {
     entries.push(urlEntry(`${SITE}/library/${slug}`, { priority: '0.8', changefreq: 'monthly' }))
   }

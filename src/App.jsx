@@ -59,7 +59,7 @@ async function syncDiscoveryData(u, setChatMessages) {
   // trial mau diaktifkan lagi, tinggal panggil ulang di sini.
 
   // PIVOT: Verneks udah nggak lagi gate user baru ke /discovery berdasarkan
-  // kelengkapan career profile — semua user (baru maupun lama) langsung ke
+  // kelengkapan profil diri — semua user (baru maupun lama) langsung ke
   // /chat setelah sign-in, nggak ada onboarding wajib. Bagian di bawah ini
   // (sync ke Supabase) tetap dijalankan di background KALAU kebetulan ada
   // sisa data lokal dari flow /discovery (halaman itu masih ada, dipakai
@@ -78,14 +78,8 @@ async function syncDiscoveryData(u, setChatMessages) {
         .eq('user_id', u.id)
         .maybeSingle()
 
-      // FIX: sebelumnya cuma cek career_readiness == null — user dengan
-      // profile "setengah jadi" (career_readiness ada, tapi target_posisi
-      // kosong karena onboarding lama sempat crash/gagal) jadi TIDAK PERNAH
-      // bisa nyimpen hasil Discovery baru yang lebih lengkap, walau mereka
-      // sudah diizinkan balik ke /discovery lewat fix di atas. Sekarang
-      // kondisinya: simpan kalau salah satu dari career_readiness ATAU
-      // target_posisi masih kosong (belum benar-benar lengkap).
-      if (existing?.career_readiness == null || !existing?.target_posisi) {
+      // Simpan kalau profil belum lengkap (wellbeing score atau fokus utama masih kosong).
+      if (existing?.career_readiness == null || !existing?.target_posisi) {  // career_readiness = wellbeing score
         const p  = result.profile_preview || {}
         const gs = result.genome_scores   || {}
         const gw = result.growth_state    || {}
@@ -118,7 +112,7 @@ async function syncDiscoveryData(u, setChatMessages) {
           }, { onConflict: 'user_id' }).catch(e => console.warn('[genome-save]', e.message))
         }
 
-        if (gw.career_stage) {
+        if (gw.career_stage) {  // career_stage = growth stage (fase perkembangan emosional)
           supabase.from('user_growth_state').upsert({
             user_id:          u.id,
             career_stage:     gw.career_stage,
@@ -164,10 +158,10 @@ async function syncDiscoveryData(u, setChatMessages) {
     }
     localStorage.removeItem('lc_discovery_result')
     localStorage.removeItem('lc_discovery_messages')
-    sessionStorage.removeItem(`lc_job_matches_${u.id}`)
+    sessionStorage.removeItem(`lc_activity_matches_${u.id}`)
   }
 
-  // Nggak ada lagi gate berdasarkan career_readiness — semua user sign-in
+  // Tidak ada gate berdasarkan profil — semua user sign-in
   // langsung diarahkan ke /chat.
   if (window.location.pathname !== '/chat') {
     window.location.replace('/chat')
@@ -518,8 +512,10 @@ export default function App() {
 
         {/* Backward Compatibility */}
         <Route path="/cv-review"      element={<Chat user={user} chatMessages={chatMessages} setChatMessages={setChatMessages} subscription={subscription} />} />
+        {/* /ats-checker route dipertahankan untuk backward compat — diarahkan ke Chat */}
         <Route path="/ats-checker"    element={<Chat user={user} chatMessages={chatMessages} setChatMessages={setChatMessages} subscription={subscription} />} />
         <Route path="/mock-interview" element={<Chat user={user} chatMessages={chatMessages} setChatMessages={setChatMessages} subscription={subscription} />} />
+        {/* /career-coach route dipertahankan untuk backward compat — diarahkan ke Chat */}
         <Route path="/career-coach"   element={<Chat user={user} chatMessages={chatMessages} setChatMessages={setChatMessages} subscription={subscription} />} />
         <Route path="/cv-maker"       element={<Chat user={user} chatMessages={chatMessages} setChatMessages={setChatMessages} subscription={subscription} />} />
       </Routes>

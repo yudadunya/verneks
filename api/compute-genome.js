@@ -99,8 +99,8 @@ ATURAN ANALISIS WAJIB:
    - communication → Komunikasi Emosi: bisa mengungkapkan perasaan dengan kata-kata, ke Diah Anna maupun orang lain
    - risk_taking → Empati: peka terhadap perasaan diri sendiri maupun orang lain di sekitarnya
 
-3. career_readiness (0-100): skor kesiapan diri secara keseluruhan (kesadaran + kebiasaan coping + kejelasan tentang apa yang dihadapi). Baru mulai sadar: 15-35%, Sudah ada usaha: 35-60%, Sudah cukup stabil: 60-85%. Realistis, bukan optimistis.
-4. career_stage (growth_state.career_stage): Baru Mulai Sadar / Belajar Mengelola / Lebih Tenang / Cukup Stabil / Sudah Jadi Kebiasaan
+3. wellbeing_score (field JSON tetap career_readiness, nama internal saja): skor kesejahteraan emosional (0-100) — kesadaran diri + kebiasaan coping + kejelasan tentang apa yang dirasakan. Baru mulai sadar: 15-35%, Sudah ada usaha: 35-60%, Sudah cukup stabil: 60-85%. Realistis.
+4. growth_stage (field JSON tetap career_stage, nama internal saja): Baru Mulai Sadar / Belajar Mengelola / Lebih Tenang / Cukup Stabil / Sudah Jadi Kebiasaan
 5. wow_insight: Harus membuat user berpikir 'bagaimana dia bisa tahu ini?' Berdasarkan pola laten yang muncul dari percakapan.
 6. mentor_message: Tulis seperti Diah Anna yang genuinely care, gaya bahasa santai/hangat layaknya pesan WhatsApp dari teman deket.
 7. Kalau "urgensi_finansial" true (ada tanda user sedang overwhelmed/berat banget secara emosional saat ini): "breakthrough_key" dan "gps_steps" langkah kedua (step pertama setelah Kenal Diri Sendiri) WAJIB berupa langkah PALING RINGAN dan cepat dilakukan untuk meredakan tekanan saat ini — misalnya teknik menenangkan diri sederhana, bukan perubahan kebiasaan besar. Langkah yang lebih jangka panjang tetap boleh muncul di langkah-langkah berikutnya, tapi langkah pertama harus yang paling cepat bikin lega.`

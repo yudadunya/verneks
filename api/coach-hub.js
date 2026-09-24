@@ -1,7 +1,7 @@
 // api/coach-hub.js
 // ═══════════════════════════════════════════════════════════════════════════
 // FILE GABUNGAN — merge dari 4 endpoint terpisah:
-//   - api/career-coach.js    (target=career-coach)  → handleCareerCoach
+//   - api/career-coach.js    (target=career-coach)  → handleChat
 //   - api/chat-history.js    (target=chat-history)   → handleChatHistory
 //   - api/discovery-coach.js (target=discovery-coach)→ handleDiscoveryCoach
 //   - api/end-session.js     (target=end-session)    → handleEndSession
@@ -32,7 +32,7 @@ const supabase    = createClient(supabaseUrl, serviceKey || anonKey)
 
 
 // ═══════════════════════════════════════════════════════════════════════════
-// ══════════════════════ HANDLER: CAREER-COACH ═══════════════════════════════
+// ══════════════════════ HANDLER: CHAT (Diah Anna — Teman Curhat AI) ════════
 // ═══════════════════════════════════════════════════════════════════════════
 // ── [OPTIMIZATION] RULE-BASED RESPONSES ──────────────────────────────────────
 // Sebelumnya berisi ~10 canned response khusus career-coach (CV, gaji,
@@ -45,7 +45,7 @@ const supabase    = createClient(supabaseUrl, serviceKey || anonKey)
 // tinggal ditambah lagi dengan pola yang sama.
 const RULE_BASED_PATTERNS = []
 
-function matchRuleBasedResponse(message, careerProfile) {
+function matchRuleBasedResponse(message, userProfile) {
   const lowerMsg = message.toLowerCase()
   
   for (const rule of RULE_BASED_PATTERNS) {
@@ -321,7 +321,7 @@ Setiap balasan dari kamu harus membuat user merasa lebih didengar — bukan buru
 `
 
 
-async function handleCareerCoach(req, res) {
+async function handleChat(req, res) {
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' })
 
   const { action = 'chat' } = req.body
@@ -333,7 +333,7 @@ async function handleCareerCoach(req, res) {
     // `user_session_notes`, (2) turunkan "misi harian" dari isi chat lalu
     // INSERT ke `dashboard_missions` — dua-duanya nulis konten personal ke
     // Supabase. Tidak ada client resmi yang memanggil action ini lagi, tapi
-    // karena tetap reachable lewat POST /api/career-coach {action:
+    // karena tetap reachable lewat POST /api/career-coach atau /api/coach-hub {action:
     // 'save-session-note'}, dikosongkan total di sini — bukan cuma "tidak
     // dipakai UI" (pelajaran yang sama seperti chat-history/end-session).
     // ═══════════════════════════════════════════════════════════════════════════
@@ -353,7 +353,7 @@ async function handleCareerCoach(req, res) {
   const { userId, localMemory } = req.body
   const plan = await getRealPlan(userId)
 
-  const careerProfile = null // sengaja tidak pernah diisi lagi — lihat catatan di atas
+  const userProfile = null // profil tidak diambil dari server — datang via localMemory dari client
   let learnedPatterns = []      // [RSI] Pola yang sudah dipelajari AI
   let rsiVersion      = 1       // [RSI] Versi model mental AI tentang user
   let diahAnnaMemory  = null    // ringkasan naratif ("apa yang Diah Anna inget")
@@ -389,8 +389,8 @@ ${learnedPatterns.map((p, i) => `${i + 1}. ${p.pattern_category}: ${p.pattern_de
   const sessionNotes = []
 
   // ── Deep memory blocks ────────────────────────────────────────────────────
-  const userDepthProfile = careerProfile?.user_depth_profile || {}
-  const depthScore       = careerProfile?.depth_score        || 0
+  const userDepthProfile = userProfile?.user_depth_profile || {}
+  const depthScore       = userProfile?.depth_score          || 0
 
   const deepMemoryBlock = diahAnnaMemory ? `
 # APA YANG KAMU INGAT TENTANG USER INI
@@ -483,7 +483,7 @@ Tulis sapaan pembuka yang natural.`,
   }
 
   // [OPTIMIZATION #2] Rule-based response fallback — hemat ~25%
-  const ruleBasedResponse = matchRuleBasedResponse(currentUserMsg, careerProfile)
+  const ruleBasedResponse = matchRuleBasedResponse(currentUserMsg, userProfile)
   if (ruleBasedResponse) {
     console.log('[OPTIMIZATION] Rule-based response matched — skip AI call')
     setCachedResponse(msgHash, ruleBasedResponse)
@@ -616,7 +616,7 @@ ${learnedPatterns.length > 0 ? `\n\n[RSI ACTIVE] Kamu sudah belajar dari ${learn
 
     return res.status(200).json({ reply, persuasiAktif, strategy, strategyLimitReached })
   } catch (error) {
-    console.error('[career-coach] chat error:', error)
+    console.error('[chat] error:', error)
     return res.status(500).json({ error: 'Diah Anna lagi bersiap, tunggu sebentar ya!' })
   }
 }
@@ -774,7 +774,7 @@ export default async function handler(req, res) {
   // User-facing chat endpoints must be bound to the Supabase session. This
   // prevents a caller from submitting another user's ID to consume quota or
   // access account-scoped data.
-  if (!target || target === 'career-coach' || target === 'update-local-memory') {
+  if (!target || target === 'career-coach' || target === 'chat' || target === 'update-local-memory') {
     const authUser = await getAuthenticatedUser(req)
     if (!authUser) return unauthorized(res)
     req.authUser = authUser
@@ -790,12 +790,10 @@ export default async function handler(req, res) {
     case 'update-local-memory':
       return handleUpdateLocalMemory(req, res)
     case 'career-coach':
-      return handleCareerCoach(req, res)
+    case 'chat':
+      return handleChat(req, res)
     default:
-      // Default ke career-coach (endpoint utama/paling sering dipanggil),
-      // sama seperti perilaku career-coach.js sebelumnya kalau tidak ada
-      // routing tambahan.
-      return handleCareerCoach(req, res)
+      return handleChat(req, res)
   }
 }
 

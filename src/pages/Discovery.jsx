@@ -26,7 +26,7 @@ const SELF_CARE_SUGGESTIONS = {
   'default':           [['Journaling', 87], ['Cerita ke Teman Dekat', 81], ['Me-Time Rutin', 74]],
 }
 
-function getOpportunities(targetPosisi) {
+function getOpportunities(fokusUtama) {
   if (!targetPosisi) return SELF_CARE_SUGGESTIONS.default
   const key = targetPosisi.toLowerCase()
   for (const [k, v] of Object.entries(SELF_CARE_SUGGESTIONS)) {
@@ -70,7 +70,7 @@ function AnalysisResult({ result, onSave, saving }) {
   const readiness   = result.career_readiness || 0
   const wowInsight  = result.wow_insight || null
   const etaMonths   = result.eta_months || null
-  const opportunities = getOpportunities(p.target_posisi)
+  const opportunities = getOpportunities(p.target_posisi)  // target_posisi = fokus emosional utama
 
   const sortedGenome = [...GENOME_MAP]
     .map(g => ({ ...g, val: gs[g.key] || 0 }))
@@ -132,11 +132,11 @@ function AnalysisResult({ result, onSave, saving }) {
             🎯 FOKUS UTAMA KAMU
           </div>
           <div style={{ color: '#fff', fontWeight: 800, fontSize: '1.2rem', lineHeight: 1.2, marginBottom: 4 }}>
-            {p.target_posisi || 'Lagi Dipetakan Diah Anna'}
+            {p.target_posisi || 'Masih Dipelajari Diah Anna'}
           </div>
           {p.posisi_saat_ini && (
             <div style={{ color: 'rgba(255,255,255,0.35)', fontSize: '0.72rem', marginBottom: 14 }}>
-              kondisi belakangan ini: {p.posisi_saat_ini}
+              perasaan belakangan ini: {p.posisi_saat_ini}
             </div>
           )}
 
@@ -298,7 +298,7 @@ function AnalysisResult({ result, onSave, saving }) {
               </div>
             </div>
             <div style={{ color: 'rgba(255,255,255,0.3)', fontSize: '0.72rem', marginBottom: 12 }}>
-              Langkah personal seputar {p.target_posisi || 'fokus utamamu'}
+              Langkah personal untuk {p.target_posisi || 'kondisimu sekarang'}
             </div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
               {gpsSteps.map((step, i) => {
@@ -451,7 +451,7 @@ export default function Discovery() {
       if (session?.user) {
         const { data: cp } = await supabase
           .from('user_career_profiles')
-          .select('career_readiness, target_posisi')
+          .select('career_readiness, target_posisi')  // field DB lama — career_readiness = wellbeing score
           .eq('user_id', session.user.id)
           .maybeSingle()
         // Sudah punya data LENGKAP → ke /chat

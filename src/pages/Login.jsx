@@ -12,12 +12,12 @@ export default function Login() {
       provider: 'google',
       options: {
         // FIX: sebelumnya hardcode ke '/chat' — user BARU (belum punya
-        // career_readiness) jadi selalu mendarat di /chat duluan, baru
+        // profil) jadi selalu mendarat di /chat duluan, baru
         // ke-redirect ke /discovery belakangan (race condition dengan
         // trigger Onboarding.jsx fallback di Chat.jsx — kadang popup
         // Onboarding sempat kepicu duluan sebelum redirect ke /discovery
         // selesai). Redirect ke root '/' supaya App.jsx yang nentuin
-        // tujuan akhir (hasCareerData ? '/chat' : '/discovery') SEBELUM
+        // tujuan akhir ('/chat') SEBELUM
         // Chat.jsx sempat mount sama sekali — bukan lagi race.
         redirectTo: `${window.location.origin}/`
       }

@@ -168,9 +168,9 @@ export default function Profile({ user, loading = false, subscription = DEFAULT_
   const firstName   = displayName.split(' ')[0]
   const avatarUrl   = user?.user_metadata?.avatar_url
   const email       = user?.email || '—'
-  const readiness   = profile?.career_readiness || growth?.progress_percent || 0
-  const target      = profile?.target_posisi || null
-  const posisi      = profile?.posisi_saat_ini || null
+  const readiness   = profile?.career_readiness || growth?.progress_percent || 0  // career_readiness = wellbeing score
+  const fokusUtama  = profile?.target_posisi || null  // target_posisi = fokus emosional utama
+  const kondisiKini = profile?.posisi_saat_ini || null  // posisi_saat_ini = kondisi perasaan sekarang
   const isPremium   = plan === 'premium'
   const depthScore  = profile?.depth_score || 0
 

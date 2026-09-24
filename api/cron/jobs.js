@@ -95,7 +95,7 @@ export default async function handler(req, res) {
   if (job === 'weekly-review') {
     // ═══════════════════════════════════════════════════════════════════════════
     // DINONAKTIFKAN (PIVOT — LOCAL-FIRST).
-    // Job ini seluruhnya dibangun di atas career_events, memory_capsule_log,
+    // Job ini dibangun di atas data obrolan curhat,
     // dan user_session_notes — TIGA tabel yang sudah permanen kosong sejak
     // fitur-fitur penulisnya dimatikan (alasan privasi, beberapa sesi lalu).
     // Akibatnya baris `if (events.length === 0 && capsules.length === 0)
@@ -293,7 +293,7 @@ export default async function handler(req, res) {
         // Konten sekarang dari pool pesan hangat yang sudah ditulis manual
         // (bukan generate AI per-user lagi) — lebih murah, dan menghindari
         // risiko AI ngarang keluar dari karakter Diah Anna (pernah kejadian:
-        // notifikasi/balasan nyasar jadi nada "business/career coach").
+        // notifikasi/balasan nyasar jadi nada "career coach").
         const personalLine = WARM_FALLBACKS[Math.floor(Math.random() * WARM_FALLBACKS.length)]
 
         const notifyResult = await notifyMorningNudge(fcmToken, userName, personalLine)
@@ -602,7 +602,7 @@ ATURAN PENTING — PERSUASIF TAPI HALUS:
       type: 'object',
       properties: {
         title:    { type: 'string', description: 'Judul final artikel, boleh sedikit dipoles dari topik asal biar lebih menarik/SEO-friendly, tapi jangan ganti makna' },
-        slug:     { type: 'string', description: 'URL slug: huruf kecil, dash sebagai spasi, tanpa karakter spesial, tanpa tahun kalau tidak perlu, contoh: cara-bikin-cv-ats-friendly' },
+        slug:     { type: 'string', description: 'URL slug: huruf kecil, dash sebagai spasi, tanpa karakter spesial, tanpa tahun kalau tidak perlu, contoh: cara-atasi-overthinking' },
         excerpt:  { type: 'string', description: 'Ringkasan 1-2 kalimat, maksimal 160 karakter, buat meta description' },
         emoji:    { type: 'string', description: 'Satu emoji yang merepresentasikan topik' },
         readTime: { type: 'string', description: 'Estimasi waktu baca, format: "X menit"' },
@@ -693,7 +693,7 @@ JANGAN MENGARANG DATA (PALING PENTING — pelanggaran ini lebih serius daripada 
   }
 
   // ── FILL MISSING NAMES — isi nama user lama yang kosong dari auth metadata
-  // Retroaktif: cek user_career_profiles yang nama-nya NULL/kosong, lalu isi
+  // Retroaktif: cek profil user yang nama-nya NULL/kosong, lalu isi
   // dari Google Auth metadata (full_name) atau fallback ke bagian sebelum @
   // di email. Aman dijalankan berulang — nggak nge-overwrite nama yang udah ada.
   if (job === 'fill-missing-names') {

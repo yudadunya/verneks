@@ -2,7 +2,7 @@
 //
 // Skeleton struktur Knowledge Graph untuk Verneks. TIDAK ADA DATA di sini —
 // hanya bentuk/shape entity dan relasinya, disiapkan untuk halaman masa depan
-// (/career/*, /roadmap/*, /skills/*, dll) yang BELUM dibangun.
+// (/topics/*, /guides/*, /self-care/*, dll) yang BELUM dibangun.
 //
 // Tujuan: saat halaman-halaman itu dibuat nanti, strukturnya sudah konsisten
 // dan saling terhubung — bukan ad-hoc per halaman.
@@ -13,7 +13,7 @@
 // secara semantik dibanding satu artikel panjang tentang "cara jadi AI engineer".
 
 /**
- * @typedef {Object} CareerEntity
+ * @typedef {Object} TopicEntity
  * @property {string} id - slug, contoh: 'ai-engineer'
  * @property {string} name
  * @property {string} definition - 1 kalimat definisi berdiri sendiri
@@ -30,7 +30,7 @@
  * @property {string} name
  * @property {string} definition
  * @property {'hard'|'soft'|'ai'|'leadership'} category
- * @property {string[]} relatedCareers - array of Career id
+ * @property {string[]} relatedTopics - array of Topic id
  */
 
 /**

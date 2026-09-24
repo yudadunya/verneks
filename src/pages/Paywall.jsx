@@ -112,7 +112,7 @@ export default function Paywall() {
   )
 
   const p           = result.profile_preview || {}
-  const readiness   = result.career_readiness || 0
+  const readiness   = result.career_readiness || 0  // field DB lama, artinya: skor kesejahteraan emosional
   const gpsSteps    = result.gps_steps || []
   const lockedSteps = gpsSteps.filter((_,i) => i >= 3)
   const mentorMsg   = result.mentor_message
@@ -148,7 +148,7 @@ export default function Paywall() {
         {/* ── RESULT BADGES ── */}
         <div style={{ display:'flex', gap:8, flexWrap:'wrap', marginBottom:20, ...fade(0.05) }}>
           {p.target_posisi && (
-            <div style={{ background:'rgba(37,211,102,0.1)', border:'1px solid rgba(37,211,102,0.2)', borderRadius:99, padding:'4px 12px', fontSize:'0.78rem', color:'#25D366', fontWeight:600 }}>🎯 {p.target_posisi}</div>
+            <div style={{ background:'rgba(139,92,246,0.1)', border:'1px solid rgba(139,92,246,0.2)', borderRadius:99, padding:'4px 12px', fontSize:'0.78rem', color:'#C4B5FD', fontWeight:600 }}>💜 {p.target_posisi}</div>
           )}
           <div style={{ background:'rgba(52,183,241,0.1)', border:'1px solid rgba(52,183,241,0.2)', borderRadius:99, padding:'4px 12px', fontSize:'0.78rem', color:'#34B7F1', fontWeight:600 }}>
             {topGenome.emoji} {topGenome.label} {gs[topGenome.key]}
@@ -167,7 +167,7 @@ export default function Paywall() {
           </div>
 
           <div style={{ color:'rgba(255,255,255,0.82)', fontSize:'0.9rem', lineHeight:1.75, marginBottom:16 }}>
-            {mentorMsg || `${p.nama ? `${p.nama}, ` : ''}aku udah dengerin cerita kita dengan seksama.${p.target_posisi ? ` Soal ${p.target_posisi} yang lagi kamu hadapi, itu wajar dan bisa dilewatin pelan-pelan.` : ''} ${p.hambatan_utama ? `Yang bikin susah lega selama ini bukan salahmu — melainkan ${p.hambatan_utama}.` : 'Kamu punya kekuatan buat ngerasa lebih baik, cuma belum sepenuhnya kepakai.'}`}
+            {mentorMsg || `${p.nama ? `${p.nama}, ` : ''}aku udah dengerin cerita kamu pelan-pelan.${p.target_posisi ? ` Soal ${p.target_posisi} yang lagi kamu rasain, itu wajar — dan kamu nggak harus ngadepinnya sendiri.` : ''} ${p.hambatan_utama ? `Yang bikin susah lega selama ini bukan salahmu — itu cuma pola yang bisa pelan-pelan dilepas.` : 'Kamu punya kekuatan buat ngerasa lebih baik, cuma belum sepenuhnya kepakai.'}`}
           </div>
 
           {/* Langkah setengah terbuka */}

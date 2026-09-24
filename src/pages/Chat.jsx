@@ -115,7 +115,7 @@ const DA = {
 
 
 // NOTE: getNextFocus() dihapus dari sini.
-// Single source of truth sekarang adalah api/career-coach.js (action: 'init-chat'),
+// Single source of truth: api/coach-hub.js (action: 'init-chat'),
 // supaya prioritas next-focus tidak pernah drift antara client dan server.
 
 function RedeemCodeModal({ userId, onClose }) {
@@ -467,7 +467,7 @@ export default function Chat({ user, chatMessages = [], setChatMessages, subscri
   }, [])
 
   // Sama seperti pushBot, tapi juga ikut disimpan ke coachHistory (lokal) —
-  // dipakai untuk pesan "custom" (bukan balasan langsung dari /api/career-coach)
+  // dipakai untuk pesan "custom" (bukan balasan langsung dari /api/coach-hub)
   // supaya tidak hilang saat reload, seperti balasan normal lainnya.
   const pushBotAndPersist = useCallback((text) => {
     pushBot(text)
@@ -511,7 +511,7 @@ export default function Chat({ user, chatMessages = [], setChatMessages, subscri
 
     // User lama (ada memori) — sapaan digenerate AI biar nyambung natural
     // dari obrolan/pola sebelumnya, ini yang worth ditunggu network-nya.
-    apiFetch('/api/career-coach', { action: 'init-chat', userId: user.id, localMemory: localMemoryRef.current })
+    apiFetch('/api/career-coach', { action: 'init-chat',  // /api/career-coach → coach-hub.js via vercel.json userId: user.id, localMemory: localMemoryRef.current })
       .then(data => {
         pushBot(data.openingMessage)
         // Prepend (bukan overwrite) — kalau user sempat ngetik & kirim pesan
@@ -619,7 +619,7 @@ export default function Chat({ user, chatMessages = [], setChatMessages, subscri
       // teks generik "Terjadi kepadatan jalur komunikasi" tanpa tahu akar
       // masalahnya (limit? error server? network?). Buka DevTools > Console
       // buat lihat detail ini kalau chat gagal lagi.
-      console.error('[Chat] /api/career-coach gagal:', err.message, err)
+      console.error('[Chat] /api/coach-hub gagal:', err.message, err)
       if (err.limitReached) {
         pushBot('Chat hari ini sudah habis 🙏 Upgrade ke Premium untuk lanjut ngobrol tanpa batas.')
         setTimeout(() => window.dispatchEvent(new CustomEvent('show-upgrade', { detail: {} })), 1200)
