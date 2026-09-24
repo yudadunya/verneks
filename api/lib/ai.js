@@ -103,37 +103,52 @@ function pickModelConfig(plan, tier) {
 // (persis kayak contoh-contoh nyata yang pernah kejadian).
 const REASONING_LEAK_PATTERNS = [
   /^(okay|ok,|alright|let me think|let's think|first,? i need|i need to (think|consider|respond))/i,
+  /^(okay,?\s+(the user|i need|let me|we need))/i,
+  /^the user (is asking|asked|wants|said)\b/i,
   /according to the (persona|rules|system|guidelines)/i,
   /\b(he|she|the user) (said|asked|wants|is asking)\b[\s\S]{0,80}\b(let me|i should|i need|maybe he|maybe she)\b/i,
   /\bmy previous (message|response)\b/i,
   /^(possible responses?|draft:|alternative:)/i,
-  // Echo instruksi (kasus baru): model narasiin ulang tugasnya alih-alih
-  // mengerjakannya.
   /^the user wants\b/i,
   /rules?\s+to\s+follow\s*:/i,
   /\bnot applicable\b/i,
   /^(length|format|tone|style)\s*:/im,
   /\b(new user|new session)\b.{0,40}\b(greeting|opening|sapaan)\b/i,
-  // Nyasar ke topik bisnis/karier (kasus baru 24 Agu 2026): model lupa
-  // persona curhat-nya dan malah ngasih saran side hustle/bisnis nggak
-  // diminta — pola "kata bisnis + tawaran/pertanyaan lanjutan" cukup khas.
   /\b(side\s*hustle|reselling|content creation)\b/i,
   /\b(bisnis|usaha) yang (lucrat|menguntungkan)\b/i,
+  // Pola khas chain-of-thought model reasoning: kalimat analitis bahasa Inggris
+  // yang membahas "the user" sebelum menjawab
+  /\b(the user|they|he|she)\b.{0,60}\b(on the (free|premium) plan|free plan|premium plan)\b/i,
+  /\b(persona guidelines?|coaching (brain|mode)|response framework)\b/i,
+  /\b(mendengarkan|validasi|reflektif) mode\b/i,
 ]
 
 function looksLikeLeakedReasoning(text) {
   if (!text) return false
-  const sample = text.slice(0, 500)
+  // trimStart() penting — kalau response diawali newline/spasi,
+  // ^ di regex tidak akan match tanpa ini
+  const sample = text.trimStart().slice(0, 600)
   if (REASONING_LEAK_PATTERNS.some(p => p.test(sample))) return true
 
-  // Heuristik struktural tambahan: obrolan/sapaan natural nggak akan punya
-  // banyak baris gaya "Label: penjelasan" — itu ciri khas instruksi/aturan
-  // yang di-echo balik mentah-mentah, bukan kalimat chat biasa. 2+ baris
-  // kayak gitu dalam satu balasan udah cukup mencurigakan.
   const labelLines = (sample.match(/^[A-Z][A-Za-z ]{2,40}:\s/gm) || []).length
   if (labelLines >= 2) return true
 
   return false
+}
+
+// Coba ekstrak bagian respons berbahasa Indonesia dari output yang bocor reasoning.
+// Heuristik: skip paragraf-paragraf awal yang berisi kata khas reasoning Bahasa
+// Inggris, ambil blok pertama yang terasa seperti respons natural.
+function extractCleanResponse(text) {
+  const paragraphs = text.split(/\n{2,}/).map(p => p.trim()).filter(Boolean)
+  for (const para of paragraphs) {
+    // Kalau paragraf ini bukan reasoning (tidak match pola bocoran), kemungkinan
+    // ini bagian respons aslinya — kembalikan itu
+    if (!looksLikeLeakedReasoning(para) && para.length > 10) {
+      return para
+    }
+  }
+  return null
 }
 
 // ── Normalize messages ───────────────────────────────────────────────────────
@@ -192,6 +207,8 @@ async function callOpenRouter({ system, messages, maxTokens, model, fallbacks = 
   const chain = [model, ...fallbacks]
   if (!chain.includes(FREE_ROUTER)) chain.push(FREE_ROUTER)
 
+  const SAFE_FALLBACK = 'Maaf, aku lagi ada gangguan sesaat. Boleh coba kirim pesannya lagi?'
+
   let lastErr
   for (let i = 0; i < chain.length; i++) {
     const modelToUse = chain[i]
@@ -205,18 +222,24 @@ async function callOpenRouter({ system, messages, maxTokens, model, fallbacks = 
       continue
     }
 
-    // Safety net bocoran reasoning/jawaban ngaco: kalau masih ada model lain
-    // di rantai, coba yang berikutnya dulu — daripada langsung ditampilkan
-    // ke user apa adanya.
-    if (looksLikeLeakedReasoning(text) && !isLastInChain) {
-      console.warn(`[ai] Kedeteksi bocoran reasoning dari ${modelToUse}, coba model berikutnya...`)
-      continue
+    if (looksLikeLeakedReasoning(text)) {
+      if (!isLastInChain) {
+        console.warn(`[ai] Kedeteksi bocoran reasoning dari ${modelToUse}, coba model berikutnya...`)
+        continue
+      }
+      // Model terakhir di chain juga bocor — coba selamatkan bagian bersihnya
+      // sebelum menyerah total ke fallback statis
+      const clean = extractCleanResponse(text)
+      if (clean) {
+        console.warn(`[ai] Model terakhir ${modelToUse} bocor reasoning, tapi berhasil ekstrak respons bersih.`)
+        return clean
+      }
+      console.warn(`[ai] Semua model di chain bocor reasoning, pakai fallback statis.`)
+      return SAFE_FALLBACK
     }
     return text
   }
 
-  // Semua model di rantai gagal — lempar error dari percobaan TERAKHIR
-  // (paling informatif buat debugging, biasanya juga yang paling relevan).
   throw lastErr
 }
 
@@ -281,9 +304,15 @@ async function callOpenRouterStructured({ system, prompt, schema, maxTokens, mod
       continue
     }
 
-    if (looksLikeLeakedReasoning(text) && !isLastInChain) {
-      console.warn(`[ai] Structured output dari ${modelToUse} kedeteksi kayak bocoran reasoning, coba model berikutnya...`)
-      continue
+    if (looksLikeLeakedReasoning(text)) {
+      if (!isLastInChain) {
+        console.warn(`[ai] Structured output dari ${modelToUse} kedeteksi kayak bocoran reasoning, coba model berikutnya...`)
+        continue
+      }
+      // Model terakhir bocor — structured output tidak bisa diselamatkan
+      // karena harus JSON valid; lempar error supaya caller bisa handle
+      lastErr = new Error(`[OpenRouter] Semua model di chain menghasilkan bocoran reasoning untuk structured output`)
+      break
     }
 
     try {
