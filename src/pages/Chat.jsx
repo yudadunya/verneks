@@ -511,7 +511,7 @@ export default function Chat({ user, chatMessages = [], setChatMessages, subscri
 
     // User lama (ada memori) — sapaan digenerate AI biar nyambung natural
     // dari obrolan/pola sebelumnya, ini yang worth ditunggu network-nya.
-    apiFetch('/api/career-coach', { action: 'init-chat',  // /api/career-coach → coach-hub.js via vercel.json userId: user.id, localMemory: localMemoryRef.current })
+    apiFetch('/api/career-coach', { action: 'init-chat', userId: user.id, localMemory: localMemoryRef.current }) // → coach-hub.js via vercel.json
       .then(data => {
         pushBot(data.openingMessage)
         // Prepend (bukan overwrite) — kalau user sempat ngetik & kirim pesan
