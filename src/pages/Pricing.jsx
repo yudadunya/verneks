@@ -37,7 +37,7 @@ const PLANS = [
     features: [
       'Chat unlimited dengan Diah Anna, kapan saja',
       'Personalisasi lebih dalam — Diah Anna makin "kenal" pola & kebiasaanmu',
-      'Ringkasan & insight mingguan dari obrolanmu',
+      'Lihat pola diri & rekomendasi aktivitas personal di halaman Tentang Kamu',
       'Akses penuh semua panduan self-care premium',
     ],
   },
@@ -47,7 +47,7 @@ const FAQ = [
   { q: 'Bisa cancel kapan saja?', a: 'Bisa. Tidak ada komitmen jangka panjang. Batalkan sebelum tanggal perpanjangan dan kamu tidak ditagih lagi.' },
   { q: 'Cara bayar gimana?', a: 'Pembayaran lewat Lynk.id — bisa GoPay, OVO, Dana, QRIS, transfer bank, atau kartu kredit/debit.' },
   { q: 'Apakah data curhatanku aman?', a: 'Ya. Chat dan cerita kamu tersimpan di device kamu sendiri, bukan di server kami, dan tidak dipakai untuk keperluan lain selain menjawab kamu.' },
-  { q: 'Bedanya Free dan Premium apa?', a: 'Free cukup buat curhat harian dengan batasan 15 chat/hari. Premium buat yang mau ngobrol tanpa batas plus insight mingguan soal mood & pola dirimu.' },
+  { q: 'Bedanya Free dan Premium apa?', a: 'Free cukup buat curhat harian dengan batasan 15 chat/hari. Premium buat yang mau ngobrol tanpa batas plus bisa lihat pola diri & rekomendasi aktivitas personal di halaman Tentang Kamu.' },
   { q: 'Kuota Free reset kapan?', a: 'Chat 15x/hari reset setiap tengah malam (00:00 WIB).' },
 ]
 
@@ -60,7 +60,7 @@ export default function Pricing({ user }) {
 
   useSEO({
     title: 'Harga & Paket Verneks Premium',
-    description: 'Verneks Premium Rp99.000/30 hari — chat unlimited dengan Diah Anna, teman curhat AI buat overthinking, kesehatan mental, hubungan, dan self-care, plus insight mingguan soal mood & pola dirimu.',
+    description: 'Verneks Premium Rp99.000/30 hari — chat unlimited dengan Diah Anna, teman curhat AI buat overthinking, kesehatan mental, hubungan, dan self-care, plus pola diri & rekomendasi aktivitas personal.',
     path: '/pricing',
     breadcrumb: generateBreadcrumb([{ name: 'Harga', path: '/pricing' }]),
     faq: FAQ.map(item => ({ question: item.q, answer: item.a })),

@@ -8,7 +8,7 @@ const PREMIUM_FEATURES = [
   { icon:'🗺️', text:'Langkah Self-Care Lengkap — panduan personal step by step, tidak ada yang ketinggalan' },
   { icon:'💬', text:'Diah Anna unlimited — cerita apapun, kapanpun, tanpa batas pesan' },
   { icon:'📈', text:'Progress Tracking harian — pantau seberapa jauh kamu udah berkembang' },
-  { icon:'📋', text:'Ringkasan Mingguan — insight mood & pola dirimu minggu ini' },
+  { icon:'🧠', text:'Tentang Kamu — lihat pola diri & rekomendasi aktivitas personal' },
   { icon:'🌿', text:'Rekomendasi Aktivitas — saran self-care yang benar-benar cocok sama kondisimu' },
   { icon:'✅', text:'Personal Action Plan — langkah kecil spesifik yang bisa langsung dicoba hari ini' },
 ]
