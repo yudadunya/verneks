@@ -232,58 +232,10 @@ async function checkAndLogUsage(userId, plan, feature) {
   }
 }
 
-// ── ENGINE V2: HELPER NEXT FOCUS & PROACTIVE GREETING ───────────────────────
-function getNextFocus(memory) {
-  if (memory.current_focus && memory.current_focus !== 'Belum ditentukan') {
-    return { focus: memory.current_focus, type: 'current_focus' };
-  }
-  if (memory.skill_gaps && memory.skill_gaps.length > 0) {
-    return { focus: memory.skill_gaps[0], type: 'biggest_skill_gap' };
-  }
-  if (memory.next_milestone && memory.next_milestone !== 'Belum ditentukan') {
-    return { focus: memory.next_milestone, type: 'next_milestone' };
-  }
-  if (memory.gps_steps && memory.gps_steps.length > 0) {
-    return { focus: memory.gps_steps[0], type: 'roadmap_step' };
-  }
-  return { focus: memory.target_position || "Pengembangan Karier", type: 'target_position' };
-}
-
-function generateDailyCoaching(memory, activeMission = null) {
-  if (activeMission?.daily_mission) {
-    return {
-      daily_focus: activeMission.weekly_focus || "Mission Completion",
-      daily_reason: "Menuntaskan misi aktif yang ada di dashboard utama kamu.",
-      daily_question: `Bagaimana progres target "${activeMission.daily_mission}" yang kita sepakati di dashboard kemarin?`
-    };
-  }
-
-  const nextFocusData = getNextFocus(memory);
-  let reason = "";
-  let question = "";
-
-  switch (nextFocusData.type) {
-    case 'current_focus':
-      reason = `Sesuai rencana aksi yang sedang kita kawal bersama.`;
-      question = `Sejauh mana langkah konkret yang sudah kamu ambil untuk mengoptimalkan area ini?`;
-      break;
-    case 'biggest_skill_gap':
-      reason = `Karena area ini adalah hambatan terbesar menuju targetmu saat ini.`;
-      question = `Menurutmu, apa yang paling menghambat perkembanganmu di area ${nextFocusData.focus}?`;
-      break;
-    default:
-      reason = `Langkah strategis berikutnya untuk mendekatkanmu ke posisi target.`;
-      question = `Apa satu tindakan kecil yang bisa kita mulai hari ini untuk fokus ke area ${nextFocusData.focus}?`;
-  }
-
-  return {
-    daily_focus: nextFocusData.focus,
-    daily_reason: reason,
-    daily_question: question
-  };
-}
-
-// ── PERSONA INTI DIAH ANNA (PIVOT: TEMAN CURHAT, BUKAN CAREER COACH) ────────
+// ── PERSONA INTI DIAH ANNA ───────────────────────────────────────────────────
+// Single source of truth untuk persona Diah Anna — server-side.
+// src/lib/diahAnnaPersona.js (client-side) sudah dihapus karena tidak pernah
+// dipanggil; semua prompt assembly terjadi di sini, di server.
 const CORE_PERSONA = `
 Kamu Diah Anna — teman curhat di Verneks. Dia dengerin dulu, nggak buru-buru kasih nasihat, dan nggak pernah nge-judge apa pun yang diceritain user.
 
@@ -344,63 +296,6 @@ ATURAN:
 - Kalau user mulai pola "tiap ada masalah kecil langsung tanya Diah Anna harus gimana" tanpa coba mikir sendiri dulu — condong ke REFLEKTIF lebih sering, bukan supaya pelit bantuan, tapi supaya user tetap terlatih mikir dan nggak jadi terlalu bergantung buat hal-hal yang sebenarnya dia sendiri bisa putuskan.
 `
 
-const STRATEGY_BRAIN = (stage, gpsSteps, currentFocus, nextMilestone, lastUpdated) => {
-  // Deteksi apakah user stuck (tidak ada progress > 14 hari)
-  const daysSinceUpdate = lastUpdated
-    ? Math.floor((Date.now() - new Date(lastUpdated)) / 86400000)
-    : 0
-  const isStuck = daysSinceUpdate > 14
-
-  // Strategi per self-care stage
-  const stageStrategies = {
-    'Baru Mulai Sadar': `
-STRATEGI: User baru mulai sadar ada pola yang perlu diperhatikan, belum punya gambaran jelas.
-Fokus Diah Anna: Bantu user mengenali & menamai apa yang sebenarnya dirasakan.
-Pertanyaan kunci: "Kalau harus dikasih nama, perasaan yang paling sering muncul belakangan ini apa?"
-Hindari: Langsung kasih solusi/langkah panjang — user belum siap, butuh didengar dulu.`,
-
-    'Belajar Mengelola': `
-STRATEGI: User sudah sadar polanya, sedang coba-coba cara mengelola perasaannya.
-Fokus Diah Anna: Dukung eksperimen kecil, tawarkan pilihan cara coping yang bisa dicoba.
-Pertanyaan kunci: "Dari cara-cara yang udah kamu coba, mana yang paling ngebantu, meski sedikit?"
-Hindari: Terlalu banyak teori — user butuh langkah kecil yang bisa dicoba sekarang.`,
-
-    'Lebih Tenang': `
-STRATEGI: User mulai merasa lebih stabil, tapi masih naik-turun.
-Fokus Diah Anna: Perkuat kebiasaan yang udah mulai kebentuk, bantu jaga konsistensi.
-Pertanyaan kunci: "Momen apa belakangan ini yang bikin kamu ngerasa paling tenang?"
-Hindari: Menganggap semua udah beres — tetap validasi kalau masih ada hari yang berat.`,
-
-    'Cukup Stabil': `
-STRATEGI: User sudah cukup stabil, mulai bisa refleksi lebih dalam soal dirinya.
-Fokus Diah Anna: Bantu user memahami pola dirinya lebih dalam & menjaga apa yang sudah berhasil.
-Pertanyaan kunci: "Apa yang beda dari cara kamu menghadapi ini sekarang dibanding dulu?"
-Hindari: Kasih saran dari nol — user sudah punya modal, tinggal dijaga.`,
-
-    'Sudah Jadi Kebiasaan': `
-STRATEGI: User sudah punya kebiasaan coping yang cukup mapan.
-Fokus Diah Anna: Dukung keberlanjutan kebiasaan itu, dan validasi kalau user mulai bisa jadi tempat cerita buat orang lain juga.
-Pertanyaan kunci: "Kalau ada orang lain yang lagi ngalamin hal serupa, apa yang bakal kamu bilang ke mereka?"
-Hindari: Mikro-manage kebiasaan yang udah jalan — user perlu ruang buat mandiri.`,
-  }
-
-  const strategy = stageStrategies[stage] || stageStrategies['Belajar Mengelola']
-
-  const stuckWarning = isStuck ? `
-⚠️ USER TAMPAK STUCK: Tidak ada update progress selama ${daysSinceUpdate} hari.
-Prioritaskan ACCOUNTABILITY atau CHALLENGER mode.
-Tanya langsung: "Apa yang membuat langkah ini belum bergerak?"` : ''
-
-  const gpsContext = gpsSteps?.length > 0 ? `
-GPS ROADMAP AKTIF:
-${gpsSteps.slice(0, 3).map((s, i) => `${i+1}. [${s.done ? '✓' : '○'}] ${s.title}`).join('\n')}
-${gpsSteps.filter(s => !s.done).length > 0 ? `Next action: ${gpsSteps.find(s => !s.done)?.title}` : 'Semua step selesai — saatnya naik level!'}` : ''
-
-  return `# BRAIN 4 — STRATEGY
-${strategy}
-${stuckWarning}
-${gpsContext}`
-}
 
 const USER_STATE_INSTRUCTIONS = {
   free: `
@@ -517,10 +412,8 @@ Tema berulang: ${(userDepthProfile.recurring_themes || []).join(', ') || '-'}
   // ════════════════════════════════════════════
   if (action === 'init-chat') {
     try {
-      // PIVOT: greeting nggak lagi pakai generateDailyCoaching (career-focus
-      // engine — GPS steps, current_focus, dst) atau nanya "situasi income".
-      // Sekarang cukup pakai memori sesi terakhir (kalau ada) buat nyambung
-      // obrolan secara natural, atau sapaan hangat biasa kalau user baru.
+      // Pakai memori sesi terakhir (kalau ada) buat nyambung obrolan secara
+      // natural, atau sapaan hangat biasa kalau user baru.
       const memoryContext = diahAnnaMemory
         || (structuralMemory.running_insight
           ? `Yang aku ketahui: ${structuralMemory.running_insight}`
@@ -728,49 +621,6 @@ ${learnedPatterns.length > 0 ? `\n\n[RSI ACTIVE] Kamu sudah belajar dari ${learn
   }
 }
 
-/**
- * Coba klasifikasikan income_situation dari beberapa pesan terakhir chat.
- * Dipanggil tiap giliran SELAMA income_situation masih kosong — begitu
- * berhasil diklasifikasi dengan yakin, langsung disimpan dan berhenti
- * dipanggil lagi (karena career-coach.js cuma masuk blok ini kalau field-nya
- * masih null).
- */
-async function classifyIncomeSituation(userId, messages, supabase) {
-  const recentText = messages.slice(-6).map(m => `${m.role === 'user' ? 'User' : 'Diah Anna'}: ${(m.content || '').slice(0, 300)}`).join('\n')
-
-  const schema = {
-    type: 'object',
-    properties: {
-      income_situation: {
-        type: 'string',
-        enum: ['belum_penghasilan', 'nambah_penghasilan', 'ganti_arah', 'belum_jelas'],
-        description: 'belum_jelas kalau dari percakapan ini belum cukup informasi untuk yakin — JANGAN menebak paksa.',
-      },
-    },
-    required: ['income_situation'],
-  }
-
-  let result
-  try {
-    result = await generateStructured({
-      system: 'Kamu mesin klasifikasi. Baca percakapan, tentukan situasi income user: belum_penghasilan (belum punya penghasilan tetap, butuh kerja/income), nambah_penghasilan (sudah kerja, mau nambah penghasilan), ganti_arah (sudah punya karier tapi kurang menjamin/mau ganti arah), atau belum_jelas kalau memang belum cukup jelas dari percakapan.',
-      prompt: recentText,
-      schema,
-      maxTokens: 40, tier: 'fast', plan: 'free',
-    })
-  } catch (e) {
-    console.error('[classifyIncomeSituation] AI gagal:', e.message)
-    return
-  }
-
-  if (!result?.income_situation || result.income_situation === 'belum_jelas') return
-
-  const { error } = await supabase
-    .from('user_career_profiles')
-    .update({ income_situation: result.income_situation })
-    .eq('user_id', userId)
-  if (error) console.error('[classifyIncomeSituation] save gagal:', error.message)
-}
 
 
 // ═══════════════════════════════════════════════════════════════════════════

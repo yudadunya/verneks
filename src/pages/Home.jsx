@@ -24,7 +24,7 @@ const C = {
 
 // ─── SEO DATA ─────────────────────────────────────────────────────────────────
 const FAQS = [
-  { q: 'Apakah Verneks gratis?', a: 'Ya. Kamu bisa mulai ngobrol dengan Diah Anna secara gratis.' },
+  { q: 'Apakah Verneks gratis?', a: 'Ya. Kamu bisa mulai ngobrol dengan Diah Anna secara gratis hingga 15 chat per hari. Fitur "Tentang Kamu" (pola diri & rekomendasi aktivitas) tersedia di paket Premium.' },
   { q: 'Apakah Diah Anna akan selalu membenarkan ceritaku?', a: 'Tidak. Dia akan mengakui perasaanmu terlebih dahulu, lalu membantu melihat situasi dari sudut pandang lain jika itu berguna.' },
   { q: 'Apa yang terjadi pada data percakapanku?', a: 'Riwayat chat dan memori percakapan disimpan di perangkatmu. Saat kamu mengirim pesan, teksnya diproses sementara oleh layanan AI agar Diah Anna bisa menjawab, dan tidak disimpan permanen di database server.' },
   { q: 'Apakah Diah Anna pengganti psikolog atau terapis?', a: 'Bukan. Diah Anna adalah teman cerita AI, bukan pengganti psikolog, terapis, dokter, keluarga, atau teman manusia. Untuk masalah yang terasa berat, cari bantuan profesional.' },
