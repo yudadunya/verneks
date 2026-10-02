@@ -123,6 +123,12 @@ const REASONING_LEAK_PATTERNS = [
   /\b(the user|they|he|she)\b.{0,60}\b(on the (free|premium) plan|free plan|premium plan)\b/i,
   /\b(persona guidelines?|coaching (brain|mode)|response framework)\b/i,
   /\b(mendengarkan|validasi|reflektif) mode\b/i,
+  // Bocoran meta-narasi BERBAHASA INDONESIA: model menganalisis user di orang
+  // ketiga atau membocorkan istilah internal prompt (RSI, log, pattern, state).
+  /\b(log RSI|RSI v?\d|pola RSI|rsi pattern|depth score|model mental(ku)? tentang)\b/i,
+  /\b(si user|user (ini|itu|tadi|kemarin|sekarang|bilang|lagi|merasa|tampak|terlihat|sepertinya)|pattern user|pola user|state (user|seneng|sedih|senang))\b/i,
+  /\bkalau lihat (pattern|pola)\b/i,
+  /\bdari (log|catatan|memori) (rsi|kemarin|sebelumnya)\b/i,
 ]
 
 // ── Deteksi berdasarkan BAHASA ──────────────────────────────────────────────
@@ -201,18 +207,21 @@ function trimToLastCompleteSentence(text) {
 async function callOpenRouter({ system, messages, maxTokens, model, fallbacks = [] }) {
   const normalized = normalizeMessages(messages)
 
+  // Model gratis (terutama router acak `openrouter/free`) sering model "thinking":
+  // token berpikirnya ikut dihitung ke max_tokens walau disembunyikan, jadi dengan
+  // batas kecil isi jawabannya jadi KOSONG ("Respons kosong"). Kasih ruang lebih
+  // lega; panjang balasan tetap dikendalikan persona, bukan batas ini.
+  const isFreeModel = (m) => m === FREE_ROUTER || String(m).endsWith(':free')
+
   async function callWithModel(modelToUse) {
     const body = {
       model: modelToUse,
-      max_tokens: maxTokens,
+      max_tokens: isFreeModel(modelToUse) ? Math.max(maxTokens, 1500) : maxTokens,
       messages: [{ role: 'system', content: system }, ...normalized],
       // Penting: kalau model yang kepilih punya mode reasoning, JANGAN
       // pernah ikut tampil di jawaban akhir — ini yang bikin bocoran
       // "proses mikir" mentah nyampe ke chat user.
-      // effort 'low': token reasoning tetap dihitung ke max_tokens walau
-      // di-exclude, jadi model reasoning bisa menghabiskan jatah sebelum
-      // sempat menulis jawaban lengkap (jawaban terpotong).
-      reasoning: { effort: 'low', exclude: true },
+      reasoning: { exclude: true },
     }
     const res = await fetch(OPENROUTER_URL, {
       method: 'POST',
@@ -253,6 +262,7 @@ async function callOpenRouter({ system, messages, maxTokens, model, fallbacks = 
   const SAFE_FALLBACK = 'Maaf, aku lagi ada gangguan sesaat. Boleh coba kirim pesannya lagi?'
 
   let lastErr
+  const chainErrors = []
   for (let i = 0; i < chain.length; i++) {
     const modelToUse = chain[i]
     const isLastInChain = i === chain.length - 1
@@ -261,7 +271,8 @@ async function callOpenRouter({ system, messages, maxTokens, model, fallbacks = 
       text = await callWithModel(modelToUse)
     } catch (e) {
       lastErr = e
-      console.warn(`[ai] Model ${modelToUse} gagal (${e.status || 'error'}: ${e.message.slice(0, 120)}), coba model berikutnya...`)
+      chainErrors.push(`${modelToUse} -> ${e.status || 'error'}: ${e.message.slice(0, 200)}`)
+      console.warn(`[ai] Model ${modelToUse} gagal (${e.status || 'error'}: ${e.message.slice(0, 200)}), coba model berikutnya...`)
       continue
     }
 
@@ -283,7 +294,12 @@ async function callOpenRouter({ system, messages, maxTokens, model, fallbacks = 
     return text
   }
 
-  throw lastErr
+  // Satu baris ringkas berisi alasan SETIAP model gagal (402 = kredit habis,
+  // 404 = nama model salah, 429 = kena rate limit, dst) supaya langsung kelihatan
+  // di log Vercel kenapa model berbayar tidak terpakai.
+  const summary = new Error(`[OpenRouter] Semua model gagal: ${chainErrors.join(' | ')}`)
+  summary.status = lastErr?.status
+  throw summary
 }
 
 // ── Panggilan structured output (dipaksa balas JSON sesuai schema) ──────────

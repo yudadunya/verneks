@@ -308,12 +308,11 @@ Semua fitur Verneks gratis untuk user ini. Jangan menyebut kuota, paket, premium
 }
 
 const RESPONSE_FRAMEWORK = `
-Sebelum menjawab, kamu wajib memproses framework ini:
-1. Apa yang sebenarnya lagi dirasakan/dialami user saat ini.
-2. Apakah dia butuh didengar dulu, atau memang sudah siap ditemani mikir.
-3. Konteks dari obrolan-obrolan sebelumnya yang relevan (kalau ada).
+Sebelum membalas, pikirkan DALAM HATI (jangan pernah ditulis): apa yang sebenarnya lagi dia rasakan, apakah dia butuh didengar dulu atau sudah siap ditemani mikir, dan apakah ada hal dari obrolan sebelumnya yang benar-benar relevan.
 
-Setiap balasan dari kamu harus membuat user merasa lebih didengar — bukan buru-buru "menyelesaikan" ceritanya.
+Yang kamu tulis hanyalah balasan langsung ke dia, memakai "kamu" dan "aku". JANGAN menulis analisis, ringkasan, atau catatan tentang dia. JANGAN pernah menyebut kata "user", "pattern", "pola", "log", "RSI", "state", "versi", "depth score", atau "memori" dalam balasan. Jangan mengutip ulang kalimat lamanya ("kamu pernah bilang..." hanya kalau benar-benar membantu dan natural, maksimal satu kali, tanpa tanda kutip).
+
+Setiap balasan harus membuat dia merasa lebih didengar, bukan buru-buru "menyelesaikan" ceritanya.
 `
 
 
@@ -378,8 +377,8 @@ async function handleChat(req, res) {
 
   // [RSI] Format pola yang dipelajari menjadi konteks untuk AI
   const rsiPatternsBlock = learnedPatterns.length > 0 ? `
-# POLA YANG SUDAH AKU PELAJARI TENTANG KAMU (RSI v${rsiVersion})
-${learnedPatterns.map((p, i) => `${i + 1}. ${p.pattern_category}: ${p.pattern_description} (Keyakinan: ${p.confidence_score}%, muncul ${p.occurrence_count}x)`).join('\n')}
+# CATATAN PRIBADIMU TENTANG TEMAN BICARAMU (konteks diam-diam; jangan disebut atau dikutip sebagai catatan)
+${learnedPatterns.map(p => `- ${p.pattern_description}`).join('\n')}
 ` : ''
 
   const sessionNotes = []
@@ -389,12 +388,12 @@ ${learnedPatterns.map((p, i) => `${i + 1}. ${p.pattern_category}: ${p.pattern_de
   const depthScore       = userProfile?.depth_score          || 0
 
   const deepMemoryBlock = diahAnnaMemory ? `
-# APA YANG KAMU INGAT TENTANG USER INI
+# YANG KAMU INGAT TENTANG TEMAN BICARAMU (konteks diam-diam; jangan disebut atau dikutip sebagai catatan)
 ${diahAnnaMemory}
 ` : ''
 
   const depthProfileBlock = depthScore > 0 ? `
-# POLA MENDALAM USER (depth score: ${depthScore}/100)
+# KECENDERUNGAN TEMAN BICARAMU (konteks diam-diam)
 Gaya coaching yang cocok: ${userDepthProfile.coach_style_fit || 'belum terdeteksi'}
 Kondisi emosi terakhir: ${userDepthProfile.last_emotional_state || 'tidak diketahui'}
 Yang memotivasi: ${(userDepthProfile.emotional_triggers?.motivators || []).join(', ') || '-'}
@@ -487,7 +486,7 @@ Tulis sapaan pembuka yang natural.`,
   }
 
   const memoryContext = `
-# APA YANG KAMU INGAT SOAL USER INI
+# TEMAN BICARAMU
 Nama: ${structuralMemory.name}
 ${sessionNotes.length > 0 ? `\nCatatan Sesi Sebelumnya:\n${sessionNotes.map(n => `- ${n.summary}`).join('\n')}` : ''}
 ${deepMemoryBlock}${depthProfileBlock}${rsiPatternsBlock}`
@@ -506,8 +505,8 @@ ${plan === 'premium' ? USER_STATE_INSTRUCTIONS.premium : USER_STATE_INSTRUCTIONS
 ${RESPONSE_FRAMEWORK}
 
 PENTING: Integrasikan fakta memori di atas secara mengalir tanpa kalimat template kaku. Kalau memorinya kosong/minim, itu wajar — user mungkin baru, cukup dengerin dan bangun konteks pelan-pelan, jangan berpura-pura sudah tahu banyak.
-${diahAnnaMemory ? `\nKamu sudah mengenal user ini dengan baik (depth score: ${depthScore}/100). Gunakan pengetahuan personalmu tentang mereka — cara komunikasi mereka, apa yang memotivasi dan menghambat mereka — untuk membuat respons terasa seperti dari seseorang yang benar-benar mengenal mereka, bukan AI generik.` : ''}
-${learnedPatterns.length > 0 ? `\n\n[RSI ACTIVE] Kamu sudah belajar dari ${learnedPatterns.length} pola perilaku user ini. Gunakan wawasan ini untuk menyesuaikan gaya komunikasimu. Versi model mentalmu tentang user ini adalah v${rsiVersion}.` : ''}
+${diahAnnaMemory ? `\nKamu sudah mengenal dia. Pakai pengetahuan itu diam-diam supaya balasanmu terasa dari seseorang yang benar-benar kenal, tanpa menyebut bahwa kamu punya catatan.` : ''}
+${learnedPatterns.length > 0 ? `\n\nSesuaikan gaya bicaramu dengan catatan di atas, tanpa pernah menyebutnya.` : ''}
 `
 
     // ═══════════════════════════════════════════════════════════════════════════
