@@ -102,8 +102,10 @@ function pickModelConfig(plan, tier) {
 // Ini bukan filter sempurna, tapi cukup buat nangkep kasus paling jelas
 // (persis kayak contoh-contoh nyata yang pernah kejadian).
 const REASONING_LEAK_PATTERNS = [
-  /^(okay|ok,|alright|let me think|let's think|first,? i need|i need to (think|consider|respond))/i,
-  /^(okay,?\s+(the user|i need|let me|we need))/i,
+  /^(let me think|let's think|first,? i need|i need to (think|consider|respond))/i,
+  // "Ok/Okay/Alright" saja BUKAN tanda bocoran (orang Indonesia sering membuka chat dengan itu);
+  // baru dianggap bocoran kalau diikuti narasi reasoning Inggris.
+  /^(okay|ok|alright),?\s+(the user|i need|i should|let me|let's|we need|so the user)/i,
   /^the user (is asking|asked|wants|said)\b/i,
   /according to the (persona|rules|system|guidelines)/i,
   /\b(he|she|the user) (said|asked|wants|is asking)\b[\s\S]{0,80}\b(let me|i should|i need|maybe he|maybe she)\b/i,
@@ -123,12 +125,33 @@ const REASONING_LEAK_PATTERNS = [
   /\b(mendengarkan|validasi|reflektif) mode\b/i,
 ]
 
+// ── Deteksi berdasarkan BAHASA ──────────────────────────────────────────────
+// Semua output teks Verneks berbahasa Indonesia. Bocoran reasoning hampir selalu
+// berbahasa Inggris dan menarasikan user di orang ketiga ("The user just shared...",
+// "They're expressing..."), dengan kalimat yang selalu beda-beda sehingga daftar
+// regex di atas tidak pernah cukup. Cek bahasa menangkap semuanya sekaligus.
+const EN_WORDS = /\b(the|is|are|was|were|and|that|with|they|their|they're|user|user's|this|for|to|of|in|it|can|will|has|have|be|as|about|their|expressing|specifically|response|feels|going)\b/gi
+const ID_WORDS = /\b(yang|dan|aku|kamu|kau|nggak|gak|ga|enggak|tidak|di|ke|dari|itu|ini|aja|saja|sih|deh|dong|ya|banget|udah|sudah|bisa|apa|lagi|untuk|dengan|saya|mau|kalau|jadi|juga|ada|karena|nih|tuh|kok|loh|lho|yuk|boleh|gimana|bagaimana)\b/gi
+
+function looksLikeEnglishNarration(text) {
+  const words = (text.match(/[A-Za-z']+/g) || [])
+  if (words.length < 6) return false
+  const en = (text.match(EN_WORDS) || []).length
+  const id = (text.match(ID_WORDS) || []).length
+  // Dominan Inggris, nyaris tanpa kata Indonesia
+  if (en >= 3 && en > id * 2) return true
+  // Narasi tentang "user" di orang ketiga, walau campur bahasa
+  if (/\b(the user|user's|they're|they are|he's|she's)\b/i.test(text) && id <= en) return true
+  return false
+}
+
 function looksLikeLeakedReasoning(text) {
   if (!text) return false
   // trimStart() penting — kalau response diawali newline/spasi,
   // ^ di regex tidak akan match tanpa ini
   const sample = text.trimStart().slice(0, 600)
   if (REASONING_LEAK_PATTERNS.some(p => p.test(sample))) return true
+  if (looksLikeEnglishNarration(sample)) return true
 
   const labelLines = (sample.match(/^[A-Z][A-Za-z ]{2,40}:\s/gm) || []).length
   if (labelLines >= 2) return true
