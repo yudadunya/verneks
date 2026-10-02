@@ -226,19 +226,6 @@ export default function Profile({ user, loading = false, subscription = DEFAULT_
             {loading ? '—' : displayName}
           </div>
 
-          {/* Plan badge */}
-          <div style={{
-            display: 'inline-flex', alignItems: 'center', gap: 5,
-            padding: '4px 14px', borderRadius: 99, marginBottom: 4,
-            background: isPremium ? 'rgba(255,183,77,0.12)' : 'rgba(255,255,255,0.06)',
-            border: isPremium ? '1px solid rgba(255,183,77,0.3)' : '1px solid rgba(255,255,255,0.1)',
-          }}>
-            <span style={{ fontSize: '0.75rem' }}>{isPremium ? '⭐' : '🆓'}</span>
-            <span style={{ color: isPremium ? '#FFB74D' : 'rgba(255,255,255,0.45)', fontSize: '0.75rem', fontWeight: 700 }}>
-              {isPremium ? 'Premium' : 'Free'}
-            </span>
-          </div>
-
           {/* Depth Score Badge — Diah Anna mengenalmu */}
           {depthScore > 0 && (
             <div style={{ marginTop: 12, padding: '12px 16px', borderRadius: 14, background: 'rgba(123,107,255,0.08)', border: '1px solid rgba(123,107,255,0.2)' }}>

@@ -24,7 +24,7 @@ Verneks hadir untuk hari-hari ketika:
 
 > AI terbaik bukanlah AI yang membuatmu bergantung, melainkan AI yang membantumu semakin mampu mengambil keputusan sendiri.
 
-Kami membangun Verneks dengan prinsip bahwa teknologi harus memberdayakan, bukan menggantikan, hubungan manusia. Diah Anna adalah teman ngobrol, bukan pengganti psikolog, terapis, atau orang-orang terdekatmu.
+Kami membangun Verneks dengan prinsip bahwa teknologi harus memberdayakan, bukan menggantikan, hubungan manusia. Diah Anna adalah AI pendamping kesehatan mental yang dibekali ilmu psikologi (CBT, ACT, motivational interviewing, dll.), tetapi bukan psikolog berlisensi dan bukan pengganti psikolog, psikiater, atau orang-orang terdekatmu.
 
 Jika suatu hari kamu tidak lagi membutuhkan Diah Anna untuk menata pikiran, maka kami merasa telah berhasil menjalankan tugas.
 
@@ -47,7 +47,7 @@ Diah Anna bukan sekadar chatbot.
 ### 💬 Chat dengan Diah Anna
 - Obrolan santai seperti WhatsApp dengan teman dekat.
 - Diah Anna ingat cerita-ceritamu sebelumnya (disimpan di perangkatmu, bukan di server).
-- **Gratis** (15 pesan/hari) atau **Premium** (tanpa batas).
+- **Gratis tanpa batas** untuk semua pengguna.
 
 ### 🧠 Diri Kamu (DNA)
 - Analisis pola emosional dari obrolanmu.
@@ -62,7 +62,7 @@ Diah Anna bukan sekadar chatbot.
 ### 🌿 Rekomendasi Aktivitas
 - Saran aktivitas nyata yang cocok dengan mood dan polamu.
 - Contoh: journaling, olahraga ringan, quality time, dll.
-- Tersedia untuk pengguna Premium.
+- Gratis untuk semua pengguna.
 
 ### 📚 Blog
 - Bacaan santai seputar overthinking, kesehatan mental, hubungan, dan self-care.
@@ -84,12 +84,9 @@ Diah Anna bukan sekadar chatbot.
 
 ---
 
-## Model Bisnis (Freemium)
+## Model Akses: Gratis untuk Semua
 
-| Paket | Harga | Fitur |
-|-------|-------|-------|
-| **Gratis** | Rp0 | 15 chat/hari, DNA, Blog, panduan dasar |
-| **Premium** | Rp99.000 / 30 hari | Chat tanpa batas, Journey lengkap, Rekomendasi aktivitas, insight mingguan |
+Semua fitur Verneks gratis dan tanpa kuota: chat tanpa batas dengan Diah Anna, Tentang Kamu (DNA), Refleksi, Journey, dan Rekomendasi aktivitas. Tidak ada paket berbayar, paywall, atau upgrade.
 
 ---
 

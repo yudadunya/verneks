@@ -1,7 +1,6 @@
 import { Link, useLocation } from 'react-router-dom'
 
-// Free:    Chat | Tentang Kamu | Refleksi | Profile        (4 tab)
-// Premium: Chat | Tentang Kamu | Refleksi | Rekomendasi | Profile (5 tab)
+// Semua fitur gratis: Chat | Tentang Kamu | Refleksi | Rekomendasi | Profil (5 tab)
 export default function BottomNav({ isPremium = false }) {
   const location = useLocation()
 
@@ -20,7 +19,8 @@ export default function BottomNav({ isPremium = false }) {
     { href: '/profile',       icon: '👤', label: 'Profil'      },
   ]
 
-  const tabs = isPremium ? premiumTabs : freeTabs
+  // Semua fitur gratis — semua pengguna melihat semua tab.
+  const tabs = premiumTabs
 
   return (
     <nav style={{

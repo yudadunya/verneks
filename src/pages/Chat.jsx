@@ -583,13 +583,6 @@ export default function Chat({ user, chatMessages = [], setChatMessages, subscri
     setCoachHistory(newHistory) // auto-save ke IndexedDB device
     setLoading(true)
 
-    if (plan !== 'premium' && waitingForPositive && isPositiveResponse(msg)) {
-      setWaitingForPositive(false)
-      setTimeout(() => {
-        window.dispatchEvent(new CustomEvent('show-upgrade', { detail: {} }))
-      }, 800)
-    }
-
     // LOCAL-FIRST: kirim ringkasan + RSI patterns dari IndexedDB device user
     // langsung di body request — server pakai ini, TIDAK query Supabase untuk
     // konten personal user ini sama sekali (lihat api/coach-hub.js).
@@ -603,9 +596,6 @@ export default function Chat({ user, chatMessages = [], setChatMessages, subscri
       pushBot(data.reply)
       const fullHistory = [...newHistory, { id: replyId, role: 'assistant', content: data.reply, text: data.reply }]
       setCoachHistory(fullHistory) // auto-save ke IndexedDB device
-      if (plan !== 'premium' && data.persuasiAktif) {
-        setWaitingForPositive(true)
-      }
 
       // Sinkronisasi memori lokal tiap kelipatan 8 pesan user (bukan lagi
       // extract-profile ke Supabase) — hasil ringkasan disimpan ke IndexedDB.
@@ -621,8 +611,7 @@ export default function Chat({ user, chatMessages = [], setChatMessages, subscri
       // buat lihat detail ini kalau chat gagal lagi.
       console.error('[Chat] /api/coach-hub gagal:', err.message, err)
       if (err.limitReached) {
-        pushBot('Chat hari ini sudah habis 🙏 Upgrade ke Premium untuk lanjut ngobrol tanpa batas.')
-        setTimeout(() => window.dispatchEvent(new CustomEvent('show-upgrade', { detail: {} })), 1200)
+        pushBot('Jalurnya lagi padat banget 🙏 Coba kirim lagi sebentar lagi ya, aku tetap di sini.')
       } else {
         pushBot('Terjadi kepadatan jalur komunikasi. Sampaikan ulang poin terakhirmu.')
       }

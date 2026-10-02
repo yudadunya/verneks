@@ -1,4 +1,4 @@
-import { BrowserRouter, Routes, Route } from 'react-router-dom'
+import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import { useState, useEffect, useRef, lazy, Suspense } from 'react'
 import { supabase } from './lib/supabase'
 import { useSubscription } from './hooks/useSubscription'
@@ -11,11 +11,9 @@ const Register     = lazy(() => import('./pages/Register'))
 const ForgotPassword = lazy(() => import('./pages/ForgotPassword'))
 const ResetPassword  = lazy(() => import('./pages/ResetPassword'))
 const Chat         = lazy(() => import('./pages/Chat'))
-const Pricing      = lazy(() => import('./pages/Pricing'))
 const Blog         = lazy(() => import('./pages/Blog'))
 const BlogPost     = lazy(() => import('./pages/BlogPost'))
 const Discovery    = lazy(() => import('./pages/Discovery'))
-const Paywall      = lazy(() => import('./pages/Paywall'))
 const GenomeResult = lazy(() => import('./pages/GenomeResult'))
 const TentangKamu  = lazy(() => import('./pages/TentangKamu'))
 const JurnalRefleksi = lazy(() => import('./pages/JurnalRefleksi'))
@@ -25,7 +23,6 @@ const AdminPanel   = lazy(() => import('./pages/AdminPanel'))
 const LibraryList  = lazy(() => import('./pages/Library/index'))
 const GuideDetail  = lazy(() => import('./pages/Library/GuideDetail'))
 
-import UpgradeModal from './components/UpgradeModal'
 import InstallPrompt from './components/InstallPrompt'
 import NotificationPrompt from './components/NotificationPrompt'
 
@@ -187,8 +184,6 @@ export default function App() {
   const [user, setUser]             = useState(null)
   const [loading, setLoading]       = useState(true)
   const [chatMessages, setChatMessages] = useState([])
-  const [showUpgrade, setShowUpgrade] = useState(false)
-  const [upgradeData, setUpgradeData] = useState(null)
   // Toast untuk push notification yang masuk SAAT app sedang dibuka
   // (foreground). Firebase tidak menampilkan popup OS otomatis untuk kasus
   // ini (beda dari saat app tertutup/background — itu sudah otomatis lewat
@@ -207,30 +202,6 @@ export default function App() {
     const onManualLogout = () => { manualLogoutRef.current = true }
     window.addEventListener('verneks:manual-logout', onManualLogout)
     return () => window.removeEventListener('verneks:manual-logout', onManualLogout)
-  }, [])
-
-  // Trigger UpgradeModal kalau app dibuka dari notifikasi push
-  // premium-expiry/upgrade-nudge (lihat firebase-messaging-sw.js —
-  // notificationclick untuk action 'open-upgrade' buka URL ini).
-  useEffect(() => {
-    if (!user?.id) return
-    const params = new URLSearchParams(window.location.search)
-    if (params.get('upgrade') === '1') {
-      window.dispatchEvent(new CustomEvent('show-upgrade'))
-      params.delete('upgrade')
-      const cleanUrl = window.location.pathname + (params.toString() ? `?${params}` : '')
-      window.history.replaceState({}, '', cleanUrl)
-    }
-  }, [user?.id])
-
-  // Global upgrade modal trigger
-  useEffect(() => {
-    const handler = (e) => {
-      if (e.detail) setUpgradeData(e.detail)
-      setShowUpgrade(true)
-    }
-    window.addEventListener('show-upgrade', handler)
-    return () => window.removeEventListener('show-upgrade', handler)
   }, [])
 
   useEffect(() => {
@@ -492,11 +463,11 @@ export default function App() {
         <Route path="/register"      element={<Register />} />
         <Route path="/forgot-password" element={<ForgotPassword />} />
         <Route path="/reset-password"  element={<ResetPassword />} />
-        <Route path="/pricing"       element={<Pricing user={user} />} />
+        <Route path="/pricing"       element={<Navigate to="/chat" replace />} />
         <Route path="/chat"          element={<Chat user={user} chatMessages={chatMessages} setChatMessages={setChatMessages} subscription={subscription} />} />
         <Route path="/discovery"      element={<Discovery />} />
         <Route path="/genome-result"   element={<GenomeResult />} />
-        <Route path="/paywall"          element={<Paywall />} />
+        <Route path="/paywall"          element={<Navigate to="/chat" replace />} />
         <Route path="/tentang-kamu"    element={<TentangKamu user={user} loading={loading} />} />
         <Route path="/refleksi"        element={<JurnalRefleksi user={user} loading={loading} />} />
         <Route path="/opportunities"  element={<Opportunities user={user} loading={loading} />} />
@@ -521,13 +492,6 @@ export default function App() {
       </Routes>
       </Suspense>
     </BrowserRouter>
-    {showUpgrade && user && (
-      <UpgradeModal
-        user={user}
-        initialData={upgradeData}
-        onClose={() => { setShowUpgrade(false); setUpgradeData(null) }}
-      />
-    )}
     <InstallPrompt user={user} />
     <NotificationPrompt user={user} />
     {pushToast && (
@@ -535,7 +499,6 @@ export default function App() {
         onClick={() => {
           const action = pushToast.data?.action
           if (action === 'open-chat') window.location.href = '/chat'
-          else if (action === 'open-upgrade') window.dispatchEvent(new CustomEvent('show-upgrade'))
           setPushToast(null)
         }}
         style={{

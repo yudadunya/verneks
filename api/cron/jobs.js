@@ -323,6 +323,10 @@ export default async function handler(req, res) {
   // expired) — BUKAN tiap hari selama user belum perpanjang, supaya nggak
   // berubah jadi spam yang justru bikin user makin males balik.
   if (job === 'premium-expiry-reminder') {
+    // DINONAKTIFKAN: semua fitur gratis, tidak ada paket untuk diperpanjang/di-upgrade.
+    return res.status(200).json({ success: true, disabled: true, reason: 'Semua fitur gratis.' })
+  }
+  if (false && job === 'premium-expiry-reminder') {
     const forceTest = req.query.force === '1'
 
     const { data: subs, error: subsErr } = await supabase
@@ -424,6 +428,10 @@ ATURAN PENTING — PERSUASIF TAPI HALUS:
   // Jadwal MINGGUAN (bukan harian) — sengaja jarang, supaya halus dan tidak
   // berubah jadi tekanan terus-menerus yang bisa bikin user malah defensif.
   if (job === 'free-upgrade-nudge') {
+    // DINONAKTIFKAN: semua fitur gratis, tidak ada paket untuk diperpanjang/di-upgrade.
+    return res.status(200).json({ success: true, disabled: true, reason: 'Semua fitur gratis.' })
+  }
+  if (false && job === 'free-upgrade-nudge') {
     // PIVOT — LOCAL-FIRST: sebelumnya sumbernya user_career_profiles
     // (mensyaratkan career_readiness, peninggalan gerbang /discovery yang
     // sekarang opsional — nge-skip hampir semua user baru) DAN "engagement"
