@@ -67,7 +67,9 @@ function openRouterHeaders() {
 //      reasoning mentah (lihat looksLikeLeakedReasoning di bawah), request
 //      otomatis DIULANG paksa lewat fallback berikutnya — bukan langsung
 //      ditampilkan ke user apa adanya.
-const FREE_NAMED  = process.env.OPENROUTER_MODEL_FREE_NAMED  || 'openai/gpt-oss-20b:free'
+// 2 Okt 2026: OpenRouter menghapus versi ":free" openai/gpt-oss-20b (404 "unavailable for free").
+// Versi berbayarnya sangat murah, jadi dipakai sebagai cadangan tengah.
+const FREE_NAMED  = process.env.OPENROUTER_MODEL_FREE_NAMED  || 'openai/gpt-oss-20b'
 const FREE_ROUTER = process.env.OPENROUTER_MODEL_FREE_ROUTER || 'openrouter/free'
 
 const PREMIUM_FAST  = process.env.OPENROUTER_MODEL_PREMIUM_FAST  || 'anthropic/claude-haiku-4.5'
@@ -87,7 +89,17 @@ const MODELS = {
   },
 }
 
+// ── MODE SELALU-GRATIS ─────────────────────────────────────────────────────
+// Default: SEMUA user (dan semua tier) memakai router otomatis `openrouter/free`,
+// yang memilih model gratis secara acak. Karena pilihannya acak, mencoba ulang
+// slug yang sama (3x) berarti mendapat model berbeda tiap percobaan: kalau satu
+// model membalas kosong atau bocor, percobaan berikutnya hampir pasti lain model.
+// Untuk kembali ke Claude berbayar nanti: set env OPENROUTER_FORCE_FREE=false di Vercel.
+const FORCE_FREE = String(process.env.OPENROUTER_FORCE_FREE ?? 'true').toLowerCase() !== 'false'
+const ALWAYS_FREE = { model: FREE_ROUTER, fallbacks: [FREE_ROUTER, FREE_ROUTER] }
+
 function pickModelConfig(plan, tier) {
+  if (FORCE_FREE) return ALWAYS_FREE
   const planKey = plan === 'premium' ? 'premium' : 'free'
   const tierKey = tier === 'smart' ? 'smart' : 'fast'
   return MODELS[planKey][tierKey]
@@ -211,7 +223,8 @@ async function callOpenRouter({ system, messages, maxTokens, model, fallbacks = 
   // token berpikirnya ikut dihitung ke max_tokens walau disembunyikan, jadi dengan
   // batas kecil isi jawabannya jadi KOSONG ("Respons kosong"). Kasih ruang lebih
   // lega; panjang balasan tetap dikendalikan persona, bukan batas ini.
-  const isFreeModel = (m) => m === FREE_ROUTER || String(m).endsWith(':free')
+  // gpt-oss selalu memakai reasoning (berbayar maupun gratis), jadi ikut dikasih ruang lebih.
+  const isFreeModel = (m) => m === FREE_ROUTER || String(m).endsWith(':free') || String(m).includes('gpt-oss')
 
   async function callWithModel(modelToUse) {
     const body = {
