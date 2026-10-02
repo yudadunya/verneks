@@ -162,6 +162,19 @@ function normalizeMessages(messages) {
 }
 
 // ── Panggilan chat biasa (teks bebas) ────────────────────────────────────────
+// ── Pengaman jawaban terpotong ──────────────────────────────────────────────
+// Kalau model berhenti karena kena batas token (finish_reason === 'length'),
+// teksnya berhenti di tengah kata/kalimat. Daripada tampil terpotong ke user,
+// rapikan sampai kalimat lengkap terakhir.
+function trimToLastCompleteSentence(text) {
+  const t = text.trimEnd()
+  if (/[.!?…)"'”’\u{1F300}-\u{1FAFF}]$/u.test(t)) return t
+  const m = t.match(/^[\s\S]*[.!?…](?=\s|$)/)
+  if (m && m[0].length >= t.length * 0.4) return m[0].trimEnd()
+  // Tidak ada akhir kalimat yang layak — buang kata terakhir yang mungkin terpotong
+  return t.replace(/\s+\S*$/, '').trimEnd() + '…'
+}
+
 async function callOpenRouter({ system, messages, maxTokens, model, fallbacks = [] }) {
   const normalized = normalizeMessages(messages)
 
@@ -173,7 +186,10 @@ async function callOpenRouter({ system, messages, maxTokens, model, fallbacks = 
       // Penting: kalau model yang kepilih punya mode reasoning, JANGAN
       // pernah ikut tampil di jawaban akhir — ini yang bikin bocoran
       // "proses mikir" mentah nyampe ke chat user.
-      reasoning: { exclude: true },
+      // effort 'low': token reasoning tetap dihitung ke max_tokens walau
+      // di-exclude, jadi model reasoning bisa menghabiskan jatah sebelum
+      // sempat menulis jawaban lengkap (jawaban terpotong).
+      reasoning: { effort: 'low', exclude: true },
     }
     const res = await fetch(OPENROUTER_URL, {
       method: 'POST',
@@ -187,8 +203,12 @@ async function callOpenRouter({ system, messages, maxTokens, model, fallbacks = 
       throw err
     }
     const data = await res.json()
-    const text = data.choices?.[0]?.message?.content
+    let text = data.choices?.[0]?.message?.content
     if (!text) throw new Error(`[OpenRouter] Respons kosong (model: ${data.model || modelToUse})`)
+    if (data.choices?.[0]?.finish_reason === 'length') {
+      console.warn(`[ai] Jawaban dari ${modelToUse} terpotong (kena max_tokens=${maxTokens}), dirapikan ke kalimat utuh.`)
+      text = trimToLastCompleteSentence(text)
+    }
     return text
   }
 
