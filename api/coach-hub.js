@@ -351,7 +351,7 @@ async function handleChat(req, res) {
 
   const structuralMemory = {
     name: structuralMemoryName,
-    running_insight: careerProfile?.running_insight || null,
+    running_insight: null, // era career-coach sudah dihapus; tidak ada profil karier di server
   }
 
   // [RSI] Format pola yang dipelajari menjadi konteks untuk AI
